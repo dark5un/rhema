@@ -15969,7 +15969,10 @@ function buildPrintHtml(d, o) {
     let title = s.heading || '';
     if (s.chId && chapterKind(s.chId) !== 'unnumbered') {
       const own = ((book.chapterTitles || {})[s.chId] || '').trim();
-      if (!(library.exportCustomChapterTitles && own)) { label = chapterName(s.chId); title = own; }
+      /* RHEMA — a titled poem prints its title alone: no 'POEM 1' label
+         above 'Κεριά' (UX gate 2026-10-17); untitled poems keep the
+         consistent 'Poem n' line through the same chapterName */
+      if (!(library.exportCustomChapterTitles && own)) { label = poemBook() && own ? '' : chapterName(s.chId); title = own; }
     }
     // a title that only repeats the label ("Chapter 1" under "Chapter One") isn't printed twice
     const word = label.split(/\s+/)[0];

@@ -713,6 +713,7 @@ test('chapbook: a real 5x8 PDF renders with the verse, the mark, and 5x8 pages',
   // the poem mark: the QR renders as vector paths; the mark div carries the class
   const html = await js(`buildPrintHtml(bookExportData(), { trim: '5x8', paper: 'white', links: {}, alsoByText: '', reviewText: '', reviewWords: '' })`);
   assert.ok(html.includes('rhema-poem-mark'), 'the print HTML carries the poem mark');
+  assert.ok(!html.includes('class="ch-num"'), 'a titled poem prints its title alone — no POEM n label (UX gate)');
   await js(`(async () => { try { await window.__pb; } catch {} })()`); // settle the job
 });
 
