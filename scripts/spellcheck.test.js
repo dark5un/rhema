@@ -238,7 +238,9 @@ function mainContext(temp, systemLocale, settings = {}, library = {}, raw = null
 test('spellcheck follows the interface until a dictionary is picked; nothing is saved for the writer', async (t) => {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'neo-spell-test-'));
   t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
-  const fresh = mainContext(temp, 'ro_RO', {}, { authorName: 'Autor', customWords: ['Zorțilă'] });
+  // RHEMA — the fork defaults the interface to Greek (Stone 11), so the interface
+  // is set through saved settings here; the follow rule under test is unchanged.
+  const fresh = mainContext(temp, 'ro_RO', { uiLanguage: 'ro' }, { authorName: 'Autor', customWords: ['Zorțilă'] });
   assert.equal(fresh.read().spellLanguage, undefined); // not saved on the writer's behalf
   assert.equal(fresh.read().authorName, 'Autor');
   assert.equal(vm.runInContext('spellLanguage', fresh.context), 'ro');
@@ -254,9 +256,17 @@ test('spellcheck follows the interface until a dictionary is picked; nothing is 
 
   // the same rule for every language: its own dictionary when NEO has one
   for (const [locale, code] of [['ru_RU', 'ru'], ['fr-CA', 'fr'], ['de', 'de'], ['pl', 'pl'], ['en-US', 'en-US'], ['it', 'en-US'], ['pt-BR', 'pt-BR'], ['pt-PT', 'en-US']]) {
-    const ui = mainContext(temp, locale);
+    const ui = mainContext(temp, 'en-US', { uiLanguage: locale }); /* RHEMA — interface set, not system-derived */
     assert.equal(ui.loads[0].language, code, locale);
     assert.equal(ui.read().spellLanguage, undefined);
+    await Promise.resolve();
+  }
+
+  // RHEMA — the fork's first launch: Greek interface, Greek dictionary, whatever the system
+  {
+    const greek = mainContext(temp, 'ro_RO');
+    assert.equal(vm.runInContext('uiLanguage', greek.context), 'el');
+    assert.equal(greek.loads[0].language, 'el');
     await Promise.resolve();
   }
 
@@ -272,7 +282,7 @@ test('spellcheck follows the interface until a dictionary is picked; nothing is 
 
   // a library.json that doesn't parse is never touched
   const broken = '{"shelves": [{"id": "shelf-1", "name": "Mine"';
-  const unreadable = mainContext(temp, 'ro_RO', {}, {}, broken);
+  const unreadable = mainContext(temp, 'ro_RO', { uiLanguage: 'ro' }, {}, broken); /* RHEMA — interface set, not system-derived */
   assert.equal(fs.readFileSync(path.join(temp, 'library.json'), 'utf8'), broken);
   assert.equal(unreadable.loads[0].language, 'ro');
   await Promise.resolve();

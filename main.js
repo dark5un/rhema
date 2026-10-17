@@ -131,7 +131,10 @@ function initLanguage() {
   const saved = readSettings().uiLanguage;
   let sys = 'en';
   try { sys = app.getLocale(); } catch { /* early start */ }
-  loadLanguage(saved || resolveLanguage(sys) || 'en');
+  /* RHEMA — Stone 11: the poet's default is Greek, English one click away
+     (View → Language). The saved choice always wins; the system language
+     never overrides it. */
+  loadLanguage(saved || 'el');
 }
 
 // The window asks once, synchronously, before any of its code runs
@@ -1031,9 +1034,16 @@ function readCover(fp, fname) {
   }
 }
 
-/* RHEMA — Stone 1a: the collection's drawing (rhema-drawing.* in the book
-   folder), shown watermarked at the end of every poem. Fixed filename, so
-   no user input ever reaches the path. */
+/* RHEMA — Stone 1a: the poem-mark drawings, shown watermarked at the end of
+   a poem. Fixed names in the book folder — 'rhema-drawing.(png|jpg|webp)'
+   for the collection, 'rhema-drawing-<chId>.*' for one poem; the key is
+   slug-validated, so no user input ever reaches the path. */
+const ASSET_KEY = /^[a-z0-9-]{0,64}$/;
+function assetGlob(key) {
+  const k = String(key || 'collection');
+  if (!ASSET_KEY.test(k)) return null;
+  return k === 'collection' ? /^rhema-drawing\.(png|jpg|webp)$/ : new RegExp('^rhema-drawing-' + k + '\\.(png|jpg|webp)$');
+}
 ipcMain.handle('rhema:asset:pick', async () => {
   const win = BrowserWindow.getFocusedWindow();
   const { canceled, filePaths } = await dialog.showOpenDialog(win, {
@@ -1043,32 +1053,38 @@ ipcMain.handle('rhema:asset:pick', async () => {
   });
   return canceled || !filePaths.length ? null : filePaths[0];
 });
-ipcMain.handle('rhema:asset:set', (_e, bookId, srcPath) => {
+ipcMain.handle('rhema:asset:set', (_e, bookId, srcPath, key) => {
+  const re = assetGlob(key);
   const ext = path.extname(srcPath).toLowerCase().replace('.', '');
-  if (!COVER_EXTS.includes(ext)) return null;
+  if (!re || !COVER_EXTS.includes(ext)) return null;
   const dir = bookDir(bookId);
   if (!fs.existsSync(dir) || !fs.existsSync(srcPath)) return null;
-  const fname = 'rhema-drawing.' + (ext === 'jpeg' ? 'jpg' : ext);
+  const stem = key && key !== 'collection' ? 'rhema-drawing-' + key + '.' : 'rhema-drawing.';
+  const fname = stem + (ext === 'jpeg' ? 'jpg' : ext);
   fs.copyFileSync(srcPath, path.join(dir, fname));
   for (const f of fs.readdirSync(dir)) {
-    if (/^rhema-drawing\./.test(f) && f !== fname) fs.unlinkSync(path.join(dir, f));
+    if (re.test(f) && f !== fname) fs.unlinkSync(path.join(dir, f));
   }
   return fname;
 });
-ipcMain.handle('rhema:asset:read', (_e, bookId) => {
+ipcMain.handle('rhema:asset:read', (_e, bookId, key) => {
   try {
+    const re = assetGlob(key);
+    if (!re) return null;
     const dir = bookDir(bookId);
-    const fname = fs.readdirSync(dir).find((f) => /^rhema-drawing\.(png|jpg|webp)$/.test(f));
+    const fname = fs.readdirSync(dir).find((f) => re.test(f));
     if (!fname) return null;
     return readCover(path.join(dir, fname), fname);
   } catch { return null; }
 });
-ipcMain.handle('rhema:asset:clear', (_e, bookId) => {
+ipcMain.handle('rhema:asset:clear', (_e, bookId, key) => {
   try {
+    const re = assetGlob(key);
+    if (!re) return false;
     const dir = bookDir(bookId);
     if (!fs.existsSync(dir)) return true;
     for (const f of fs.readdirSync(dir)) {
-      if (/^rhema-drawing\./.test(f)) fs.unlinkSync(path.join(dir, f));
+      if (re.test(f)) fs.unlinkSync(path.join(dir, f));
     }
     return true;
   } catch { return false; }

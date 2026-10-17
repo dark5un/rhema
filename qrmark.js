@@ -1,36 +1,46 @@
 /* ==================================================================== */
 /*  RHEMA — the poem mark: QR + watermarked drawing (Stone 1a)          */
 /*                                                                      */
-/*  Every poem ends with a small mark: a QR of the poem (payload from   */
-/*  library.rhema.qr.template — a knob, see the plan §5) and, when the  */
-/*  collection has one, the poet's drawing shown as a watermark. The    */
-/*  mark lives OUTSIDE .chapter-body, so it never enters the chapter    */
-/*  file, and it is built by the same code in the editor, the PDF/HTML  */
-/*  export (buildHtml) and the chapbook print (buildPrintHtml).         */
+/*  Every poem can end with a small mark: a QR of the poem and the      */
+/*  poet's drawing shown as a watermark. Both are declared PER POEM,     */
+/*  independently of each other, in book.rhema.poems[<chId>]:            */
+/*                                                                      */
+/*    .qr      undefined = the library template (or title — author),     */
+/*             string    = this poem's own URL/text (placeholders ok),  */
+/*             'off'     = no QR for this poem                           */
+/*    .drawing undefined = the collection's drawing,                    */
+/*             fname     = this poem's own asset (rhema-drawing-<chId>) */
+/*             'off'     = no drawing for this poem                     */
+/*                                                                      */
+/*  The mark lives OUTSIDE .chapter-body, so it never enters the        */
+/*  chapter file, and the same code builds it in the editor, the        */
+/*  PDF/HTML export (buildHtml) and the chapbook print (buildPrintHtml).*/
 /*  QR encoding: qrcode-generator.js (MIT, Kazuhiko Arase), vendored.   */
 /* ==================================================================== */
 
 const RhemaQr = (() => {
   'use strict';
 
-  let drawing = null; // { dataUrl } for the open book; null = none
+  const drawings = new Map(); // key ('collection' or chId) -> dataUrl|null
 
   function cfg() { return (library.rhema && library.rhema.qr) || {}; }
-  function on() { return cfg().off !== true; }
+  function poemRec(chId) { return (book && book.rhema && book.rhema.poems && book.rhema.poems[chId]) || null; }
 
-  // ---- payload (the knob: a URL template, or a plain text fallback) ----
+  // ---- payload (per poem first, then the library template knob) ----
   function fill(template, vars) {
     return template.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? vars[k] : m));
   }
-  function payload(title, collection, author) {
+  function payload(chId, title, collection, author) {
     const vars = {
       title: (title || '').trim(),
       collection: (collection || '').trim(),
       author: (author || '').trim()
     };
+    const own = chId && poemRec(chId) && poemRec(chId).qr;
+    if (typeof own === 'string' && own) return fill(own, vars);
     const template = cfg().template || '';
     if (template) return fill(template, vars);
-    // no URL configured yet: the QR carries the poem's name and author
+    // nothing declared: the QR carries the poem's name and author
     return [vars.title || t('Untitled'), vars.author || t('Anonymous')].filter(Boolean).join(' — ');
   }
   function poemTitle(chId) {
@@ -60,23 +70,27 @@ const RhemaQr = (() => {
     }
   }
 
-  // ---- the mark: drawing (watermarked) beside the QR ----
-  function markHtml(title, collection, author) {
-    const svg = qrSvg(payload(title, collection, author), 84);
-    if (!svg && !drawing) return '';
-    const art = drawing
-      ? `<img class="rhema-mark-drawing" src="${drawing.dataUrl}" alt="" style="max-height:84px;max-width:120px;opacity:.35;object-fit:contain">`
+  // ---- the mark: drawing (watermarked) beside the QR, each per poem ----
+  function markHtml(chId, title, collection, author) {
+    const rec = poemRec(chId);
+    const qrOff = rec && rec.qr === 'off';
+    const svg = qrOff ? '' : qrSvg(payload(chId, title, collection, author), 84);
+    const key = rec && typeof rec.drawing === 'string' && rec.drawing !== 'off' ? chId : 'collection';
+    const art = (rec && rec.drawing === 'off') ? null : drawings.get(key);
+    if (!svg && !art) return '';
+    const artImg = art
+      ? `<img class="rhema-mark-drawing" src="${art}" alt="" style="max-height:84px;max-width:120px;opacity:.35;object-fit:contain">`
       : '';
     // inline styles only: the export CSS stays untouched (merge posture)
-    return `<div class="rhema-poem-mark" contenteditable="false" style="display:flex;align-items:flex-end;gap:14px;margin-top:1.6em">${art}${svg ? `<span class="rhema-mark-qr" style="display:inline-block">${svg}</span>` : ''}</div>`;
+    return `<div class="rhema-poem-mark" contenteditable="false" style="display:flex;align-items:flex-end;gap:14px;margin-top:1.6em">${artImg}${svg ? `<span class="rhema-mark-qr" style="display:inline-block">${svg}</span>` : ''}</div>`;
   }
 
   // ---- editor: the mark sits at the end of the chapter section ----
   function chapterRendered(sec, chId) {
-    if (!poemBook() || !on()) return;
+    if (!poemBook()) return;
     const old = sec.querySelector('.rhema-poem-mark');
     if (old) old.remove();
-    const html = markHtml(poemTitle(chId), book.title, book.author);
+    const html = markHtml(chId, poemTitle(chId), book.title, book.author);
     if (!html) return;
     const wrap = document.createElement('div');
     wrap.innerHTML = html;
@@ -87,56 +101,127 @@ const RhemaQr = (() => {
   // The book being exported is always the open one (shelf exports borrow
   // `book` first), so poemBook() is the format check. ----
   function exportSectionEnd(sec, d) {
-    if (!poemBook() || !on() || !sec || sec.kind !== 'chapter' || !sec.chId) return undefined;
-    return markHtml(sec.heading || poemTitle(sec.chId), (d && d.title) || book.title, (d && d.author) || book.author);
+    if (!poemBook() || !sec || sec.kind !== 'chapter' || !sec.chId) return undefined;
+    return markHtml(sec.chId, sec.heading || poemTitle(sec.chId), (d && d.title) || book.title, (d && d.author) || book.author);
   }
 
-  // ---- the collection's drawing (rhema-drawing.* in the book folder) ----
-  async function loadDrawing(bookId) {
-    drawing = null;
+  // ---- the drawings (rhema-drawing.* / rhema-drawing-<chId>.* in the book folder) ----
+  async function loadDrawing(bookId, key) {
     try {
-      const got = await window.neo.rhema.assetRead(bookId);
-      if (got && got.base64) drawing = { dataUrl: `data:${got.mime};base64,${got.base64}` };
-    } catch (err) { /* none is the normal case */ }
+      const got = await window.neo.rhema.assetRead(bookId, key);
+      drawings.set(key, got && got.base64 ? `data:${got.mime};base64,${got.base64}` : null);
+    } catch (err) { drawings.set(key, null); }
+  }
+  async function loadAllDrawings(meta) {
+    drawings.clear();
+    await loadDrawing(meta.id, 'collection');
+    const poems = (meta.rhema && meta.rhema.poems) || {};
+    for (const chId of Object.keys(poems)) {
+      if (typeof poems[chId].drawing === 'string' && poems[chId].drawing !== 'off') await loadDrawing(meta.id, chId);
+    }
   }
 
+  function setPoemField(chId, field, value) {
+    if (!book) return;
+    if (!book.rhema) book.rhema = {};
+    if (!book.rhema.poems) book.rhema.poems = {};
+    if (!book.rhema.poems[chId]) book.rhema.poems[chId] = {};
+    const r = book.rhema.poems[chId];
+    if (value === undefined) delete r[field]; else r[field] = value;
+    if (!Object.keys(r).length) delete book.rhema.poems[chId];
+    saveMeta();
+  }
+
+  // ---- per-poem menus (the chapter menu of a poem book) ----
+  function chapterMenuItems(chId) {
+    if (!poemBook()) return undefined;
+    return ['-',
+      { label: t('Poem QR…'), value: 'rhemaQr' },
+      { label: t('Poem drawing…'), value: 'rhemaDrawing' }];
+  }
+  async function chapterMenuChoice(chId, choice) {
+    if (choice === 'rhemaQr') { await qrMenu(chId); return true; }
+    if (choice === 'rhemaDrawing') { await drawingMenu(chId); return true; }
+    return false;
+  }
+  async function qrMenu(chId) {
+    const rec = poemRec(chId);
+    const own = rec && typeof rec.qr === 'string' && rec.qr !== 'off';
+    const off = rec && rec.qr === 'off';
+    const choice = await optionModal(t('This poem’s QR'), null, [
+      { label: t('Set a link or text for this poem…'), value: 'set' },
+      ...(own ? [{ label: t('Remove it (use the default)'), value: 'clear' }] : []),
+      ...(off ? [{ label: t('Show a QR here again'), value: 'on' }]
+              : [{ label: t('Never show a QR for this poem'), value: 'off' }])
+    ]);
+    if (!choice) return;
+    if (choice === 'set') {
+      const v = await askInput(t('The QR of “{title}”', { title: escHtml(shownTitle(chapterName(chId))) }),
+        t('a link, or any text — {title} and {author} work too'), (rec && rec.qr !== 'off' && rec.qr) || '');
+      if (v === null) return;
+      setPoemField(chId, 'qr', v || undefined);
+    } else if (choice === 'clear') setPoemField(chId, 'qr', undefined);
+    else if (choice === 'off') setPoemField(chId, 'qr', 'off');
+    else if (choice === 'on') setPoemField(chId, 'qr', undefined);
+    renderChapters();
+  }
+  async function drawingMenu(chId) {
+    const rec = poemRec(chId);
+    const own = rec && typeof rec.drawing === 'string' && rec.drawing !== 'off';
+    const off = rec && rec.drawing === 'off';
+    const choice = await optionModal(t('This poem’s drawing'), null, [
+      { label: t('Set this poem’s drawing…'), value: 'set' },
+      ...(own ? [{ label: t('Remove it (use the collection’s)'), value: 'clear' }] : []),
+      ...(off ? [{ label: t('Show a drawing here again'), value: 'on' }]
+              : [{ label: t('Never show a drawing for this poem'), value: 'off' }])
+    ]);
+    if (!choice) return;
+    if (choice === 'set') {
+      const src = await window.neo.rhema.assetPick();
+      if (!src) return;
+      const fname = await window.neo.rhema.assetSet(book.id, src, chId);
+      if (!fname) { toast(t('That image could not be added.')); return; }
+      setPoemField(chId, 'drawing', fname);
+      await loadDrawing(book.id, chId);
+    } else if (choice === 'clear') {
+      await window.neo.rhema.assetClear(book.id, chId);
+      drawings.delete(chId);
+      setPoemField(chId, 'drawing', undefined);
+    } else if (choice === 'off') setPoemField(chId, 'drawing', 'off');
+    else if (choice === 'on') setPoemField(chId, 'drawing', undefined);
+    renderChapters();
+  }
+
+  // ---- collection drawing: shelf card menu ----
   async function rememberDrawing(meta, fname) {
-    // book.rhema.drawing: which collection has one (the shelf menu reads it)
     meta.rhema = { ...(meta.rhema || {}) };
     if (fname) meta.rhema.drawing = fname; else delete meta.rhema.drawing;
     if (!Object.keys(meta.rhema).length) delete meta.rhema;
     await writeBookMeta(meta.id, meta).catch(() => {});
   }
-
   async function pickDrawing(meta) {
     const src = await window.neo.rhema.assetPick();
     if (!src) return false;
-    const fname = await window.neo.rhema.assetSet(meta.id, src);
+    const fname = await window.neo.rhema.assetSet(meta.id, src, 'collection');
     if (!fname) { toast(t('That image could not be added.')); return false; }
     await rememberDrawing(meta, fname);
-    await loadDrawing(meta.id);
-    // an open book shows it right away
+    await loadDrawing(meta.id, 'collection');
     if (book && book.id === meta.id) renderChapters();
     toast(t('The collection has its drawing.'), 3000);
     return true;
   }
-
   async function clearDrawing(meta) {
-    await window.neo.rhema.assetClear(meta.id);
+    await window.neo.rhema.assetClear(meta.id, 'collection');
+    drawings.set('collection', null);
     await rememberDrawing(meta, null);
-    drawing = null;
     if (book && book.id === meta.id) renderChapters();
   }
-
-  // ---- shelf card menu: poem books grow a Drawing item ----
   function shelfCardMenu(meta) {
     if (!(NeoHooks.format(meta.format) && NeoHooks.format(meta.format).poem)) return undefined;
     const has = !!(meta.rhema && meta.rhema.drawing);
-    return [
-      '-',
+    return ['-',
       { label: t('Set poem drawing…'), value: 'rhemaDrawing' },
-      ...(has ? [{ label: t('Remove poem drawing'), value: 'rhemaDrawingOff', danger: true }] : [])
-    ];
+      ...(has ? [{ label: t('Remove poem drawing'), value: 'rhemaDrawingOff', danger: true }] : [])];
   }
   function shelfCardChoice(meta, choice) {
     if (choice === 'rhemaDrawing') { pickDrawing(meta); return true; }
@@ -146,9 +231,12 @@ const RhemaQr = (() => {
 
   NeoHooks.on('chapterRendered', chapterRendered);
   NeoHooks.on('exportSectionEnd', exportSectionEnd);
-  NeoHooks.on('bookOpened', (meta) => { loadDrawing(meta.id); });
+  NeoHooks.on('bookOpened', (meta) => { loadAllDrawings(meta); });
+  NeoHooks.on('chapterMenuItems', chapterMenuItems);
+  NeoHooks.on('chapterMenuChoice', chapterMenuChoice);
   NeoHooks.on('shelfCardMenu', shelfCardMenu);
   NeoHooks.on('shelfCardChoice', shelfCardChoice);
 
-  return { payload, qrSvg, markHtml, pickDrawing, clearDrawing, loadDrawing, hasDrawing: () => !!drawing };
+  return { payload, qrSvg, markHtml, pickDrawing, clearDrawing, loadDrawing,
+    hasDrawing: (key) => !!drawings.get(key || 'collection') };
 })();

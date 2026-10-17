@@ -25,6 +25,9 @@ for (const name of fs.readdirSync(os.tmpdir())) {
 }
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), `neo-manuscript-test-${process.pid}-`));
 app.setPath('userData', path.join(tmp, 'app'));
+// RHEMA — the fork's default UI language is Greek (Stone 11); this suite reads English strings
+fs.mkdirSync(app.getPath('userData'), { recursive: true });
+fs.writeFileSync(path.join(app.getPath('userData'), 'settings.json'), JSON.stringify({ uiLanguage: 'en' }));
 app.setPath('documents', tmp);
 const LIB = path.join(tmp, 'Rhema Library');
 fs.mkdirSync(LIB);

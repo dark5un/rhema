@@ -14,7 +14,7 @@ carry anchors. Target: <300 changed lines across core files.
 
 | Anchor | What | Phase |
 |--------|------|-------|
-| `RHEMA — hook bus` block after the i18n preamble | `NeoHooks` — `on`/`emit`/`emitTrue`/`has` + `registerFormat`/`format` registry. `emitTrue` (Phase 2) = veto: first listener returning true stops the host's handling. Additive: no listeners = no-op. | 0–2 |
+| `RHEMA — hook bus` block after the i18n preamble | `NeoHooks` — `on`/`emit`/`emitTrue`/`emitList`/`has` + `registerFormat`/`format` registry. `emitTrue` (Phase 2) = veto: first listener returning true stops the host's handling. `emitList` (2e) = merge: array results from every listener concatenated (menu surfaces several features share). Additive: no listeners = no-op. | 0–2 |
 | `const poemBook = ...` right after the bus block | true when the open book's format is a registered poem format | 2 |
 | shelf `+` contextmenu: `New Poem Collection` + `NeoHooks.format('poetry').createOnShelf` | the poet's new-book flow, beside New Book / New Script (behind Show More Features like Script — revisit at UI review) | 2 |
 | Enter-hint toast: `NeoHooks.emit('enterHint') ?? t(...)` | poets get the poem rhythm wording | 2 |
@@ -22,7 +22,7 @@ carry anchors. Target: <300 changed lines across core files.
 | beforeinput: `if (poemBook()) { e.preventDefault(); NeoHooks.emit('poemLineBreak', …); return; }` | an IME's line break becomes a real `<br>` via poetry.js | 2 |
 | `syncChapter()`: `NeoHooks.emit('chapterSynced', body, chId)` | poetry.js marks every paragraph verse before capture | 2 |
 | `openBook()`: `NeoHooks.emit('bookOpened', book)` | fork features re-arm per book (scraps.js tab visibility + sidecar reset, poetry.js) | 2c |
-| `chapterMenuItems()` / `chapterMenuChoice()`: `NeoHooks.emit('chapterMenuItems', …)` + `emitTrue('chapterMenuChoice', …)` | poem status items (draft/fair copy/done) grow on the card + nav chapter menus; choices answer themselves | 2b |
+| `chapterMenuItems()` / `chapterMenuChoice()`: `emitList('chapterMenuItems', …)` + `emitTrue('chapterMenuChoice', …)` | poem status items (draft/fair copy/done, 2b) and per-poem Poem QR…/Poem drawing… submenus (2e) grow on the card + nav chapter menus; choices answer themselves | 2b+2e |
 | `deleteChapter()`: `NeoHooks.emit('chapterDeleted', chId)` | per-chapter fork metadata (poem status) is pruned with the chapter | 2b |
 | `renderNav()` item: `NeoHooks.emit('navItem', item, chId)` | status dots in the chapter nav | 2b |
 | `renderOutline()` board + card: `NeoHooks.emit('boardRendered', board)` / `emit('poemCard', cell, chId)` | collection progress chip; rich poem cards (title, first line, line count, status dot) | 2b |
@@ -31,7 +31,7 @@ carry anchors. Target: <300 changed lines across core files.
 | `showSnapshot()`: `NeoHooks.emit('snapshotShown', v)` | compare.js turns a poem snapshot side-by-side (Then/Now + added-word marks) | 2d |
 | `renderChapters()` loop end: `NeoHooks.emit('chapterRendered', sec, chId)` | the poem mark (QR + watermarked drawing) is appended to the section, outside `.chapter-body` — never captured into the chapter file (qrmark.js) | 2e |
 | `buildHtml()` chapter branch + `buildPrintHtml()` chapter loop: `NeoHooks.emit('exportSectionEnd', sec, d)` | the same mark prints in PDF/HTML exports and the chapbook; listener checks `poemBook()` (shelf exports borrow `book` first) | 2e |
-| shelf card menu (both paths): `emit('shelfCardMenu', meta)` + `emitTrue('shelfCardChoice', meta, choice)` | poem books grow Set/Remove poem drawing items (qrmark.js) | 2e |
+| shelf card menu (both paths): `emitList('shelfCardMenu', meta)` + `emitTrue('shelfCardChoice', meta, choice)` | poem books grow Set/Remove collection-drawing items (qrmark.js) | 2e |
 | `document.title = ... 'Rhema' /* RHEMA */` in `showWindowTitle()` | window title says Rhema | 0 |
 | `checkForUpdate()` `state === 'off'` branch | honest "Updates arrive by hand" notice instead of a fake "up to date" (Stone 15) | 0 |
 | `showAbout()` `<h2>Rhema</h2>` | About modal heading (hardcoded, bypasses t()) | 0 |
@@ -69,7 +69,8 @@ name are the only literal renames (both listed above).
 | `rhemaAiSettings()` + `ai:test` handler | library.rhema.ai read (main-side source of truth); the Test button, with the saved key attached only when the tested base equals the saved base | 1 |
 | `dailyBackup()` `keep:` + `rhemaBackupKeep()` | Stone 6: backup retention from library.rhema.retention.backups (default 14, `'unlimited'` → keep all) | 1 |
 | File menu `Rhema AI…` item | opens the Rhema settings pane (behind Show More Features, like Cover Art…) | 1 |
-| `rhema:asset:pick/set/read/clear` handlers | Stone 1a: the collection drawing as `rhema-drawing.(png|jpg|webp)` in the book folder; fixed filename, no user input in the path; reuses COVER_EXTS + readCover | 2e |
+| `initLanguage()`: `loadLanguage(saved || 'el')` | Stone 11: first launch is Greek regardless of the system language (the poet's default; View → Language switches). The saved choice always wins. Spellcheck follows the interface, so first launch also gets dictionary-el. | 2f |
+| `rhema:asset:pick/set/read/clear` handlers | Stone 1a: poem-mark drawings — `rhema-drawing.(png|jpg|webp)` (collection) and `rhema-drawing-<chId>.*` (one poem); slug-validated key, fixed names, no user input in the path; reuses COVER_EXTS + readCover | 2e |
 | (future) import formats | | 3 |
 | (deferred, before any auto-update re-enable) `latestReleaseFromGitHub()` | still fetches hughhowey/neo with UA 'NEO-App'; must be pointed at dark5un/rhema when RHEMA_AUTO_UPDATE flips to true, so the fallback link matches the publish feed | 15-re |
 
@@ -115,7 +116,9 @@ name are the only literal renames (both listed above).
 | `scripts/rhema-ai.test.js` | Phase 1: ComfyUI workflow builder, retention knobs (keepValue + snapsToThin unlimited), settings gate, brief plumbing — hermetic |
 | `scripts/rhema-ai-live.js` | NOT in npm test: live chain check (Strata brief → ComfyUI render) against this machine's endpoints |
 | `scripts/poetry.test.js` | Phase 2: the pure poetry rules sliced from poetry.js (Enter rhythm, stanza/poem split, line ops) — vm harness, hermetic |
-| `scripts/poetry.e2e.js` (`test:poetry`) | Phase 2: real Electron — new poem collection, Enter rhythm, line ops, structural undo, disk format, and the novel's Enter rhythm unchanged |
+| `scripts/poetry.e2e.js` (`test:poetry`) | Phase 2: real Electron — new poem collection, Enter rhythm, line ops, structural undo, disk format, poem mark (QR/drawing per poem), and the novel's Enter rhythm unchanged. Visible fixtures are real public-domain Kavafis verse («Κεριά», «Η πόλις»), not placeholder words (Panos 2026-10-17) |
+| `scripts/*.e2e.js` (11) | each pins `uiLanguage: 'en'` in its temp settings.json — the fork's default is Greek (Stone 11), the suites read English strings |
+| `scripts/spellcheck.test.js` | interface language set via saved settings (the fork no longer derives it from the system); added fork case: first launch = el + dictionary-el |
 
 ## Hook bus semantics (note for Phase 2)
 

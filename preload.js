@@ -45,11 +45,11 @@ contextBridge.exposeInMainWorld('neo', {
   /* RHEMA — namespaced bridge for Rhema features */
   rhema: {
     test: (settings) => ipcRenderer.invoke('ai:test', settings),
-    /* RHEMA — Stone 1a: the collection's drawing asset */
+    /* RHEMA — Stone 1a: the poem-mark drawings (key: 'collection' or a chapter id) */
     assetPick: () => ipcRenderer.invoke('rhema:asset:pick'),
-    assetSet: (bookId, srcPath) => ipcRenderer.invoke('rhema:asset:set', bookId, srcPath),
-    assetRead: (bookId) => ipcRenderer.invoke('rhema:asset:read', bookId),
-    assetClear: (bookId) => ipcRenderer.invoke('rhema:asset:clear', bookId)
+    assetSet: (bookId, srcPath, key) => ipcRenderer.invoke('rhema:asset:set', bookId, srcPath, key),
+    assetRead: (bookId, key) => ipcRenderer.invoke('rhema:asset:read', bookId, key),
+    assetClear: (bookId, key) => ipcRenderer.invoke('rhema:asset:clear', bookId, key)
   },
   importFiles: (paths) => ipcRenderer.invoke('import:files', paths),
   pathForFile: (file) => webUtils.getPathForFile(file),

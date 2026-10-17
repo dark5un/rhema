@@ -32,6 +32,21 @@ const NeoHooks = {
     return last;
   },
   has(name) { return !!(this._hooks[name] && this._hooks[name].length); },
+  // merge emit (Phase 2e): array results from every listener, concatenated
+  // (menu surfaces where several Rhema features add items side by side)
+  emitList(name, ...args) {
+    const list = this._hooks[name];
+    if (!list || !list.length) return undefined;
+    let out;
+    for (const fn of list) {
+      try {
+        const r = fn(...args);
+        if (Array.isArray(r)) out = (out || []).concat(r);
+      }
+      catch (err) { console.error('[rhema hook]', name, err); }
+    }
+    return out;
+  },
   // veto emit (Phase 2): first listener that returns true wins and stops the
   // host's own handling; anything else falls through
   emitTrue(name, ...args) {
@@ -2030,7 +2045,7 @@ function bookTile(meta, opts = {}) {
         if (meta.coverImage) options.push({ label: t('Remove cover art'), desc: t('Deletes the image from the book folder. (To just hide it, use the ↻ on the book.)'), danger: true, value: 'uncover' });
       }
       options.push(
-        ...(NeoHooks.emit('shelfCardMenu', meta) || []), /* RHEMA — poem books grow a Drawing item (qrmark.js) */
+        ...(NeoHooks.emitList('shelfCardMenu', meta) || []), /* RHEMA — poem books grow a Drawing item (qrmark.js) */
         { label: t('Remove from bookshelf'), desc: t('Takes it off your shelves. The files stay safe in your NEO Library folder on disk.'), value: 'remove' },
         { label: trashLabel, desc: window.Capacitor ? t('Moves the book folder to Deleted Books in your NEO Library, where you can recover it.') : t('Sends the book folder to your system trash, where you can recover it.'), danger: true, value: 'trash' }
       );
@@ -2043,7 +2058,7 @@ function bookTile(meta, opts = {}) {
       items.push({ label: t('Export…'), value: 'export' });
       if (canCopy) items.push({ label: t('Duplicate'), value: 'duplicate' });
       if (coverItems.length) items.push({ label: t('Cover') + '  ›', value: 'coverMenu' });
-      items.push(...(NeoHooks.emit('shelfCardMenu', meta) || []), '-'); /* RHEMA — poem books grow a Drawing item (qrmark.js) */
+      items.push(...(NeoHooks.emitList('shelfCardMenu', meta) || []), '-'); /* RHEMA — poem books grow a Drawing item (qrmark.js) */
       items.push({ label: t('Remove from bookshelf'), value: 'remove' }, { label: trashLabel, value: 'trash', danger: true });
       const x = e.clientX;
       const y = e.clientY;
@@ -2836,7 +2851,7 @@ async function chapterMenu(chId, x = 0, y = 0, from = null) {
   }
   items.push('-', { label: t('Delete'), value: 'delete', danger: true });
   /* RHEMA — poem books: the chapter menu grows poem items (poetry.js) */
-  const rhemaExtra = NeoHooks.emit('chapterMenuItems', chId);
+  const rhemaExtra = NeoHooks.emitList('chapterMenuItems', chId); /* RHEMA — emitList: poetry.js and qrmark.js both add items */
   if (rhemaExtra && rhemaExtra.length) items.push(...rhemaExtra);
   const choice = await popMenu(x, y, items, { title: chapterName(chId), from: from || document.querySelector(`.nav-item[data-id="${chId}"] .n-row`) });
   if (!choice || choice === kind) return null;

@@ -20,6 +20,9 @@ for (const name of fs.readdirSync(os.tmpdir())) {
 }
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), `neo-poetry-test-${process.pid}-`));
 app.setPath('userData', path.join(tmp, 'app'));
+// RHEMA — the fork's default UI language is Greek (Stone 11); this suite reads English strings
+fs.mkdirSync(app.getPath('userData'), { recursive: true });
+fs.writeFileSync(path.join(app.getPath('userData'), 'settings.json'), JSON.stringify({ uiLanguage: 'en' }));
 app.setPath('documents', tmp);
 const LIB = path.join(tmp, 'Rhema Library');
 fs.mkdirSync(LIB);
@@ -112,22 +115,29 @@ test('a new poem collection opens as verse', async () => {
   assert.equal(st[0].cls, 'poetry');
 });
 
+// Real verse for the visible fixtures: K. P. Cavafy, "Κεριά" (1893/1899)
+// and "Η πόλις" (1910) — public domain, text per the Ίκαρος/Κέντρο
+// Ελληνικής Γλώσσας editions. The poet's UX deserves real poems.
+const L1 = "Του μέλλοντος οι μέρες στέκοντ' εμπροστά μας";
+const L2 = "σα μια σειρά κεράκια αναμμένα —";
+const L3 = "χρυσά, ζεστά, και ζωηρά κεράκια.";
+
 test('Enter once breaks the line, twice opens a stanza, three times a new poem', async () => {
   await caretToEnd();
-  await type('First line');
+  await type(L1);
   await enter(); await tick();
-  await type('second');
+  await type(L2);
   let st = await stanzas();
-  assert.deepEqual(st[0].lines, ['First line', 'second'], 'soft break inside the stanza');
+  assert.deepEqual(st[0].lines, [L1, L2], 'soft break inside the stanza');
   await enter(); await tick();
   await enter(); await tick();
   st = await stanzas();
   assert.equal(st.length, 2, 'the second Enter opened a new stanza');
-  assert.deepEqual(st[0].lines, ['First line', 'second']);
+  assert.deepEqual(st[0].lines, [L1, L2]);
   assert.deepEqual(st[1].lines, ['']);
-  await type('new stanza');
+  await type(L3);
   st = await stanzas();
-  assert.deepEqual(st[1].lines, ['new stanza']);
+  assert.deepEqual(st[1].lines, [L3]);
   await enter(); await tick();
   await enter(); await tick();
   await enter(); await tick(120);
@@ -141,7 +151,7 @@ test('Enter once breaks the line, twice opens a stanza, three times a new poem',
 test('⌘Z undoes the stanza split (structural undo)', async () => {
   await js('currentChapterId = book.chapterOrder[1]');
   await caretToEnd();
-  await type('tail');
+  await type("Καινούργιους τόπους δεν θα βρεις,");
   await enter(); await tick();
   await enter(); await tick();
   let st = await stanzasOf(1);
@@ -229,7 +239,7 @@ test('the chapter file on disk keeps the poetry paragraphs', async () => {
 
 test('the outline card shows title, first line, line count and status dot', async () => {
   // give the first poem a title and a status
-  await js(`(() => { book.chapterTitles[book.chapterOrder[0]] = 'August'; saveMeta(); })()`);
+  await js(`(() => { book.chapterTitles[book.chapterOrder[0]] = 'Κεριά'; saveMeta(); })()`);
   await js(`NeoHooks.format('poetry').setStatus(book.chapterOrder[0], 'done')`);
   await tick(300);
   await js(`document.querySelector('.tab[data-tab="outline"]').click()`);
@@ -246,8 +256,8 @@ test('the outline card shows title, first line, line count and status dot', asyn
     };
   })()`);
   assert.ok(card, 'the poem has an outline card');
-  assert.equal(card.title, 'August');
-  assert.equal(card.line, '“First line”', 'first written line, quoted');
+  assert.equal(card.title, 'Κεριά');
+  assert.equal(card.line, '“' + L1 + '”', 'first written line, quoted');
   assert.match(card.count, /\d+ lines/, 'line count, not words');
   assert.equal(card.dot, true, 'status dot on the card');
   // the nav carries the dot too
@@ -272,17 +282,17 @@ test('deleting a poem prunes its status record', async () => {
 });
 
 test('scraps: Alt+Shift+X cuts the line, the drawer holds it tagged, Put in returns it', async () => {
-  // poem 0 stands: stanzas ['First line','second'] + ['new stanza']
+  // poem 0 stands: stanzas [L1,L2] + [L3]
   await js('currentChapterId = book.chapterOrder[0]');
-  await caretInLine(0, 1, 0); // caret on 'second'
+  await caretInLine(0, 1, 0); // caret on the second line of the first stanza
   await key({ key: 'x', code: 'KeyX', altKey: true, shiftKey: true });
   await tick(120);
   const list = await js('RhemaScraps.list()');
   assert.equal(list.length, 1, 'the line landed in Scraps');
-  assert.deepEqual(list[0].lines, ['second']);
+  assert.deepEqual(list[0].lines, [L2]);
   assert.equal(list[0].originChId, await js('book.chapterOrder[0]'), 'tagged with its poem');
   let st = await stanzasOf(0);
-  assert.deepEqual(st[0].lines, ['First line'], 'and left the poem');
+  assert.deepEqual(st[0].lines, [L1], 'and left the poem');
   // the drawer shows it, with the Scraps tab visible for a poem book
   assert.equal(await js('document.querySelector(\'.tab[data-tab="scraps"]\').hidden'), false);
   await js('document.querySelector(\'.tab[data-tab="scraps"]\').click()');
@@ -293,11 +303,11 @@ test('scraps: Alt+Shift+X cuts the line, the drawer holds it tagged, Put in retu
   await js('document.querySelector(\'.tab[data-tab="manuscript"]\').click()');
   await tick(200);
   await js('currentChapterId = book.chapterOrder[0]');
-  await caretInLine(1, 0, 0); // 'new stanza'
+  await caretInLine(1, 0, 0); // the stanza below
   await js('RhemaScraps.putIn(RhemaScraps.list()[0])');
   await tick(120);
   st = await stanzasOf(0);
-  assert.deepEqual(st[1].lines, ['new stanza', 'second'], 'the line came back under the caret');
+  assert.deepEqual(st[1].lines, [L3, L2], 'the line came back under the caret');
   // and it is on disk
   const sidecar = path.join(LIB, fs.readdirSync(LIB).find((d) => d.startsWith('book-')), 'rhema-scraps.json');
   await js('flushSidecars && flushSidecars()');
@@ -310,8 +320,8 @@ test('compare: a poem snapshot shows then/now columns and marks added words', as
   await js('currentChapterId = book.chapterOrder[0]');
   const snapName = await js(`(async () => { const r = await takeSnapshot(SNAP_KEPT); return r && r.snap && r.snap.name; })()`);
   assert.ok(snapName, 'a snapshot was taken');
-  await caretInLine(0, 0, 10); // end of 'First line'
-  await type(' heron');
+  await caretInLine(0, 0, 10); // mid the first line
+  await type(' πικρά');
   await tick(150);
   await js(`document.querySelector('.tab[data-tab="darlings"]').click()`);
   await tick(250);
@@ -323,8 +333,8 @@ test('compare: a poem snapshot shows then/now columns and marks added words', as
     const now = grid.querySelector('.rhema-now');
     return {
       cols: grid.querySelectorAll('.rhema-compare-col').length,
-      thenHasHeron: grid.querySelector('.rhema-compare-col .snap-body:not(.rhema-now)').textContent.includes('heron'),
-      nowHasHeron: now && now.textContent.includes('heron'),
+      thenHasHeron: grid.querySelector('.rhema-compare-col .snap-body:not(.rhema-now)').textContent.includes('πικρά'),
+      nowHasHeron: now && now.textContent.includes('πικρά'),
       added: CSS.highlights.has('rhema-snap-added') ? CSS.highlights.get('rhema-snap-added').size : 0
     };
   })()`);
@@ -346,10 +356,10 @@ test('qr mark: every poem ends with a QR in the editor, and exports carry it', a
   assert.ok(mark.has, 'the poem section ends with the mark');
   assert.ok(mark.svg, 'the mark carries a real QR');
   assert.equal(mark.inBody, false, 'and it never enters the editable text');
-  // payload: the plain-text default, then the URL template knob
-  assert.equal(await js('RhemaQr.payload("Sea", "Col", "Panos")'), 'Sea — Panos');
+  // payload: the plain-text default, then the library template knob
+  assert.equal(await js('RhemaQr.payload(null, "Sea", "Col", "Panos")'), 'Sea — Panos');
   await js(`library.rhema = Object.assign(library.rhema || {}, { qr: { template: 'https://onlyascii.io/{collection}/{title}' } })`);
-  assert.equal(await js('RhemaQr.payload("Sea", "Col", "Panos")'), 'https://onlyascii.io/Col/Sea');
+  assert.equal(await js('RhemaQr.payload(null, "Sea", "Col", "Panos")'), 'https://onlyascii.io/Col/Sea');
   // both export builders carry the mark for a poem book
   const html = await js('buildHtml()');
   assert.ok(html.includes('rhema-poem-mark') && html.includes('<svg'), 'the PDF/HTML export carries the mark');
@@ -357,14 +367,41 @@ test('qr mark: every poem ends with a QR in the editor, and exports carry it', a
   assert.ok(print.includes('rhema-poem-mark'), 'the chapbook print carries the mark');
 });
 
-test('qr mark: the collection drawing sits watermarked beside the QR', async () => {
+test('qr mark: QR and drawing are declared per poem, and can each be off', async () => {
+  await js('createChapterAt(storyEnd())'); // the delete test took poem 1; grow a second poem
+  await tick(250);
+  const ch0 = await js('book.chapterOrder[0]');
+  const ch1 = await js('book.chapterOrder[1]');
+  // this poem's own QR payload, independent of the library template
+  await js(`(() => { if (!book.rhema) book.rhema = {}; book.rhema.poems = book.rhema.poems || {}; book.rhema.poems[${JSON.stringify(ch0)}] = Object.assign({}, book.rhema.poems[${JSON.stringify(ch0)}], { qr: 'https://poem.example/{title}' }); saveMeta(); })()`);
+  await js('renderChapters()');
+  await tick(200);
+  assert.equal(await js(`RhemaQr.payload(${JSON.stringify(ch0)}, "Κεριά", "Col", "Panos")`), 'https://poem.example/Κεριά');
+  // poem 1 still follows the library template
+  assert.match(await js(`RhemaQr.payload(${JSON.stringify(ch1)}, "X", "Col", "Panos")`), /^https:\/\/onlyascii\.io\//);
+  // this poem opts out of the QR entirely
+  await js(`(() => { book.rhema.poems[${JSON.stringify(ch0)}].qr = 'off'; saveMeta(); })()`);
+  await js('renderChapters()');
+  await tick(200);
+  const off = await js(`(() => {
+    const m = document.querySelector('.chapter[data-id="' + book.chapterOrder[0] + '"] > .rhema-poem-mark');
+    return { any: !!m, svg: !!(m && m.querySelector('svg')) };
+  })()`);
+  assert.equal(off.any, false, 'a poem with qr off and no drawing shows no mark');
+  // poem 1 keeps its mark
+  assert.ok(await js(`!!document.querySelector('.chapter[data-id="' + book.chapterOrder[1] + '"] > .rhema-poem-mark svg')`), 'the other poem keeps its QR');
+  await js(`(() => { delete book.rhema.poems[${JSON.stringify(ch0)}].qr; saveMeta(); })()`);
+});
+
+test('qr mark: the collection drawing sits watermarked, a poem can override it', async () => {
   const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
   const src = path.join(LIB, 'drawing-test.png');
   fs.writeFileSync(src, png);
   const bookId = await js('book.id');
-  const fname = await js(`window.neo.rhema.assetSet(${JSON.stringify(bookId)}, ${JSON.stringify(src)})`);
-  assert.equal(fname, 'rhema-drawing.png', 'the drawing lands in the book folder');
-  await js(`RhemaQr.loadDrawing(${JSON.stringify(bookId)})`);
+  const ch0 = await js('book.chapterOrder[0]');
+  const fname = await js(`window.neo.rhema.assetSet(${JSON.stringify(bookId)}, ${JSON.stringify(src)}, 'collection')`);
+  assert.equal(fname, 'rhema-drawing.png', 'the collection drawing lands in the book folder');
+  await js(`RhemaQr.loadDrawing(${JSON.stringify(bookId)}, 'collection')`);
   await js('renderChapters()');
   await tick(250);
   const art = await js(`(() => {
@@ -373,12 +410,25 @@ test('qr mark: the collection drawing sits watermarked beside the QR', async () 
     return { has: !!img, faded: !!(img && /opacity:\\s*\\.35/.test(img.getAttribute('style') || '')), data: !!(img && img.src.startsWith('data:image/png')) };
   })()`);
   assert.ok(art.has && art.faded && art.data, 'the drawing shows watermarked next to the QR');
+  // a poem's own drawing, declared independently (and its own file)
+  const own = await js(`window.neo.rhema.assetSet(${JSON.stringify(bookId)}, ${JSON.stringify(src)}, ${JSON.stringify(ch0)})`);
+  assert.equal(own, 'rhema-drawing-' + ch0 + '.png', 'the poem drawing is its own asset');
+  await js(`(() => { book.rhema.poems[${JSON.stringify(ch0)}] = Object.assign({}, book.rhema.poems[${JSON.stringify(ch0)}], { drawing: ${JSON.stringify(own)} }); saveMeta(); })()`);
+  await js(`RhemaQr.loadDrawing(${JSON.stringify(bookId)}, ${JSON.stringify(ch0)})`);
+  await js('renderChapters()');
+  await tick(250);
+  const both = await js(`(() => {
+    const a = document.querySelector('.chapter[data-id="' + book.chapterOrder[0] + '"] > .rhema-poem-mark img');
+    const b = document.querySelector('.chapter[data-id="' + book.chapterOrder[1] + '"] > .rhema-mark img, .chapter[data-id="' + book.chapterOrder[1] + '"] > .rhema-poem-mark img');
+    return { a: !!a, b: !!b };
+  })()`);
+  assert.ok(both.a && both.b, 'both poems show a drawing — the poem its own, the other the collection’s');
   // and it survives a reopen (read straight from the book folder)
-  const got = await js(`window.neo.rhema.assetRead(${JSON.stringify(bookId)})`);
+  const got = await js(`window.neo.rhema.assetRead(${JSON.stringify(bookId)}, 'collection')`);
   assert.ok(got && got.base64.length > 0, 'rhema-drawing.png reads back');
-  const cleared = await js(`window.neo.rhema.assetClear(${JSON.stringify(bookId)})`);
+  const cleared = await js(`window.neo.rhema.assetClear(${JSON.stringify(bookId)}, 'collection')`);
   assert.ok(cleared);
-  assert.equal(await js(`window.neo.rhema.assetRead(${JSON.stringify(bookId)})`), null, 'and clears');
+  assert.equal(await js(`window.neo.rhema.assetRead(${JSON.stringify(bookId)}, 'collection')`), null, 'and clears');
 });
 
 test('a novel still gets NEO\'s Enter rhythm (anchors change nothing)', async () => {
