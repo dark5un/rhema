@@ -18,7 +18,12 @@ carry anchors. Target: <300 changed lines across core files.
 | `document.title = ... 'Rhema' /* RHEMA */` in `showWindowTitle()` | window title says Rhema | 0 |
 | `checkForUpdate()` `state === 'off'` branch | honest "Updates arrive by hand" notice instead of a fake "up to date" (Stone 15) | 0 |
 | `showAbout()` `<h2>Rhema</h2>` | About modal heading (hardcoded, bypasses t()) | 0 |
-| (future) enter-key call-site, menu call-sites, cards, export formats, settings panes | one `NeoHooks.emit(...)` per hook surface | 2+ |
+| `requestPaint()` provider line + `hasSecret` guard | `RhemaSettings.configured()` routes covers through ai.js (provider `'rhema'`); the key check is skipped for local endpoints | 1 |
+| `paintCover` call options | `settings: RhemaSettings.aiSettings()` passed to `cover:paint` | 1 |
+| `refreshCover()` `hasKey` line | a configured Rhema AI counts as "paintable" without an OpenAI secret | 1 |
+| `snapsToThin(snaps, now, keepDays)` | Stone 6: retention parameter (default = upstream 30; 0/Infinity = unlimited); call site passes `RhemaSettings.snapKeepDays()` | 1 |
+| `WINDOWS` list + `msg.type === 'rhemaSettings'` | File → Rhema AI… opens `RhemaSettings.open()` | 1 |
+| (future) enter-key call-site, menu call-sites, cards, export formats | one `NeoHooks.emit(...)` per hook surface | 2+ |
 
 ## i18n.js
 
@@ -42,21 +47,26 @@ name are the only literal renames (both listed above).
 | `Rhema Library` (6 sites, was `NEO Library`) | library folder name | 0 |
 | `applicationName: 'Rhema'` (about panel) | product name | 0 |
 | startup migration block after `LIBRARY_FILE` | first-run adoption: if Rhema Library is empty but a NEO Library exists, ask once to open it (books from NEO never look "gone") | 0 |
-| (future) `ai:*` IPC handlers, import formats, snapshot retention setting | | 1–3 |
+| `cover:paint` handler | provider `'rhema'` branch → `ai.js` `paintCover`; secret name `rhema-ai`, key optional for local endpoints | 1 |
+| `rhemaAiSettings()` + `ai:test` handler | library.rhema.ai fallback read; the settings pane's Test button | 1 |
+| `dailyBackup()` `keep:` + `rhemaBackupKeep()` | Stone 6: backup retention from library.rhema.retention.backups (default 14, `'unlimited'` → keep all) | 1 |
+| File menu `Rhema AI…` item | opens the Rhema settings pane (behind Show More Features, like Cover Art…) | 1 |
+| (future) import formats | | 3 |
 | (deferred, before any auto-update re-enable) `latestReleaseFromGitHub()` | still fetches hughhowey/neo with UA 'NEO-App'; must be pointed at dark5un/rhema when RHEMA_AUTO_UPDATE flips to true, so the fallback link matches the publish feed | 15-re |
 
 ## preload.js
 
 | Anchor | What | Phase |
 |--------|------|-------|
-| (future) `window.neo.rhema` bridge | namespaced IPC for Rhema features | 1+ |
+| `window.neo.rhema` bridge | namespaced IPC (`test` → `ai:test`); more Rhema IPC joins this object | 1+ |
 
 ## index.html
 
 | Anchor | What | Phase |
 |--------|------|-------|
 | `<title>Rhema</title>`, `<h1>Rhema</h1>` | product name | 0 |
-| (future) Rhema `<script>` tags (~4 lines) | new fork files | 2+ |
+| `<script src="rhema-settings.js">` | the Rhema settings pane module (before app.js) | 1 |
+| (future) more Rhema `<script>` tags | new fork files | 2+ |
 
 ## package.json (no comments possible — listed here instead)
 
@@ -78,6 +88,8 @@ name are the only literal renames (both listed above).
 | `scripts/library-folder.test.js` | expectations follow the 'Rhema Library' rename (marked) |
 | `scripts/filesystem.test.js` | catalog header expectation follows the i18n brand seam (marked) |
 | `scripts/*.e2e.js` (9) + `scripts/try.js` | seed 'Rhema Library' to match main.js default; verified at upstream baseline parity (words 22/0, tabs 9/0, notes 14/0, footnotes 24/0, caret 14/0, cover-text 2/0, manuscript 5/0, simple 14/0, pages 9/4 = 4 pre-existing env failures) |
+| `scripts/rhema-ai.test.js` | Phase 1: ComfyUI workflow builder, retention knobs (keepValue + snapsToThin unlimited), settings gate, brief plumbing — hermetic |
+| `scripts/rhema-ai-live.js` | NOT in npm test: live chain check (Strata brief → ComfyUI render) against this machine's endpoints |
 
 ## Hook bus semantics (note for Phase 2)
 

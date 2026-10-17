@@ -42,6 +42,8 @@ contextBridge.exposeInMainWorld('neo', {
   paintCover: (bookId, text, options) => ipcRenderer.invoke('cover:paint', bookId, text, options),
   setSecret: (name, value) => ipcRenderer.invoke('secret:set', name, value),
   hasSecret: (name) => ipcRenderer.invoke('secret:has', name),
+  /* RHEMA — namespaced bridge for Rhema features */
+  rhema: { test: (settings) => ipcRenderer.invoke('ai:test', settings) },
   importFiles: (paths) => ipcRenderer.invoke('import:files', paths),
   pathForFile: (file) => webUtils.getPathForFile(file),
   fullscreenEscape: () => ipcRenderer.invoke('fullscreen:escape'),

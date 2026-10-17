@@ -1,0 +1,153 @@
+// Rhema — AI settings pane /* RHEMA */
+//
+// File → Rhema AI…: the local text endpoint (OpenAI-compatible), the image
+// endpoint (ComfyUI or OpenAI-compatible), and the backup/snapshot retention
+// knobs (Stone 6, unlimited included). Everything lives in library.rhema —
+// namespaced so upstream's library.json keys never collide. The API key goes
+// through secret:set ('rhema-ai'), never into the library folder.
+//
+// Loaded before app.js; exposes window.RhemaSettings (the NeoCovers pattern).
+
+'use strict';
+
+const RhemaSettings = (() => {
+
+  const cfg = () => library.rhema || {};
+  const aiSettings = () => cfg().ai || {};
+  const retention = () => cfg().retention || {};
+
+  // retention values: undefined -> default; days -> days; 0/'unlimited' -> keep all
+  const keepValue = (v, dflt) => {
+    if (v === 'unlimited' || v === 0) return Infinity;
+    const n = Number(v);
+    return Number.isFinite(n) && n > 0 ? n : dflt;
+  };
+
+  // A text base plus an image endpoint is enough to paint through Rhema's own
+  // plumbing (ai.js in the main process); until then the upstream OpenAI path
+  // stays in charge.
+  const configured = () => {
+    const ai = aiSettings();
+    return !!(ai.text && ai.text.base && ai.image && ai.image.provider && ai.image.url);
+  };
+
+  // Snapshot thinning days for snapsToThin (app.js); Infinity = keep everything.
+  const snapKeepDays = () => keepValue(retention().snapshots, 30);
+
+  function open() {
+    const ai = aiSettings();
+    const ret = retention();
+    const text = ai.text || {};
+    const img = ai.image || {};
+    const bd = document.createElement('div');
+    bd.className = 'modal-backdrop';
+    const sel = (v, opts) => opts.map((o) => `<option value="${o[0]}"${String(v) === String(o[0]) ? ' selected' : ''}>${t(o[1])}</option>`).join('');
+    bd.innerHTML = `
+      <div class="modal" style="width:600px">
+        <h2 style="font-size:17px">${t('Rhema AI')}</h2>
+        <p>${t('Rhema can read a book once it passes {n} words and paint its cover with your own local models: a language model writes the brief, an image model paints it. Nothing leaves this computer.', { n: PAINT_AT })}</p>
+        <div class="stats-row">
+          <label>${t('Text model URL')} <input id="ra-base" type="text" spellcheck="false" style="width:300px" placeholder="http://localhost:11434/v1" value="${escHtml(text.base || '')}"/></label>
+        </div>
+        <div class="stats-row">
+          <label>${t('Model')} <input id="ra-model" type="text" spellcheck="false" style="width:220px" placeholder="qwen3.8-flash-next-iq3_s" value="${escHtml(text.model || '')}"/></label>
+          <label>${t('API key')} <input id="ra-key" type="password" autocomplete="off" spellcheck="false" style="width:220px"/></label>
+        </div>
+        <p class="soft" id="ra-keynote" style="margin:-6px 0 12px;font-size:12px"></p>
+        <div class="stats-row">
+          <label>${t('Paint with')}
+            <select id="ra-imgprovider">${sel(img.provider || '', [['', 'no image endpoint'], ['comfyui', 'ComfyUI'], ['openai', 'OpenAI-compatible']])}</select>
+          </label>
+          <label>${t('Image URL')} <input id="ra-imgurl" type="text" spellcheck="false" style="width:240px" placeholder="http://localhost:3101" value="${escHtml(img.url || '')}"/></label>
+        </div>
+        <details class="st-advanced"${img.provider === 'comfyui' ? ' open' : ''}>
+          <summary class="soft">${t('ComfyUI')}</summary>
+          <div class="stats-row">
+            <label>${t('Checkpoint')} <input id="ra-ckpt" type="text" spellcheck="false" style="width:240px" placeholder="juggernautXL_v9.safetensors" value="${escHtml(img.checkpoint || '')}"/></label>
+            <label>${t('Size')}
+              <select id="ra-size">${sel(img.width ? img.width + 'x' + img.height : '832x1216', [['832x1216', '832 × 1216'], ['1024x1536', '1024 × 1536'], ['672x1344', '672 × 1344']])}</select>
+            </label>
+            <label>${t('Steps')} <input id="ra-steps" type="number" min="10" max="100" style="width:64px" value="${img.steps || 30}"/></label>
+            <label>${t('CFG')} <input id="ra-cfg" type="number" min="1" max="20" step="0.5" style="width:64px" value="${img.cfg || 6}"/></label>
+          </div>
+          <p class="soft" style="font-size:12px;margin:0 0 6px">${t('The workflow is built for you; a custom ComfyUI API workflow (with {{POSITIVE}}, {{SEED}}…) can be set in the library file.')}</p>
+        </details>
+        <details class="st-advanced">
+          <summary class="soft">${t('Backups and snapshots')}</summary>
+          <div class="stats-row">
+            <label>${t('Keep daily backups for')}
+              <select id="ra-retbackups">${sel(ret.backups === undefined ? 14 : ret.backups, [[14, '14 days'], [30, '30 days'], [90, '90 days'], [365, '365 days'], ['unlimited', 'unlimited']])}</select>
+            </label>
+            <label>${t('Keep automatic snapshots for')}
+              <select id="ra-retsnaps">${sel(ret.snapshots === undefined ? 30 : ret.snapshots, [[30, '30 days'], [90, '90 days'], [365, '365 days'], ['unlimited', 'unlimited']])}</select>
+            </label>
+          </div>
+          <p class="soft" style="font-size:12px;margin:0 0 6px">${t('Snapshots you take yourself (⌘S) are always kept. “Unlimited” never deletes — the library folder just grows.')}</p>
+        </details>
+        <div style="text-align:right;margin-top:14px">
+          <button id="ra-test" class="btn-quiet" style="margin-right:10px">${t('Test')}</button>
+          <button class="m-cancel btn-quiet" style="margin-right:10px">${t('Cancel')}</button>
+          <button class="m-ok btn-gold">${t('Save')}</button>
+        </div>
+        <p class="soft" id="ra-testnote" style="margin:8px 0 0;font-size:12px"></p>
+      </div>`;
+    document.body.appendChild(bd);
+    const note = bd.querySelector('#ra-keynote');
+    const key = bd.querySelector('#ra-key');
+    window.neo.hasSecret('rhema-ai').then((has) => {
+      note.textContent = has
+        ? t('A key is saved, encrypted, outside your library folder. Paste a new one to replace it, or type “{remove}” to forget it.', { remove: t('remove') })
+        : t('Local endpoints usually need no key. If yours does, it is stored encrypted on this computer and only ever sent to the URL above.');
+    });
+    const done = () => bd.remove();
+    bd.querySelector('.m-cancel').onclick = done;
+    bd.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); done(); } });
+    const collect = () => {
+      const size = (bd.querySelector('#ra-size').value || '832x1216').split('x');
+      const provider = bd.querySelector('#ra-imgprovider').value;
+      return {
+        text: {
+          base: bd.querySelector('#ra-base').value.trim().replace(/\/+$/, '') || undefined,
+          model: bd.querySelector('#ra-model').value.trim() || undefined,
+          tokenParam: 'max_tokens'
+        },
+        image: provider ? {
+          provider,
+          url: bd.querySelector('#ra-imgurl').value.trim().replace(/\/+$/, '') || undefined,
+          checkpoint: bd.querySelector('#ra-ckpt').value.trim() || undefined,
+          width: parseInt(size[0], 10) || 832,
+          height: parseInt(size[1], 10) || 1216,
+          steps: parseInt(bd.querySelector('#ra-steps').value, 10) || 30,
+          cfg: parseFloat(bd.querySelector('#ra-cfg').value) || 6
+        } : undefined
+      };
+    };
+    bd.querySelector('#ra-test').onclick = async () => {
+      const tn = bd.querySelector('#ra-testnote');
+      tn.textContent = t('Testing…');
+      const res = await window.neo.rhema.test(collect()).catch((err) => ({ error: String(err) }));
+      const line = (r) => r && r.ok ? (r.models ? t('ok — {n} models', { n: String(r.models.length) }) : t('ok')) : t('failed: {error}', { error: (r && r.error) || '?' });
+      tn.textContent = t('Text: {text} · Paint: {image}', { text: line(res.text), image: line(res.image) });
+    };
+    bd.querySelector('.m-ok').onclick = async () => {
+      const k = key.value.trim();
+      if (k === 'remove' || k === t('remove')) await window.neo.setSecret('rhema-ai', '');
+      else if (k) await window.neo.setSecret('rhema-ai', k);
+      const back = bd.querySelector('#ra-retbackups').value;
+      const snaps = bd.querySelector('#ra-retsnaps').value;
+      library.rhema = {
+        ai: collect(),
+        retention: {
+          backups: back === 'unlimited' ? 'unlimited' : parseInt(back, 10),
+          snapshots: snaps === 'unlimited' ? 'unlimited' : parseInt(snaps, 10)
+        }
+      };
+      await writeLibrary(library);
+      done();
+    };
+  }
+
+  return {
+    configured, aiSettings, retention, keepValue, snapKeepDays, open
+  };
+})();

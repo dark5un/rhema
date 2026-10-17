@@ -1071,6 +1071,16 @@ ipcMain.handle('secret:set', (_e, name, value) => {
 
 ipcMain.handle('secret:has', (_e, name) => !!readSecret(name));
 
+/* RHEMA — library.rhema.ai as a fallback when the renderer sends no settings */
+function rhemaAiSettings() {
+  try { const lib = readJSON(LIBRARY_FILE, {}); return (lib.rhema && lib.rhema.ai) || {}; } catch { return {}; }
+}
+
+/* RHEMA — the Rhema AI pane's Test button: ping both endpoints, report */
+ipcMain.handle('ai:test', (_e, settings) =>
+  require('./ai.js').testEndpoints({ settings, apiKey: readSecret('rhema-ai') })
+    .catch((err) => ({ error: String((err && err.message) || err) })));
+
 // One painting at a time per book; a second request while one is running
 // simply gets the running one's answer.
 const paintJobs = new Map();
@@ -1079,13 +1089,21 @@ ipcMain.handle('cover:paint', (_e, bookId, text, options) => {
   if (paintJobs.has(bookId)) return paintJobs.get(bookId);
   const job = (async () => {
     const provider = (options && options.provider) || 'openai';
-    const apiKey = readSecret(provider);
-    if (!apiKey) return { error: t('No API key for {provider} — add one under File → Cover Art…', { provider }) };
+    /* RHEMA — 'rhema': local OpenAI-compatible text endpoint + ComfyUI (ai.js).
+       The key is optional: local endpoints usually have none. */
+    const isRhema = provider === 'rhema';
+    const apiKey = readSecret(isRhema ? 'rhema-ai' : provider);
+    if (!isRhema && !apiKey) return { error: t('No API key for {provider} — add one under File → Cover Art…', { provider }) };
     const dir = bookDir(bookId);
     if (!fs.existsSync(dir)) return { error: t('Book folder is missing') };
     try {
-      const art = require('./art.js');
-      const out = await art.paintCover({
+      const out = isRhema
+        ? await require('./ai.js').paintCover({
+            settings: (options && options.settings) || rhemaAiSettings(),
+            apiKey,
+            text: String(text || '')
+          })
+        : await require('./art.js').paintCover({
         provider,
         apiKey,
         text: String(text || ''),
@@ -2133,10 +2151,22 @@ function dailyBackup() {
       finish(null);
     });
     child.on('exit', (code) => finish(code ? new Error('the backup stopped (' + code + ')') : null));
-    child.postMessage({ libraryDir: LIBRARY_DIR, target, keep: 14, fileLimitMs: BACKUP_FILE_LIMIT_MS });
+    /* RHEMA — Stone 6: backup retention is a setting, unlimited included */
+    child.postMessage({ libraryDir: LIBRARY_DIR, target, keep: rhemaBackupKeep(), fileLimitMs: BACKUP_FILE_LIMIT_MS });
   });
 }
 let backupRunning = false;
+
+/* RHEMA — library.rhema.retention.backups: days, or 'unlimited' (keep all) */
+function rhemaBackupKeep() {
+  try {
+    const r = (readJSON(LIBRARY_FILE, {}).rhema || {}).retention || {};
+    const v = r.backups;
+    if (v === 'unlimited' || v === 0) return Number.MAX_SAFE_INTEGER;
+    const n = Number(v);
+    return Number.isFinite(n) && n > 0 ? n : 14;
+  } catch { return 14; }
+}
 
 // ---------------------------------------------------------------------------
 // Window
@@ -2632,6 +2662,7 @@ function buildMenu() {
         { label: t('Take Snapshot'), accelerator: 'CmdOrCtrl+S', registerAccelerator: false, click: () => sendToWindow({ type: 'snapshot' }) },
         { type: 'separator' },
         { more: true, label: t('Cover Art…'), click: () => sendToWindow({ type: 'coverArt' }) },
+        { more: true, label: t('Rhema AI…'), click: () => sendToWindow({ type: 'rhemaSettings' }) }, /* RHEMA */
         {
           label: t('Goals…'),
           accelerator: 'CmdOrCtrl+,',

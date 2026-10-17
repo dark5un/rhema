@@ -2180,8 +2180,9 @@ function bookPlainText() {
 
 // Paint the open book, or a book on the shelf (text is read from disk then).
 async function requestPaint(meta, text) {
-  const provider = coverProvider();
-  if (!(await window.neo.hasSecret(provider))) {
+  /* RHEMA — a configured local endpoint paints through Rhema's own plumbing (ai.js) */
+  const provider = RhemaSettings.configured() ? 'rhema' : coverProvider();
+  if (provider !== 'rhema' && !(await window.neo.hasSecret(provider))) {
     if (!library.coverArtNudged) {
       library.coverArtNudged = true;
       await writeLibrary(library);
@@ -2209,7 +2210,7 @@ async function requestPaint(meta, text) {
   const mine = (cs.models && cs.models[provider]) || {};
   let res = null;
   try {
-    res = await window.neo.paintCover(meta.id, text, { provider, textModel: mine.text, imageModel: mine.image, quality: cs.quality });
+    res = await window.neo.paintCover(meta.id, text, { provider, textModel: mine.text, imageModel: mine.image, quality: cs.quality, /* RHEMA */ settings: provider === 'rhema' ? RhemaSettings.aiSettings() : undefined });
   } catch (err) {
     window.neo.logError('paint request: ' + (err && err.stack || err));
     res = { error: String((err && err.message) || err) };
@@ -2247,7 +2248,7 @@ async function refreshCover(meta, el) {
   const enough = (meta.wordCount || 0) >= PAINT_AT;
   // a bound book's cover has no text of its own to paint from
   // (painting is behind Show More Features; a painting already made still shows)
-  const hasKey = meta.kind !== 'cover' && moreOn() && await window.neo.hasSecret(coverProvider());
+  const hasKey = meta.kind !== 'cover' && moreOn() && (RhemaSettings.configured() /* RHEMA */ || await window.neo.hasSecret(coverProvider()));
   const options = [];
   if (meta.coverImage && mode !== 'image') options.push({ label: t('Show your cover art'), desc: t('The image you gave this book.'), value: 'image' });
   if (hasPainting(meta) && mode !== 'painted') options.push({ label: t('Show NEO’s painting'), desc: t('The cover painted from the text.'), value: 'painted' });
@@ -12406,9 +12407,11 @@ function textHash(str) {
 }
 // NEO's own snapshots older than a month go, by their names alone (so every
 // device picks the same ones); ⌘S snapshots and the newest one stay
-function snapsToThin(snaps, now) {
+function snapsToThin(snaps, now, keepDays = SNAP_KEEP_DAYS) {
+  // RHEMA — Stone 6: retention is a setting; 0 or Infinity keeps everything
+  if (!(keepDays > 0) || keepDays === Infinity) return [];
   const newest = snaps.reduce((a, s) => (!a || s.at > a.at ? s : a), null);
-  return snaps.filter((s) => s !== newest && s.kind !== SNAP_KEPT && now - s.at > SNAP_KEEP_DAYS * 86400000).map((s) => s.name);
+  return snaps.filter((s) => s !== newest && s.kind !== SNAP_KEPT && now - s.at > keepDays * 86400000).map((s) => s.name);
 }
 // where a chapter's text at snapshots[i] is: the newest snapshot at or
 // before it holding the file (snapshots oldest first, each with `files`)
@@ -12541,7 +12544,7 @@ async function takeSnapshotNow(kind, htmlOf, { ifNoneToday }) {
   snap.meta = meta;
   snaps.push(snap);
   // NEO's own old ones go, each handing its chapters on to the next first
-  for (const gone of snapsToThin(snaps, now)) {
+  for (const gone of snapsToThin(snaps, now, RhemaSettings.snapKeepDays() /* RHEMA */)) {
     const i = snaps.findIndex((s) => s.name === gone);
     const next = snaps[i + 1];
     if (i < 0 || !next) continue;
@@ -17733,7 +17736,7 @@ window.neo.onMenu(async (msg) => {
   if ($('#keyboard-shortcuts') && msg.type !== 'help') return;
   // a window the menu opens (⌘, for Goals, say) never stacks on one that's
   // already open: pressing it again used to pile up overlays
-  const WINDOWS = ['stats', 'about', 'emailSettings', 'coverArt', 'reshelve', 'checkUpdate'];
+  const WINDOWS = ['stats', 'about', 'emailSettings', 'coverArt', 'rhemaSettings', 'reshelve', 'checkUpdate']; /* RHEMA */
   if (WINDOWS.includes(msg.type) && document.querySelector('.modal-backdrop:not([hidden])')) {
     if (msg.type === 'checkUpdate' && updateDialog) updateDialog.focus();
     return;
@@ -17781,6 +17784,7 @@ window.neo.onMenu(async (msg) => {
     if (window.neo.writingStyleState) window.neo.writingStyleState(library.writingStyle);
   }
   if (msg.type === 'coverArt') openCoverArt();
+  if (msg.type === 'rhemaSettings') RhemaSettings.open(); /* RHEMA */
   // a script's lines sit where they print: no alignment, poetry or flush
   if (msg.type === 'align' && !(book && isScript())) {
     applyAlign(msg.value);
