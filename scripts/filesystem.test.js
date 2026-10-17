@@ -153,7 +153,7 @@ describe('filesystem', { concurrency: 1 }, () => {
       assert.equal(main.call('library:write', library), true);
       const catalog = path.join(dir, '_catalog.txt');
       const text = fs.readFileSync(catalog, 'utf8');
-      assert.match(text, /NEO LIBRARY CATALOG — which folder is which book/);
+      assert.match(text, /Rhema LIBRARY CATALOG — which folder is which book/); // /* RHEMA */ visible header rebranded by the i18n brand seam
       assert.match(text, /regenerated automatically; edits here do nothing/);
       assert.match(text, new RegExp(`Hello  —  ${book.id}  —  shelf: Works in Progress`));
 

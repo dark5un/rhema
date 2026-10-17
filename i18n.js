@@ -63,6 +63,13 @@
       plural = savedPlural;
     }
     if (str == null) str = key;
+    /* RHEMA — display-only rebrand: every visible string (this file is shared
+       by the main process and the window) says Rhema, while upstream's English
+       keys and every locales/*.json stay byte-identical for clean merges.
+       Branded BEFORE variable fill, so a writer's own words — a title with
+       "NEO" in it — are never touched; strings crediting upstream (hughhowey)
+       are skipped. */
+    if (str && !str.includes('hughhowey')) str = str.replace(/\bNEO\b/g, 'Rhema');
     return fill(str, vars);
   }
 

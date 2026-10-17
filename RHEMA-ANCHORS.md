@@ -14,7 +14,22 @@ carry anchors. Target: <300 changed lines across core files.
 | Anchor | What | Phase |
 |--------|------|-------|
 | `RHEMA — hook bus` block after the i18n preamble | `NeoHooks` — `on`/`emit`/`has` + `registerFormat`/`format` registry (~25 lines). Additive: no listeners = no-op. | 0 |
+| `document.title = ... 'Rhema' /* RHEMA */` in `showWindowTitle()` | window title says Rhema | 0 |
 | (future) enter-key call-site, menu call-sites, cards, export formats, settings panes | one `NeoHooks.emit(...)` per hook surface | 2+ |
+
+## i18n.js
+
+| Anchor | What | Phase |
+|--------|------|-------|
+| brand replace inside `t()` | Display-only rebrand: `\bNEO\b` → `Rhema` applied to the translated/English template BEFORE variable fill (writer's own words in `{vars}` are never touched; strings containing `hughhowey` skipped). Shared by main process and window, so every visible string — dialogs, menus, toasts, all locales — rebrands through this one line. Upstream keys and all `locales/*.json` stay byte-identical: zero merge friction. | 0 |
+
+## Rebrand strategy (Panos, 2026-10-17)
+
+Only what is VISIBLE says Rhema. Code identifiers, comments, env vars
+(`NEO_TRY_DIR`), locale keys, and upstream string literals keep "NEO" —
+renaming them would collide with upstream on every merge. The i18n.js brand
+line is the single seam; `index.html` title/h1 and the main.js library-folder
+name are the only literal renames (both listed above).
 
 ## main.js
 
