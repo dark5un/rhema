@@ -807,6 +807,10 @@ test('chapbook: a real 5x8 PDF renders with the verse, the mark, and 5x8 pages',
   const to = path.join(tmp, 'chapbook-5x8.pdf');
   try { fs.unlinkSync(to); } catch { /* new */ }
   dialog.showSaveDialog = async () => ({ canceled: false, filePath: to });
+  // Stone 17: poem 0 declares a generated kind drawing — it must ride the
+  // print side INLINE (Paged.js pitfall: ancestor CSS selectors do not
+  // apply in the print window; the mark carries everything inline)
+  await js(`(() => { if (!book.rhema) book.rhema = {}; book.rhema.poems = book.rhema.poems || {}; book.rhema.poems[book.chapterOrder[0]] = Object.assign({}, book.rhema.poems[book.chapterOrder[0]], { drawing: 'kind:fleuron' }); saveMeta(); })()`);
   await js(`(() => { window.__pb = printPaperback(); })()`);
   assert.ok(await until(() => js(`!!document.querySelector('.modal-backdrop .m-ok')`), 15000), 'the chapbook dialog opened');
   await js(`document.querySelector('.modal-backdrop .m-ok').click()`);
@@ -823,6 +827,8 @@ test('chapbook: a real 5x8 PDF renders with the verse, the mark, and 5x8 pages',
   assert.ok(html.includes('rhema-poem-mark'), 'the print HTML carries the poem mark');
   assert.ok(!html.includes('class="ch-num"'), 'a titled poem prints its title alone — no POEM n label (UX gate)');
   assert.ok(html.includes('class="poetry" style="margin-top:0.9em"'), 'the second stanza of a poem carries the widened stanza gap inline (UX round 2)');
+  assert.ok(/class="rhema-mark-drawing"[^>]*>\s*<svg[^>]*viewBox="0 0 80 80"/.test(html), 'the kind drawing rides the print HTML as INLINE svg (not an img, no ancestor CSS) — Stone 17');
+  await js(`(() => { delete book.rhema.poems[book.chapterOrder[0]].drawing; saveMeta(); })()`);
   await js(`(async () => { try { await window.__pb; } catch {} })()`); // settle the job
 });
 
