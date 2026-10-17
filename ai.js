@@ -120,7 +120,7 @@ async function listModels(base, apiKey) {
 // ---------------------------------------------------------------------------
 
 async function writeBrief({ base, apiKey, model, tokenParam, text }) {
-  if (!base) throw new Error('No AI base URL set — add one under File → Rhema AI…');
+  if (!base) throw new Error('No AI base URL set — add one under File → Rhema Settings…');
   base = assertHttpUrl(base, 'the text model URL');
   const defaults = [model];
   try { defaults.push(...(await listModels(base, apiKey))); } catch { /* the configured name will have to do */ }
@@ -211,7 +211,7 @@ function buildWorkflow(workflow, { positive, negative, checkpoint, width, height
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function comfyuiPaint({ url, workflow, brief, checkpoint, width, height, steps, cfg, seed, timeoutMs = 5 * 60 * 1000 }) {
-  if (!url) throw new Error('No ComfyUI URL set — add one under File → Rhema AI…');
+  if (!url) throw new Error('No ComfyUI URL set — add one under File → Rhema Settings…');
   url = assertHttpUrl(url, 'the ComfyUI URL');
   let graph;
   try {

@@ -685,6 +685,10 @@ const RhemaPoetry = (() => {
   function prettyName(name) {
     const s = String(name || '').replace(/\.(txt|md|docx|pdf|fountain|fdx)$/i, '')
       .replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
+    // Greek titles are sentence-case by convention: only the Latin path
+    // capitalizes every word (UI review round 2: 'ο-αστεράκι' must not
+    // become 'Ο Αστεράκι')
+    if (/[α-ωΑ-Ω]/.test(s)) return s.replace(/^./, (c) => c.toUpperCase());
     return s.replace(/(^|\s)(.)/g, (_m, sp, ch) => sp + ch.toUpperCase());
   }
 

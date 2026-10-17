@@ -15986,7 +15986,7 @@ function buildPrintHtml(d, o) {
     if (head) head = `<header class="ch-head">${head}</header>`;
     const pg1 = !back && !numbered;
     if (pg1) numbered = true;
-    body += `<section class="${back ? 'backpage' : 'chapter'}${pg1 ? ' pg1' : ''}" id="${id}">${head}${prose(s.paras, !back && !!head)}${NeoHooks.emit('exportSectionEnd', s, d) || ''}</section>`; /* RHEMA — the poem mark prints too (qrmark.js) */
+    body += `<section class="${back ? 'backpage' : 'chapter'}${pg1 ? ' pg1' : ''}${poemBook() && !back ? ' poem' : ''}" id="${id}">${head}${prose(s.paras, !back && !!head)}${NeoHooks.emit('exportSectionEnd', s, d) || ''}</section>`; /* RHEMA — the poem mark prints too (qrmark.js) */
   }
   const back = [];
   // a note to the reader: a review, and where to find the writer
@@ -16081,6 +16081,9 @@ ${cap ? `p.first:not(.dialogue)::first-letter { initial-letter: 2; -webkit-initi
 p.brk { text-align: center; margin: 0.7em 0; break-after: avoid; letter-spacing: 0.1em; }
 p.poetry { margin: 0.5em 1.5em; text-align: left; }
 p.poetry + p.poetry { margin-top: 0; }
+/* RHEMA — a poet's stanza break must read as a gap at a glance: ~2x line
+   pitch between stanzas in poem books (UX review round 2) */
+section.poem p.poetry + p.poetry { margin-top: 0.9em; }
 .backpage p.hy { text-indent: 0; margin-bottom: 0.7em; }
 .also p { text-align: center; font-style: italic; margin: 0 0 0.45em; }
 .note .reach-hd { margin-top: 1.4em; text-align: center; letter-spacing: 0.18em; text-transform: uppercase; font-size: 0.85em; }

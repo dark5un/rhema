@@ -1014,5 +1014,7 @@
  "never — one file, one poem": "ποτέ — ένα αρχείο, ένα ποίημα",
  "A single blank line is always a stanza break. Whatever the split, you can join poems or split them again in the editor: press Enter three times to start a new poem.": "Μία κενή γραμμή είναι πάντα αλλαγή στροφής. Όποια και αν είναι η ρύθμιση διαχωρισμού, μπορείτε να ενώσετε ή να χωρίσετε ποιήματα στον επεξεργαστή: πατώντας τρεις φορές το Enter ξεκινά νέο ποίημα.",
  "Chapbook PDF": "Φυλλάδιο PDF",
- "A print-ready interior PDF and a cover template sized to its page count.": "Ένα έτοιμο για εκτύπωση εσωτερικό PDF και ένα πρότυπο εξωφύλλου προσαρμοσμένο στον αριθμό σελίδων του."
+ "A print-ready interior PDF and a cover template sized to its page count.": "Ένα εσωτερικό PDF έτοιμο για εκτύπωση και ένα πρότυπο εξωφύλλου προσαρμοσμένο στον αριθμό σελίδων του.",
+ "No AI base URL set — add one under File → Rhema Settings…": "Δεν έχει οριστεί διεύθυνση AI — προσθέστε μία από Αρχείο → Ρυθμίσεις Ρήματος…",
+ "No ComfyUI URL set — add one under File → Rhema Settings…": "Δεν έχει οριστεί διεύθυνση ComfyUI — προσθέστε μία από Αρχείο → Ρυθμίσεις Ρήματος…"
 }
