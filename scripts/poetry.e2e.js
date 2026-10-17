@@ -271,6 +271,41 @@ test('deleting a poem prunes its status record', async () => {
   assert.equal(gone, true, 'book.rhema.poems follows the chapter out');
 });
 
+test('scraps: Alt+Shift+X cuts the line, the drawer holds it tagged, Put in returns it', async () => {
+  // poem 0 stands: stanzas ['First line','second'] + ['new stanza']
+  await js('currentChapterId = book.chapterOrder[0]');
+  await caretInLine(0, 1, 0); // caret on 'second'
+  await key({ key: 'x', code: 'KeyX', altKey: true, shiftKey: true });
+  await tick(120);
+  const list = await js('RhemaScraps.list()');
+  assert.equal(list.length, 1, 'the line landed in Scraps');
+  assert.deepEqual(list[0].lines, ['second']);
+  assert.equal(list[0].originChId, await js('book.chapterOrder[0]'), 'tagged with its poem');
+  let st = await stanzasOf(0);
+  assert.deepEqual(st[0].lines, ['First line'], 'and left the poem');
+  // the drawer shows it, with the Scraps tab visible for a poem book
+  assert.equal(await js('document.querySelector(\'.tab[data-tab="scraps"]\').hidden'), false);
+  await js('document.querySelector(\'.tab[data-tab="scraps"]\').click()');
+  await tick(200);
+  const cards = await js('document.querySelectorAll("#rhema-scraps .rhema-scrap").length');
+  assert.equal(cards, 1, 'the drawer lists the scrap');
+  // put it back into the other stanza
+  await js('document.querySelector(\'.tab[data-tab="manuscript"]\').click()');
+  await tick(200);
+  await js('currentChapterId = book.chapterOrder[0]');
+  await caretInLine(1, 0, 0); // 'new stanza'
+  await js('RhemaScraps.putIn(RhemaScraps.list()[0])');
+  await tick(120);
+  st = await stanzasOf(0);
+  assert.deepEqual(st[1].lines, ['new stanza', 'second'], 'the line came back under the caret');
+  // and it is on disk
+  const sidecar = path.join(LIB, fs.readdirSync(LIB).find((d) => d.startsWith('book-')), 'rhema-scraps.json');
+  await js('flushSidecars && flushSidecars()');
+  await tick(300);
+  assert.ok(fs.existsSync(sidecar), 'rhema-scraps.json written');
+  assert.equal(JSON.parse(fs.readFileSync(sidecar, 'utf8')).length, 1);
+});
+
 test('a novel still gets NEO\'s Enter rhythm (anchors change nothing)', async () => {
   await js(`(async () => {
     await addImportedBooks([{ name: 'A Novel', chapters: [{ title: 'One', paras: [{ text: 'Prose here.' }, { text: 'More prose.' }] }] }], library.shelves[0]);

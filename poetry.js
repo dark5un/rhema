@@ -611,7 +611,9 @@ const RhemaPoetry = (() => {
     isPoemBook,
     setStatus: setPoemStatus,
     getStatus: poemStatus,
-    lines: poemLines
+    lines: poemLines,
+    // stanza DOM helpers for the other Rhema files (scraps.js, compare.js)
+    dom: { stanzaParts, setParts, caretLine, setCaretLine, commit, lineText }
   });
   NeoHooks.on('poemKey', poemKey);
   NeoHooks.on('poemLineBreak', insertLineBreakDom);

@@ -120,6 +120,7 @@
         <div class="tab" role="tab" tabindex="0" aria-selected="false" data-tab="notes" data-i18n>Notes</div>
         <div class="tab" role="tab" tabindex="0" aria-selected="false" data-tab="outline" data-i18n>Outline</div>
         <div class="tab darlings" role="tab" tabindex="0" aria-selected="false" data-tab="darlings" data-i18n data-i18n-title title="Drag any selection here. It's saved, not gone.">Darlings</div>
+        <div class="tab rhema-scraps-tab" role="tab" tabindex="0" aria-selected="false" data-tab="scraps" data-i18n hidden>Scraps</div><!-- RHEMA: shown only for poem collections -->
       </div>
       <div id="counters">
         <span id="goal-counter" role="button" tabindex="0" data-i18n-title title="Today's words — click for goals, sprints, and your progress chart"></span>
@@ -152,5 +153,6 @@
   <script src="manuscript.js"></script>
   <script src="app.js"></script>
   <script src="poetry.js"></script><!-- RHEMA: after app.js — it registers into the hook bus -->
+  <script src="scraps.js"></script><!-- RHEMA -->
 </body>
 </html>

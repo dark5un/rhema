@@ -26,3 +26,11 @@
   font-size: 12px;
   opacity: 0.8;
 }
+
+/* the scraps drawer (Scraps tab) */
+#rhema-scraps { padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
+.rhema-scrap { border: 1px solid rgba(127, 127, 127, 0.35); border-radius: 8px; padding: 10px 12px; cursor: grab; }
+.rhema-scrap-text { font-style: italic; white-space: pre-line; }
+.rhema-scrap-meta { font-size: 11px; opacity: 0.65; margin-top: 6px; }
+.rhema-scrap-btns { margin-top: 8px; display: flex; gap: 8px; }
+.rhema-scrap-empty { opacity: 0.7; padding: 8px 4px; }

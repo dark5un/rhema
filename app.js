@@ -2594,6 +2594,7 @@ async function openBook(bookId) {
   $$('.tab[data-tab="notes"]')[0].textContent = tabName('notes');
   $$('.tab[data-tab="outline"]')[0].textContent = tabName('outline');
   spEditorMode(); // a script, or a book
+  NeoHooks.emit('bookOpened', book); /* RHEMA — fork features re-arm per book (scraps.js, poetry.js) */
 
   renderChapters();
   wordsFromDisk(); // what the book holds is not today's writing (#345)
@@ -8700,6 +8701,8 @@ function switchTab(name) {
   auxEditor.hidden = true;
   dList.hidden = true;
   oList.hidden = true;
+  const rhemaScraps = document.querySelector('.rhema-scraps-drawer'); /* RHEMA — the scraps drawer belongs to its tab alone */
+  if (rhemaScraps) rhemaScraps.hidden = true;
   // the outline's cards, their List/Cards switch and their hint belong to the Outline alone
   for (const id of ['#outline-board', '#outline-views', '#outline-board-hint']) { const el = $(id); if (el) el.hidden = true; }
 
@@ -8711,6 +8714,11 @@ function switchTab(name) {
     dList.hidden = false;
     renderDarlings();
     renderSnapList();
+    returnTo();
+    findHere();
+  } else if (name === 'scraps') { /* RHEMA — the poet's scraps drawer (scraps.js) */
+    $('#aux-title').textContent = t('Scraps');
+    NeoHooks.emit('scrapsTabShown');
     returnTo();
     findHere();
   } else if (name === 'outline') {
