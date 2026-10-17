@@ -1,9 +1,10 @@
 /* ==================================================================== */
-/*  RHEMA — the poem mark: QR + watermarked drawing (Stone 1a)          */
+/*  RHEMA — the poem mark: a colophon of drawing + QR (Stone 1a,         */
+/*  restyled for vector drawings by Stone 17 / Phase 2h)                 */
 /*                                                                      */
-/*  Every poem can end with a small mark: a QR of the poem and the      */
-/*  poet's drawing shown as a watermark. Both are declared PER POEM,     */
-/*  independently of each other, in book.rhema.poems[<chId>]:            */
+/*  Every poem can end with a small mark: the poet's drawing over a      */
+/*  QR of the poem. Both are declared PER POEM, independently, in        */
+/*  book.rhema.poems[<chId>]:                                           */
 /*                                                                      */
 /*    .qr      undefined = the library template (or title — author),     */
 /*             string    = this poem's own URL/text (placeholders ok),  */
@@ -11,6 +12,10 @@
 /*    .drawing undefined = the collection's drawing,                    */
 /*             fname     = this poem's own asset (rhema-drawing-<chId>) */
 /*             'off'     = no drawing for this poem                     */
+/*                                                                      */
+/*  The asset is vector (SVG) or raster — the poet's choice; every       */
+/*  drawing kind (imported, ornament, fingerprint, AI) lands as one      */
+/*  asset file, so this file renders exactly one thing.                  */
 /*                                                                      */
 /*  The mark lives OUTSIDE .chapter-body, so it never enters the        */
 /*  chapter file, and the same code builds it in the editor, the        */
@@ -70,21 +75,25 @@ const RhemaQr = (() => {
     }
   }
 
-  // ---- the mark: drawing (watermarked) beside the QR, each per poem ----
+  // ---- the mark: a small colophon — the drawing over the QR, centered.
+  // Stone 17 restyle: the old side-by-side row with a 35%-opacity raster
+  // read as a "pasted-on gray rectangle" (UX review); the mark is now a
+  // deliberate end-of-poem colophon: vector art at full strength, the QR
+  // stepped down under it, the whole block kept off page breaks.
+  // ALL styling rides inline on the elements: Paged.js page cloning does
+  // not apply ancestor-based CSS selectors in the print window (pitfall
+  // recorded 2026-10-17 — the qrmark pattern). ----
   function markHtml(chId, title, collection, author) {
     const rec = poemRec(chId);
     const qrOff = rec && rec.qr === 'off';
-    const svg = qrOff ? '' : qrSvg(payload(chId, title, collection, author), 84);
+    const svg = qrOff ? '' : qrSvg(payload(chId, title, collection, author), 64);
     const key = rec && typeof rec.drawing === 'string' && rec.drawing !== 'off' ? chId : 'collection';
     const art = (rec && rec.drawing === 'off') ? null : drawings.get(key);
     if (!svg && !art) return '';
     const artImg = art
-      ? `<img class="rhema-mark-drawing" src="${art}" alt="" style="max-height:84px;max-width:120px;opacity:.35;object-fit:contain">`
+      ? `<img class="rhema-mark-drawing" src="${art}" alt="" style="display:block;max-height:72px;max-width:160px;object-fit:contain">`
       : '';
-    // inline styles only: the export CSS stays untouched (merge posture)
-    // centered under the heading: a deliberate colophon, not stray squares
-    // (full mark restyle — vector drawings, monoline — is Stone 17 / 2h)
-    return `<div class="rhema-poem-mark" contenteditable="false" style="display:flex;align-items:flex-end;justify-content:center;gap:14px;margin-top:1.6em">${artImg}${svg ? `<span class="rhema-mark-qr" style="display:inline-block">${svg}</span>` : ''}</div>`;
+    return `<div class="rhema-poem-mark" contenteditable="false" style="display:flex;flex-direction:column;align-items:center;gap:10px;margin-top:2.2em;break-inside:avoid;page-break-inside:avoid">${artImg}${svg ? `<span class="rhema-mark-qr" style="display:inline-block">${svg}</span>` : ''}</div>`;
   }
 
   // ---- editor: the mark sits at the end of the chapter section ----
@@ -191,9 +200,10 @@ const RhemaQr = (() => {
     if (choice === 'set') {
       const token = await window.neo.rhema.assetPick(); // one-time token, not a path
       if (!token) return;
-      const fname = await window.neo.rhema.assetSet(book.id, token, chId);
-      if (!fname) { toast(t('That image could not be added.')); return; }
-      setPoemField(chId, 'drawing', fname);
+      const got = await window.neo.rhema.assetSet(book.id, token, chId);
+      if (got && got.rejected) { toast(t('That SVG cannot be used — it contains scripting or outside references.'), 4000); return; }
+      if (!got) { toast(t('That image could not be added.')); return; }
+      setPoemField(chId, 'drawing', got);
       await loadDrawing(book.id, chId);
     } else if (choice === 'clear') {
       await window.neo.rhema.assetClear(book.id, chId);
@@ -214,9 +224,10 @@ const RhemaQr = (() => {
   async function pickDrawing(meta) {
     const token = await window.neo.rhema.assetPick(); // one-time token, not a path
     if (!token) return false;
-    const fname = await window.neo.rhema.assetSet(meta.id, token, 'collection');
-    if (!fname) { toast(t('That image could not be added.')); return false; }
-    await rememberDrawing(meta, fname);
+    const got = await window.neo.rhema.assetSet(meta.id, token, 'collection');
+    if (got && got.rejected) { toast(t('That SVG cannot be used — it contains scripting or outside references.'), 4000); return false; }
+    if (!got) { toast(t('That image could not be added.')); return false; }
+    await rememberDrawing(meta, got);
     await loadDrawing(meta.id, 'collection');
     if (book && book.id === meta.id) renderChapters();
     toast(t('The collection has its drawing.'), 3000);

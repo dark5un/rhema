@@ -1028,23 +1028,18 @@ function readCover(fp, fname) {
   try {
     const buf = fs.readFileSync(fp);
     const ext = path.extname(fname).slice(1);
-    const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
+    const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp'
+      : ext === 'svg' ? 'image/svg+xml' : 'image/jpeg'; /* RHEMA — svg rides the same read path (Stone 17); the cover globs never match it */
     return { base64: buf.toString('base64'), mime, ext };
   } catch {
     return null;
   }
 }
 
-/* RHEMA — Stone 1a: the poem-mark drawings, shown watermarked at the end of
-   a poem. Fixed names in the book folder — 'rhema-drawing.(png|jpg|webp)'
-   for the collection, 'rhema-drawing-<chId>.*' for one poem; the key is
-   slug-validated, so no user input ever reaches the path. */
-const ASSET_KEY = /^[a-z0-9-]{0,64}$/;
-function assetGlob(key) {
-  const k = String(key || 'collection');
-  if (!ASSET_KEY.test(k)) return null;
-  return k === 'collection' ? /^rhema-drawing\.(png|jpg|webp)$/ : new RegExp('^rhema-drawing-' + k + '\\.(png|jpg|webp)$');
-}
+/* RHEMA — Stone 1a/17: the poem-mark drawings. Names, kinds, sanitizing
+   and writes live in rhema-assets.js (unit-testable); the handlers below
+   own the IPC surface and the one-time pick tokens. */
+const RhemaAssets = require('./rhema-assets.js');
 // Security review (2026-10-17): the renderer never names a source path.
 // pick hands back a one-time token bound to the dialog's result; set only
 // accepts tokens this handler issued — a compromised renderer cannot stage
@@ -1056,7 +1051,7 @@ ipcMain.handle('rhema:asset:pick', async () => {
   const { canceled, filePaths } = await dialog.showOpenDialog(win, {
     title: t('Choose the collection drawing'),
     properties: ['openFile'],
-    filters: [{ name: t('Images'), extensions: COVER_EXTS }]
+    filters: [{ name: t('Images'), extensions: RhemaAssets.ASSET_EXTS }] /* RHEMA — Stone 17: vectors too (not COVER_EXTS) */
   });
   if (canceled || !filePaths.length) return null;
   if (assetPicks.size > 20) assetPicks.clear(); // stale picks don't pile up
@@ -1069,40 +1064,32 @@ ipcMain.handle('rhema:asset:set', (_e, bookId, token, key) => {
     const srcPath = assetPicks.get(String(token));
     if (!srcPath) return null;
     assetPicks.delete(String(token)); // single use
-    const re = assetGlob(key);
     const ext = path.extname(srcPath).toLowerCase().replace('.', '');
-    if (!re || !COVER_EXTS.includes(ext)) return null;
-    const dir = bookDir(bookId);
-    if (!fs.existsSync(dir) || !fs.existsSync(srcPath)) return null;
-    const stem = key && key !== 'collection' ? 'rhema-drawing-' + key + '.' : 'rhema-drawing.';
-    const fname = stem + (ext === 'jpeg' ? 'jpg' : ext);
-    fs.copyFileSync(srcPath, path.join(dir, fname));
-    for (const f of fs.readdirSync(dir)) {
-      if (re.test(f) && f !== fname) fs.unlinkSync(path.join(dir, f));
-    }
-    return fname;
+    if (!RhemaAssets.assetGlob(key) || !RhemaAssets.ASSET_EXTS.includes(ext)) return null;
+    if (!fs.existsSync(srcPath)) return null;
+    return RhemaAssets.saveAsset(bookDir(bookId), key, ext, fs.readFileSync(srcPath));
   } catch (err) { logError('rhema-asset', err); return null; }
+});
+// Stone 17: the deterministic drawings (ornaments, fingerprints,
+// monograms) are generated as SVG text and saved through this channel.
+// The renderer never names a path — only the slug key — and the SVG is
+// sanitized by the same gate as an imported one.
+ipcMain.handle('rhema:asset:write', (_e, bookId, key, svgText) => {
+  try {
+    return RhemaAssets.saveAsset(bookDir(bookId), key, 'svg', String(svgText || ''));
+  } catch (err) { logError('rhema-asset-write', err); return null; }
 });
 ipcMain.handle('rhema:asset:read', (_e, bookId, key) => {
   try {
-    const re = assetGlob(key);
-    if (!re) return null;
     const dir = bookDir(bookId);
-    const fname = fs.readdirSync(dir).find((f) => re.test(f));
+    const fname = RhemaAssets.findAsset(dir, key);
     if (!fname) return null;
     return readCover(path.join(dir, fname), fname);
   } catch { return null; }
 });
 ipcMain.handle('rhema:asset:clear', (_e, bookId, key) => {
   try {
-    const re = assetGlob(key);
-    if (!re) return false;
-    const dir = bookDir(bookId);
-    if (!fs.existsSync(dir)) return true;
-    for (const f of fs.readdirSync(dir)) {
-      if (re.test(f)) fs.unlinkSync(path.join(dir, f));
-    }
-    return true;
+    return RhemaAssets.clearAsset(bookDir(bookId), key);
   } catch { return false; }
 });
 

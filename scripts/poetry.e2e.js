@@ -439,7 +439,7 @@ test('qr mark: QR and drawing are declared per poem, and can each be off', async
   await js(`(() => { delete book.rhema.poems[${JSON.stringify(ch0)}].qr; saveMeta(); })()`);
 });
 
-test('qr mark: the collection drawing sits watermarked, a poem can override it', async () => {
+test('qr mark: the collection drawing sits in the colophon, a poem can override it', async () => {
   const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
   const bookId = await js('book.id');
   const ch0 = await js('book.chapterOrder[0]');
@@ -456,9 +456,30 @@ test('qr mark: the collection drawing sits watermarked, a poem can override it',
   const art = await js(`(() => {
     const m = document.querySelector('.chapter[data-id="' + book.chapterOrder[0] + '"] > .rhema-poem-mark');
     const img = m && m.querySelector('img.rhema-mark-drawing');
-    return { has: !!img, faded: !!(img && /opacity:\\s*\\.35/.test(img.getAttribute('style') || '')), data: !!(img && img.src.startsWith('data:image/png')) };
+    const st = (m && m.getAttribute('style')) || '';
+    return { has: !!img,
+      colophon: /flex-direction:\\s*column/.test(st) && /break-inside:\\s*avoid/.test(st),
+      full: !!(img && !/opacity/.test(img.getAttribute('style') || '')), // Stone 17: no gray-rectangle watermark
+      data: !!(img && img.src.startsWith('data:image/png')) };
   })()`);
-  assert.ok(art.has && art.faded && art.data, 'the drawing shows watermarked next to the QR');
+  assert.ok(art.has && art.colophon && art.full && art.data, 'the drawing sits at full strength in the stacked colophon, kept off page breaks');
+  // Stone 17: a VECTOR drawing rides the same slot — SVG asset, same read
+  // path, same mark; and the generated-SVG channel (asset:write) saves
+  // through the same fixed-name gate.
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M2 12C8 4 16 4 22 12C16 20 8 20 2 12Z" fill="none" stroke="#000" stroke-width="1.5"/></svg>';
+  const wrote = await js(`window.neo.rhema.assetWrite(${JSON.stringify(bookId)}, 'collection', ${JSON.stringify(svg)})`);
+  assert.equal(wrote, 'rhema-drawing.svg', 'asset:write stores the generated SVG under the fixed name');
+  assert.equal(fs.existsSync(path.join(dir, 'rhema-drawing.png')), false, 'and replaces the raster (one drawing per key)');
+  const hostile = await js(`window.neo.rhema.assetWrite(${JSON.stringify(bookId)}, 'collection', '<svg><script>alert(1)</script></svg>')`);
+  assert.deepEqual(hostile, { rejected: 'script' }, 'a scripting SVG is refused with its reason');
+  await js(`RhemaQr.loadDrawing(${JSON.stringify(bookId)}, 'collection')`);
+  await js('renderChapters()');
+  await tick(250);
+  const vec = await js(`(() => {
+    const img = document.querySelector('.chapter[data-id="' + book.chapterOrder[0] + '"] > .rhema-poem-mark img.rhema-mark-drawing');
+    return !!(img && img.src.startsWith('data:image/svg+xml'));
+  })()`);
+  assert.ok(vec, 'the vector drawing reaches the mark as an svg data URL');
   // a poem's own drawing, declared independently (and its own file)
   fs.writeFileSync(path.join(dir, 'rhema-drawing-' + ch0 + '.png'), png);
   const own = 'rhema-drawing-' + ch0 + '.png';
@@ -474,7 +495,7 @@ test('qr mark: the collection drawing sits watermarked, a poem can override it',
   assert.ok(both.a && both.b, 'both poems show a drawing — the poem its own, the other the collection’s');
   // and it survives a reopen (read straight from the book folder)
   const got = await js(`window.neo.rhema.assetRead(${JSON.stringify(bookId)}, 'collection')`);
-  assert.ok(got && got.base64.length > 0, 'rhema-drawing.png reads back');
+  assert.ok(got && got.base64.length > 0 && got.mime === 'image/svg+xml', 'rhema-drawing.svg reads back with its mime');
   const cleared = await js(`window.neo.rhema.assetClear(${JSON.stringify(bookId)}, 'collection')`);
   assert.ok(cleared);
   assert.equal(await js(`window.neo.rhema.assetRead(${JSON.stringify(bookId)}, 'collection')`), null, 'and clears');

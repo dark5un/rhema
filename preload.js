@@ -48,6 +48,7 @@ contextBridge.exposeInMainWorld('neo', {
     /* RHEMA — Stone 1a: the poem-mark drawings (key: 'collection' or a chapter id) */
     assetPick: () => ipcRenderer.invoke('rhema:asset:pick'),
     assetSet: (bookId, token, key) => ipcRenderer.invoke('rhema:asset:set', bookId, token, key), // one-time pick token, not a path
+    assetWrite: (bookId, key, svgText) => ipcRenderer.invoke('rhema:asset:write', bookId, key, svgText), /* RHEMA — Stone 17: generated SVG drawings */
     assetRead: (bookId, key) => ipcRenderer.invoke('rhema:asset:read', bookId, key),
     assetClear: (bookId, key) => ipcRenderer.invoke('rhema:asset:clear', bookId, key)
   },
