@@ -658,6 +658,98 @@ const RhemaPoetry = (() => {
     if (book && book.rhema && book.rhema.poems) delete book.rhema.poems[chId];
   }
 
+  /* ---------------- import (Stone 12, Phase 3a) ---------------- */
+
+  // One parsed poem (its flagged paras) as a chapter body: stanzas are
+  // p.poetry blocks, lines are soft <br>s — exactly what the editor's
+  // Enter rhythm produces by hand. Leading indent rides in as the
+  // editor's own em-space pair.
+  function poemChapterHTML(ch) {
+    const stanzas = [];
+    let cur = null;
+    for (const p of ch.paras || []) {
+      if (p.gap || p.scene) { if (cur && cur.length) { stanzas.push(cur); cur = null; } continue; }
+      if (!p.text) continue;
+      if (!cur) cur = [];
+      cur.push(p);
+    }
+    if (cur && cur.length) stanzas.push(cur);
+    const IND = '\u2003\u2003';
+    const line = (p) => (p.indent ? IND : '') + importedEmphasis(escHtml(dialogueDashes(p.text || '', dashStyle())));
+    return stanzas.map((st) => `<p class="poetry">${st.map(line).join('<br>')}</p>`).join('') || '<p class="poetry"><br></p>';
+  }
+
+  // File → Import Poems…: each file becomes one poem collection on the
+  // current author's first shelf (the Import Manuscripts landing).
+  async function importPoems() {
+    const results = await window.neo.importPick({ poetry: true });
+    if (!results.length) return;
+    toast(t('Importing…'));
+    const shelf = shelvesFor(currentAuthor().id)[0] || library.shelves[0];
+    if (!shelf) return;
+    let ok = 0;
+    for (const r of results) {
+      if (r.error) { toast(t('Couldn’t import {name}: {error}', { name: r.name, error: r.error }), 6000); continue; }
+      const meta = await window.neo.createBook({ author: r.author || displayAuthor(), title: r.title || r.name });
+      meta.format = 'poetry';
+      meta.title = r.title || r.name;
+      const td = library.tabDefaults || {};
+      meta.tabNames = { notes: td.notes || 'Notes', outline: td.outline || 'Outline' };
+      meta.chapterTitles = {};
+      let words = 0;
+      for (const ch of r.chapters) {
+        const chId = 'ch-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
+        await window.neo.writeChapter(meta.id, chId, poemChapterHTML(ch));
+        if (ch.title) meta.chapterTitles[chId] = ch.title;
+        meta.chapterOrder.push(chId);
+        for (const p of ch.paras) words += countWords(p.text || '');
+      }
+      meta.wordCount = words;
+      await writeBookMeta(meta.id, meta);
+      await placeTitle(shelf, meta.id);
+      ok++;
+    }
+    await writeLibrary(library);
+    if (!$('#bookshelf-view').hidden) renderShelves();
+    if (ok) toast(t('{n} poem collections imported onto “{shelf}” — lines and stanzas kept', { n: ok, shelf: shelf.name }), 6000);
+  }
+
+  // A shelf card's Import poems…: the file's poems join this collection.
+  async function importPoemsInto(meta) {
+    const results = await window.neo.importPick({ poetry: true });
+    if (!results.length) return;
+    const live = (await window.neo.readBookMeta(meta.id)) || meta;
+    live.chapterTitles = live.chapterTitles || {};
+    let added = 0;
+    let words = live.wordCount || 0;
+    for (const r of results) {
+      if (r.error) { toast(t('Couldn’t import {name}: {error}', { name: r.name, error: r.error }), 6000); continue; }
+      for (const ch of r.chapters) {
+        const chId = 'ch-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
+        await window.neo.writeChapter(meta.id, chId, poemChapterHTML(ch));
+        if (ch.title) live.chapterTitles[chId] = ch.title;
+        (live.chapterOrder = live.chapterOrder || []).push(chId);
+        for (const p of ch.paras) words += countWords(p.text || '');
+        added++;
+      }
+    }
+    if (!added) return;
+    live.wordCount = words;
+    await writeBookMeta(meta.id, live);
+    await writeLibrary(library);
+    renderShelves();
+    toast(t('{n} poems added to “{title}”', { n: added, title: live.title || '' }), 6000);
+  }
+
+  function shelfCardMenu(meta) {
+    if (!(NeoHooks.format(meta.format) && NeoHooks.format(meta.format).poem)) return undefined;
+    return ['-', { label: t('Import poems…'), value: 'rhemaImportPoems' }];
+  }
+  function shelfCardChoice(meta, choice) {
+    if (choice === 'rhemaImportPoems') { importPoemsInto(meta); return true; }
+    return false;
+  }
+
   /* ---------------- registration ---------------- */
 
   NeoHooks.registerFormat('poetry', {
@@ -667,6 +759,8 @@ const RhemaPoetry = (() => {
     setStatus: setPoemStatus,
     getStatus: poemStatus,
     lines: poemLines,
+    importPoems,
+    poemChapterHTML,
     // stanza DOM helpers for the other Rhema files (scraps.js, compare.js)
     dom: { stanzaParts, setParts, caretLine, setCaretLine, commit, lineText }
   });
@@ -696,6 +790,8 @@ const RhemaPoetry = (() => {
   NeoHooks.on('chapterMenuChoice', chapterMenuChoice);
   NeoHooks.on('boardRendered', boardProgress);
   NeoHooks.on('chapterDeleted', chapterDeleted);
+  NeoHooks.on('shelfCardMenu', shelfCardMenu); /* RHEMA — Import poems… on a collection's card */
+  NeoHooks.on('shelfCardChoice', shelfCardChoice);
 
   // test/probe window into the internals (harmless in production)
   window.RhemaPoetryDebug = { caretLine, stanzaParts, insertLineBreakDom, poemEnterRule };

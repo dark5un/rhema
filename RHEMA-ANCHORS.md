@@ -43,6 +43,15 @@ carry anchors. Target: <300 changed lines across core files.
 | `refreshCover()` paint-menu desc | on the Rhema path: "about a minute, on your own machine" — no "few cents" | 1 |
 | `snapsToThin(snaps, now, keepDays)` | Stone 6: retention parameter (default = upstream 30; 0/Infinity = unlimited); call site passes `RhemaSettings.snapKeepDays()` | 1 |
 | `WINDOWS` list + `msg.type === 'rhemaSettings'` | File → Rhema AI… opens `RhemaSettings.open()` | 1 |
+| bookTile export menu: `Chapbook PDF (5×8)…` label for poem books (value stays `'paperback'`) | poets print chapbooks (Stone 13) | 3a |
+| `importChaptersIntoBook()`: `poemBook() ? NeoHooks.format('poetry').poemChapterHTML(ch) : importedChapterHTML(ch)` | a poem book takes imported chapters as poems: stanzas + soft breaks | 3a |
+| `importDroppedChapters()`: pdf in the drop filter + `{ poetry: true }` when `poemBook()` | dropped files into an open collection keep lines | 3a |
+| `importChapters()`: `{ chapters: true, poetry: true }` for poem books | the in-book Import… keeps lines | 3a |
+| `printPaperback()` ×2 (trim preselect + `let trim`): `bp.trim || (poemBook() ? '5x8' : '5.5x8.5')` | the paperback dialog opens as a chapbook for poem books (upstream `PRINT_TRIMS` already has 5×8) | 3a |
+| `buildMd()`: `p.poetry` branch — `'  \n> '` between lines | Markdown export keeps verse lines (hard break, continuing blockquote) | 3a |
+| `buildTxt()`: `p.poetry` takes text from runs (`{ br, text:'\n' }`) | plain-text export keeps verse lines — `p.innerText` on the detached holder never renders, so `<br>` vanished and lines ran together (found by e2e; novels have no soft breaks, prose path untouched) | 3a |
+| EPUB chapter `inner`: `NeoHooks.emit('epubSectionEnd', ch, d)` | the poem mark closes each EPUB chapter (qrmark.js emits XHTML: closed `<img/>`, no contenteditable) | 3a |
+| `onMenu`: `msg.type === 'importPoems'` → `NeoHooks.format('poetry').importPoems()` | File → Import Poems… | 3a |
 | (future) enter-key call-site, menu call-sites, cards, export formats | one `NeoHooks.emit(...)` per hook surface | 2+ |
 
 ## i18n.js
@@ -74,7 +83,11 @@ name are the only literal renames (both listed above).
 | File menu `Rhema AI…` item | opens the Rhema settings pane (behind Show More Features, like Cover Art…) | 1 |
 | `initLanguage()`: `loadLanguage(saved || 'el')` | Stone 11: first launch is Greek regardless of the system language (the poet's default; View → Language switches). The saved choice always wins. Spellcheck follows the interface, so first launch also gets dictionary-el. | 2f |
 | `rhema:asset:pick/set/read/clear` handlers | Stone 1a: poem-mark drawings — `rhema-drawing.(png|jpg|webp)` (collection) and `rhema-drawing-<chId>.*` (one poem); slug-validated key, fixed names; reuses COVER_EXTS + readCover. **2h-fix (security review): `set` takes a one-time token issued by `pick`, never a renderer path** — a compromised renderer cannot stage an arbitrary image-extension file from disk; handler wrapped in try/catch | 2e+2h-fix |
-| (future) import formats | | 3 |
+| `importFile(fp, opts)` | Stone 12: `opts.poetry` keeps every line a line — txt/md poem files stream `{ text, line, indent }` + `{ gap, wide }` paras; docx line-break continuations flagged `cont`, empty Word paragraphs become stanza gaps; `.pdf` joins via `require('./pdfimport.js').pdfParas` (lazy pdfjs-dist load) | 3a |
+| `poemize()` inside `importFile` | the multi-poem splitter: split knob `library.rhema.import.split` = `'auto'` (headings, separators, page breaks, two-blank-line gaps) / `'headings'` (gaps never split) / `'whole'`; Title-styled first line names the book, as in chapterize; prologue/epilogue roles ride along | 3a |
+| `import:files` + `import:pick` handlers | carry `opts` (poetry mode); `.pdf` in the filter only for poetry picks; poetry dialog title 'Bring your poems home' | 3a |
+| File menu `Import Poems…` item | `sendToWindow({ type: 'importPoems' })` — each file becomes a poem collection | 3a |
+| `pdfimport.js` (new fork file, main-process only — no `<script>` tag) | PDF → paragraph stream: text items sharing a baseline join into lines; the 25th-percentile pitch separates stanza gaps (×1.6) from poem gaps (×2.4); pushed-in lines get the indent flag | 3a |
 | (deferred, before any auto-update re-enable) `latestReleaseFromGitHub()` | still fetches hughhowey/neo with UA 'NEO-App'; must be pointed at dark5un/rhema when RHEMA_AUTO_UPDATE flips to true, so the fallback link matches the publish feed | 15-re |
 
 ## preload.js
@@ -82,6 +95,7 @@ name are the only literal renames (both listed above).
 | Anchor | What | Phase |
 |--------|------|-------|
 | `window.neo.rhema` bridge | namespaced IPC (`test` → `ai:test`; `assetPick/assetSet/assetRead/assetClear` → `rhema:asset:*`) | 1+ |
+| `importFiles: (paths, opts)` | opts carries the poetry mode through `import:files` | 3a |
 
 ## index.html
 
@@ -109,6 +123,8 @@ name are the only literal renames (both listed above).
 - `homepage` and `linux.maintainer` (Hugh Howey) KEPT as attribution —
   explicit decision (review 2026-10-17); revisit only at public release.
 - `test:rhema-settings` script — runs scripts/rhema-settings.e2e.js (Electron pane test).
+- `dependencies: pdfjs-dist ^6.4.299` — Stone 12 PDF import (legacy build,
+  lazily imported by pdfimport.js only during a PDF import).
 
 ## scripts/
 
@@ -120,7 +136,9 @@ name are the only literal renames (both listed above).
 | `scripts/rhema-ai.test.js` | Phase 1: ComfyUI workflow builder, retention knobs (keepValue + snapsToThin unlimited), settings gate, brief plumbing — hermetic |
 | `scripts/rhema-ai-live.js` | NOT in npm test: live chain check (Strata brief → ComfyUI render) against this machine's endpoints |
 | `scripts/poetry.test.js` | Phase 2: the pure poetry rules sliced from poetry.js (Enter rhythm, stanza/poem split, line ops) — vm harness, hermetic |
-| `scripts/poetry.e2e.js` (`test:poetry`) | Phase 2: real Electron — new poem collection, Enter rhythm, line ops, structural undo, disk format, poem mark (QR/drawing per poem), and the novel's Enter rhythm unchanged. Visible fixtures are real public-domain Kavafis verse («Κεριά», «Η πόλις»), not placeholder words (Panos 2026-10-17) |
+| `scripts/poetry.e2e.js` (`test:poetry`) | Phase 2: real Electron — new poem collection, Enter rhythm, line ops, structural undo, disk format, poem mark (QR/drawing per poem), and the novel's Enter rhythm unchanged. Visible fixtures are real public-domain Kavafis verse («Κεριά», «Η πόλις»), not placeholder words (Panos 2026-10-17). 3a adds: .txt import → poem collection (lines/stanzas/titles/mark kept), md/txt/EPUB export keeps verse + XHTML-safe mark, chapbook dialog opens at 5×8, shelf-card Import poems… joins the collection |
+| `scripts/import-poetry.test.js` | Phase 3a: main.js in a vm — poemize split knob (auto/headings/whole), Kavafis txt/md/docx fixtures, PDF line/pitch grouping (pdfimport pure functions), novels untouched (no opts = old chapterize) — hermetic |
+| `scripts/import-chapters.test.js` | upstream suite; harness gained `poemBook: () => false` + `NeoHooks.format: () => null` stubs for the poem-book seam (novel path always answers) |
 | `scripts/*.e2e.js` (11) | each pins `uiLanguage: 'en'` in its temp settings.json — the fork's default is Greek (Stone 11), the suites read English strings |
 | `scripts/spellcheck.test.js` | interface language set via saved settings (the fork no longer derives it from the system); added fork case: first launch = el + dictionary-el |
 

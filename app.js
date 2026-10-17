@@ -2096,7 +2096,7 @@ function bookTile(meta, opts = {}) {
         ...(moreOn() ? [{ label: t('Text (.txt)'), value: 'txt' }, { label: t('Markdown (.md)'), value: 'md' }, { label: t('HTML (.html)'), value: 'html' }] : []),
         { label: 'PDF (.pdf)', value: 'pdf' },
         { label: t('Word (.docx)'), value: 'docx' }, { label: t('EPUB (.epub)'), value: 'epub' },
-        ...(window.Capacitor || isPageMeta(meta) ? [] : [{ label: t('Paperback for KDP…'), value: 'paperback' }])
+        ...(window.Capacitor || isPageMeta(meta) ? [] : [{ label: NeoHooks.format(meta.format) && NeoHooks.format(meta.format).poem ? t('Chapbook PDF (5×8)…') : t('Paperback for KDP…'), value: 'paperback' }]) /* RHEMA — poets print chapbooks (Stone 13) */
       ]);
       if (!fmt) return;
       if (window.Capacitor || fmt === 'paperback') {
@@ -14147,7 +14147,9 @@ async function importChaptersIntoBook(results, beforeId) {
       // line gave (the parser harvests it as the book's) names the chapter;
       // in a file of several, that title was the old book's
       const title = ch.title || (r.chapters.length === 1 && r.title) || '';
-      adding.push({ title, html: importedChapterHTML(ch) });
+      /* RHEMA — a poem book takes its chapters as poems: stanzas and soft
+         line breaks, the same HTML the Enter rhythm writes by hand */
+      adding.push({ title, html: poemBook() ? NeoHooks.format('poetry').poemChapterHTML(ch) : importedChapterHTML(ch) });
     });
   }
   if (!adding.length || !book || book.id !== bookId) return 0;
@@ -14187,11 +14189,11 @@ async function importChaptersIntoBook(results, beforeId) {
 async function importDroppedChapters(files, beforeId) {
   const paths = [...files]
     .map((f) => { try { return window.neo.pathForFile(f); } catch { return null; } })
-    .filter((p) => p && /\.(docx|txt|md)$/i.test(p));
+    .filter((p) => p && (poemBook() ? /\.(docx|txt|md|pdf)$/i : /\.(docx|txt|md)$/i).test(p)); /* RHEMA — poems read PDFs too */
   if (!paths.length) { toast(t('No .docx, .txt, or .md files in that drop')); return; }
   const bookId = book.id;
   toast(t('Importing…'));
-  const results = await window.neo.importFiles(paths);
+  const results = await window.neo.importFiles(paths, poemBook() ? { poetry: true } : {}); /* RHEMA */
   if (book && book.id === bookId) await importChaptersIntoBook(results, beforeId);
 }
 
@@ -14199,7 +14201,7 @@ async function importDroppedChapters(files, beforeId) {
 async function importChapters() {
   if (!book || isScript() || $('#editor-view').hidden) return;
   const bookId = book.id;
-  const results = await window.neo.importPick({ chapters: true });
+  const results = await window.neo.importPick(poemBook() ? { chapters: true, poetry: true } : { chapters: true }); /* RHEMA — a poem book imports line by line (Stone 12) */
   if (!results.length || !book || book.id !== bookId) return;
   const at = currentChapterId ? book.chapterOrder.indexOf(currentChapterId) + 1 : book.chapterOrder.length;
   await importChaptersIntoBook(results, book.chapterOrder[at]);
@@ -16127,7 +16129,7 @@ async function printPaperback() {
       <h2 style="font-size:17px">${t('Paperback for KDP')}</h2>
       <p class="pm-hint">${t('A print-ready interior PDF and a cover template sized to its page count, for Amazon KDP.')}</p>
       <div class="pm-row pm-trims">${PRINT_TRIMS.map((x) => `
-        <button type="button" class="fr-choice${(bp.trim || '5.5x8.5') === x.id ? ' sel' : ''}" data-trim="${x.id}"><strong>${x.label}</strong><span>${x.mm}</span></button>`).join('')}
+        <button type="button" class="fr-choice${(bp.trim || (poemBook() ? '5x8' : '5.5x8.5')) === x.id ? ' sel' : ''}" data-trim="${x.id}"><strong>${x.label}</strong><span>${x.mm}</span></button>`).join('')}
       </div>
       <div class="pm-row">
         <label>${t('Paper')}
@@ -16163,7 +16165,7 @@ async function printPaperback() {
     e.currentTarget.hidden = true;
     ta.focus();
   };
-  let trim = bp.trim || '5.5x8.5';
+  let trim = bp.trim || (poemBook() ? '5x8' : '5.5x8.5'); /* RHEMA — a poem book opens as a chapbook: 5 × 8 (Stone 13) */
   const selTrim = bd.querySelector('.fr-choice.sel');
   if (selTrim) selTrim.focus({ preventScroll: true });
   for (const b of bd.querySelectorAll('[data-trim]')) {
@@ -16274,7 +16276,12 @@ function buildTxt(data) {
     const notes = [];
     for (const p of ch.paras) {
       const noted = (p.runs || []).some((r) => r.fn !== undefined);
-      const text = noted ? p.runs.map((r) => (r.fn !== undefined ? (notes.push(r.fn), `[${++fnN}]`) : r.text)).join('').trim() : p.text;
+      /* RHEMA — a verse paragraph's lines ride in its runs ({ br, text:'\n' }):
+         p.innerText on the detached holder never renders, so <br> would vanish
+         and the lines would run together (novels have no soft breaks; the
+         upstream path is untouched) */
+      const text = noted ? p.runs.map((r) => (r.fn !== undefined ? (notes.push(r.fn), `[${++fnN}]`) : r.text)).join('').trim()
+        : p.poetry ? (p.runs || []).map((r) => r.text || '').join('').trim() : p.text;
       out += p.sceneBreak ? '\n***\n\n' : (p.poetry ? '    ' : '') + text + '\n\n';
     }
     if (notes.length) out += '----------\n' + notes.map((n, i) => `[${fnN - notes.length + i + 1}] ${n}`).join('\n') + '\n\n';
@@ -16301,7 +16308,10 @@ function buildMd(data) {
     const notes = [];
     for (const p of ch.paras) {
       const runs = (p.runs || []).map((r) => (r.fn !== undefined ? (notes.push(r.fn), { text: '\uE001' + (++fnN) + '\uE002' }) : r));
-      out += p.sceneBreak ? '\n***\n\n' : (p.poetry ? '> ' : '') + mdRuns(runs).replace(/\uE001(\d+)\uE002/g, '[^$1]') + '\n\n';
+      /* RHEMA — verse keeps its lines in Markdown too: a hard break at each
+         soft break, and the blockquote continues on every line of the stanza */
+      const body = mdRuns(runs).replace(/\uE001(\d+)\uE002/g, '[^$1]');
+      out += p.sceneBreak ? '\n***\n\n' : (p.poetry ? '> ' + body.replace(/\n/g, '  \n> ') : body) + '\n\n';
     }
     notes.forEach((n, i) => { out += `[^${fnN - notes.length + i + 1}]: ${mdMeta(n)}\n`; });
     if (notes.length) out += '\n';
@@ -17075,7 +17085,7 @@ ${ch.subtitle ? `<p class="sub">${escXml(ch.subtitle)}</p>` : ''}${ch.byline ? `
     }).join('\n');
     inner = `<section epub:type="${EPUB_TYPES[kind] || ch.role || 'chapter'}">${ch.heading ? `<h1>${escXml(ch.heading)}</h1>` : ''}${ch.byline ? `<p class="byline">${escXml(ch.byline)}</p>` : ''}
 ${paras}
-</section>`;
+${NeoHooks.emit('epubSectionEnd', ch, d) || ''}</section>`; /* RHEMA — epubSectionEnd: the poem mark closes each EPUB chapter (qrmark.js) */
   }
   if (notes.length) {
     const first = fnN - notes.length + 1;
@@ -17862,6 +17872,7 @@ window.neo.onMenu(async (msg) => {
   if (msg.type === 'focusCycle') cycleFocus();
   if (msg.type === 'import') importBooks();
   if (msg.type === 'importChapters') importChapters();
+  if (msg.type === 'importPoems') NeoHooks.format('poetry').importPoems(); /* RHEMA — Stone 12: File → Import Poems… */
   if (msg.type === 'stats') openStats();
   if (msg.type === 'chapterStep') gotoChapter(msg.value);
   if (msg.type === 'writingStyle') {

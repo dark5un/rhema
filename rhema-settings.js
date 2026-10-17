@@ -101,6 +101,15 @@ const RhemaSettings = (() => {
           </div>
           <p class="soft" style="font-size:12px;margin:0 0 6px">${t('Leave it empty and the QR carries the poem’s title and author as plain text. A template can use {title}, {collection} and {author}.')}</p>
         </details>
+        <details class="st-advanced">
+          <summary class="soft">${t('Importing poems')}</summary>
+          <div class="stats-row">
+            <label>${t('Split a file into poems by')}
+              <select id="ra-split">${sel((cfg().import || {}).split || 'auto', [['auto', 'headings, separators, page breaks and wide gaps'], ['headings', 'headings, separators and page breaks only'], ['whole', 'never — one file, one poem']])}</select>
+            </label>
+          </div>
+          <p class="soft" style="font-size:12px;margin:0 0 6px">${t('A single blank line is always a stanza break. Whatever the split, you can join poems or split them again in the editor: Enter three times starts a new poem.')}</p>
+        </details>
         <div style="text-align:right;margin-top:14px">
           <button id="ra-test" class="btn-quiet" style="margin-right:10px;border:1px solid rgba(255,255,255,.35);padding:5px 14px">${t('Test')}</button>
           <button class="m-cancel btn-quiet" style="margin-right:10px">${t('Cancel')}</button>
@@ -176,10 +185,12 @@ const RhemaSettings = (() => {
       const back = bd.querySelector('#ra-retbackups').value;
       const snaps = bd.querySelector('#ra-retsnaps').value;
       const qrTemplate = bd.querySelector('#ra-qr').value.trim();
+      const split = bd.querySelector('#ra-split').value; /* RHEMA — Stone 12 split knob */
       // merge, never replace: other library.rhema sub-keys (Phase 2+) survive
       library.rhema = Object.assign({}, cfg(), {
         ai: collect(),
         qr: { ...(cfg().qr || {}), template: qrTemplate || undefined },
+        import: { ...(cfg().import || {}), split: split !== 'auto' ? split : undefined },
         retention: {
           backups: back === 'unlimited' ? 'unlimited' : parseInt(back, 10),
           snapshots: snaps === 'unlimited' ? 'unlimited' : parseInt(snaps, 10)

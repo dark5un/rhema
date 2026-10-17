@@ -36,6 +36,18 @@ BrowserWindow.prototype.loadFile = function (file, opts) {
 };
 require('../main.js');
 
+/* RHEMA — the import tests answer the real File → Import Poems… picker from
+   the main-process side: window.neo is a contextBridge object and its
+   properties are read-only in the renderer, so a renderer stub silently
+   fails and the real dialog hangs the suite (seen 2026-10-17). main.js
+   looks up dialog.showOpenDialog at call time on the shared electron
+   module object, so patching it here exercises the real import:pick path
+   (filters, titles, all of it). */
+const { dialog } = require('electron');
+let pickedFiles = [];
+dialog.showOpenDialog = async () =>
+  pickedFiles.length ? { canceled: false, filePaths: pickedFiles } : { canceled: true, filePaths: [] };
+
 let wc;
 let dbg = null; // webContents.debugger once attached (viewport pin + text input)
 const js = (code) => wc.executeJavaScript(code, true);
@@ -584,6 +596,81 @@ test('poem chrome: chapter words become poem words in the open book, and back on
   await tick(300);
   assert.equal(await js(`t('Chapters')`), 'Chapters', 'the shelf keeps NEO\'s words');
   assert.equal(await js(`t('Chapter {n}', { n: 3 })`), 'Chapter 3');
+});
+
+test('import: a real .txt of two Kavafis poems becomes a poem collection, lines kept', async () => {
+  const fp = path.join(tmp, 'imported-poems.txt');
+  fs.writeFileSync(fp, [
+    '# Κεριά',
+    L1, L2, '', L3, '', '',
+    '# Η πόλις',
+    'Σαράντα χρόνια θα περάσουν στη ζωή σου',
+    'κι άλλες πόλεις δεν θα βρεις παρά τις πόλεις.'
+  ].join('\n') + '\n');
+  // the picker is a dialog; answer it with the file we just wrote
+  pickedFiles = [fp]; // the patched picker answers with the file we just wrote
+  await js(`NeoHooks.format('poetry').importPoems()`);
+  await tick(600);
+  const ids = await js('library.shelves[0].bookIds.slice()');
+  const newId = ids[ids.length - 1];
+  assert.equal(await js(`(async () => (await window.neo.readBookMeta(${JSON.stringify(newId)})).format)()`), 'poetry', 'the imported book is a poem collection');
+  assert.equal(await js(`(async () => (await window.neo.readBookMeta(${JSON.stringify(newId)})).chapterOrder.length)()`), 2, 'two poems, split at the markdown headings');
+  await js(`openBook(${JSON.stringify(newId)})`);
+  await tick(500);
+  assert.equal(await js('poemBook()'), true);
+  const st = await stanzasOf(0);
+  assert.equal(st.length, 2, 'the blank line kept the stanza break');
+  assert.deepEqual(st[0].lines, [L1, L2], 'the verse lines survived as one stanza');
+  assert.equal(st[0].cls, 'poetry');
+  assert.equal(await js(`book.chapterTitles[book.chapterOrder[0]]`), 'Κεριά', 'the heading became the poem title');
+  assert.equal(await js(`document.querySelectorAll('.chapter[data-id="' + book.chapterOrder[0] + '"] > .rhema-poem-mark').length`), 1, 'the imported poem carries its mark');
+});
+
+test('export: verse survives md, txt and EPUB; the chapbook opens at 5×8', async () => {
+  const md = await js('buildMd()');
+  assert.ok(md.includes('> ' + L1 + '  \n> ' + L2), 'markdown keeps the line with a hard break and a continuing quote');
+  const txt = await js('buildTxt()');
+  assert.ok(txt.includes(L1 + '\n' + L2), 'plain text keeps the lines');
+  const entries = await js('buildEpubEntries()');
+  const chs = JSON.parse(JSON.stringify(entries.filter((e) => /^OEBPS\/ch\d+\.xhtml$/.test(e.path)).map((e) => e.content)));
+  assert.ok(chs.some((c) => c.includes('<br/>')), 'the EPUB chapter keeps the soft line break');
+  assert.ok(chs.some((c) => c.includes('class="poetry"')), 'and the poetry class the EPUB CSS styles');
+  assert.ok(chs.some((c) => c.includes('rhema-poem-mark')), 'and the poem mark rides into the EPUB');
+  assert.ok(chs.every((c) => !/<img[^>]*[^/]>/.test(c)), 'the mark is XHTML: no unclosed <img>');
+  // the chapbook preset: a poem book opens the paperback dialog at 5x8
+  const trimSel = await js(`(async () => {
+    printPaperback(); // opens the dialog; we read it and cancel
+    // the dialog opens after flushAllSaves + the shelf scan: poll, don't guess
+    let sel = null;
+    for (let i = 0; i < 40 && !sel; i++) {
+      await new Promise((r) => setTimeout(r, 100));
+      sel = document.querySelector('.print-modal [data-trim].sel');
+    }
+    const id = sel ? sel.dataset.trim : null;
+    const cancel = document.querySelector('.print-modal .m-cancel');
+    if (cancel) cancel.click();
+    await new Promise((r) => setTimeout(r, 200));
+    return id;
+  })()`);
+  assert.equal(trimSel, '5x8', 'the chapbook dialog opens at 5 × 8 for a poem book');
+});
+
+test('import into an open collection: the shelf card menu path', async () => {
+  const fp = path.join(tmp, 'one-more.txt');
+  fs.writeFileSync(fp, '# Το πλεονέκτημα\nΜια λέξη μόνο.\n');
+  const before = await js('library.shelves[0].bookIds.length');
+  pickedFiles = [fp]; /* RHEMA — the patched picker (see top of file) */
+  const colId = await js('library.shelves[0].bookIds[library.shelves[0].bookIds.length - 1]');
+  // the real card path: the hook answers the choice (fire-and-forget), so
+  // poll for the result instead of guessing a tick
+  await js(`(async () => { const meta = await shelfMeta(${JSON.stringify(colId)}); await NeoHooks.emit('shelfCardChoice', meta, 'rhemaImportPoems'); })()`);
+  let joined = 2;
+  for (let i = 0; i < 30 && joined < 3; i++) {
+    await tick(100);
+    joined = await js(`(async () => (await window.neo.readBookMeta(${JSON.stringify(colId)})).chapterOrder.length)()`);
+  }
+  assert.equal(await js('library.shelves[0].bookIds.length'), before, 'no new collection was made');
+  assert.equal(joined, 3, 'the poem joined the collection');
 });
 
 async function main() {

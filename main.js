@@ -1948,7 +1948,9 @@ function readTextFile(fp) {
   }
 }
 
-async function importFile(fp) {
+async function importFile(fp, opts = {}) {
+  /* RHEMA — Stone 12: opts.poetry keeps every line a line (a poem file
+     splits into poems, not chapters); .pdf joins the readable formats */
   // a manuscript kept in iCloud may not be on this Mac yet
   const wait = whenLocal([fp]);
   if (wait && (await wait).size) throw new Error('This file is still downloading from iCloud. Try again in a moment');
@@ -1961,7 +1963,10 @@ async function importFile(fp) {
     return { name, script: ext.slice(1), source: fs.readFileSync(fp, 'utf8').replace(/^\uFEFF/, '') };
   }
 
-  if (ext === '.docx') {
+  if (ext === '.pdf') { /* RHEMA */
+    const { pdfParas } = require('./pdfimport.js');
+    paras = await pdfParas(fp);
+  } else if (ext === '.docx') {
     const JSZip = require('jszip');
     const zip = await JSZip.loadAsync(fs.readFileSync(fp));
     const docFile = zip.file('word/document.xml');
@@ -1975,6 +1980,14 @@ async function importFile(fp) {
       // a paragraph of its own: NEO's lines are paragraphs
       .flatMap((p) => !p.text.includes('\n') ? [p]
         : p.text.split('\n').map((text, i) => ({ ...p, text: text.trim(), pageBreak: p.pageBreak && i === 0, heading: p.heading && i === 0, title: p.title && i === 0 })));
+    if (opts.poetry) paras = paras.map((p) => p.text ? { ...p, line: true } : { text: '', gap: true }); /* RHEMA — empty Word paragraphs are stanza gaps in a poem file */
+  } else if (opts.poetry) { /* RHEMA — a poem's txt/md keeps every line a line */
+    const raw = readTextFile(fp);
+    for (const line of raw.split(/\r\n|\r|\n/)) {
+      const s = line.replace(/\s+$/g, '');
+      if (!s.trim()) { paras.push({ text: '', gap: true }); continue; }
+      paras.push({ text: s.trim(), line: true, indent: /^[\t ]{2,}/.test(s) });
+    }
   } else {
     const raw = readTextFile(fp);
     // Paragraphs are split on blank lines, unless the file barely has any
@@ -2022,6 +2035,71 @@ async function importFile(fp) {
     return isNumberedHeading(t) ? '' : t;
   };
   const isBreak = (t) => /^\s*([*#•~⁂—–-]\s*){1,7}$/.test(t || '');
+
+  /* RHEMA — Stone 12: a poem file is poemized, not chapterized. The split
+     knob (library.rhema.import.split) is 'auto' (headings, separators, page
+     breaks and two-blank-line gaps open a new poem), 'headings' (gaps never
+     split) or 'whole' (the file is one poem). */
+  const splitMode = (() => {
+    try {
+      const lib = readJSON(LIBRARY_FILE, {});
+      const m = lib.rhema && lib.rhema.import && lib.rhema.import.split;
+      return m === 'headings' || m === 'whole' ? m : 'auto';
+    } catch { return 'auto'; }
+  })();
+  const poemize = () => {
+    if (splitMode === 'whole') {
+      const body = paras.filter((p) => p.text).map((p) => ({ text: p.text, line: true, indent: !!p.indent }));
+      return body.length ? [{ title: '', paras: body, role: null }] : [];
+    }
+    const poems = [];
+    let cur = [];
+    let curTitle = '';
+    let curRole = null;
+    let lastWasHeading = false;
+    let gapRun = 0;
+    styledTitle = null;
+    const close = () => {
+      while (cur.length && cur[cur.length - 1].gap) cur.pop();
+      if (cur.some((p) => p.text) || curTitle) poems.push({ title: curTitle, paras: cur, role: curRole });
+      cur = []; curTitle = ''; curRole = null; lastWasHeading = false; gapRun = 0;
+    };
+    for (const p of paras) {
+      if (p.pageEnd) { close(); continue; }
+      if (p.gap) {
+        gapRun += p.wide ? 2 : 1;
+        if (splitMode === 'auto' && gapRun >= 2) { close(); continue; }
+        if (cur.some((x) => x.text)) cur.push({ text: '', gap: true });
+        continue;
+      }
+      gapRun = 0;
+      // a Title-styled line before any verse names the book, as in chapterize
+      if (p.title && !cur.some((x) => x.text) && !poems.length && styledTitle === null && p.text) { styledTitle = titleOf(p.text); continue; }
+      const isH = p.heading || p.title || isMdHeading(p.text || '') ||
+        (CHAPTER_WORDS.test(bare(p.text || '')) && (p.text || '').length < 60 && !readsAsSentence(p.text));
+      if (isH) {
+        // two headings with no verse between (a tab named for the book, then
+        // the poem's own title): the titles join instead of an empty poem
+        if (lastWasHeading && !cur.some((x) => x.text)) {
+          const t2 = titleOf(p.text || '');
+          if (t2) curTitle = curTitle ? `${curTitle} — ${t2}` : t2;
+          continue;
+        }
+        close();
+        const h = (p.text || '').replace(/^#{1,6}\s*/, '').trim();
+        curRole = PROLOGUE_WORDS.test(h) ? 'prologue' : EPILOGUE_WORDS.test(h) ? 'epilogue' : null;
+        curTitle = titleOf(p.text || '');
+        lastWasHeading = true;
+        continue;
+      }
+      lastWasHeading = false;
+      if (isBreak(p.text)) { close(); continue; }
+      if (p.pageBreak) close(); // a heading-less page break opens the next poem
+      cur.push({ text: p.text, line: true, indent: !!p.indent });
+    }
+    close();
+    return poems;
+  };
 
   let styledTitle = null; // a Title-styled first line: the book's name
   const chapterize = (usePageBreaks) => {
@@ -2074,9 +2152,14 @@ async function importFile(fp) {
   // First pass trusts page breaks. Some word processors sprinkle page-break
   // formatting on every paragraph, exploding a story into confetti — if the
   // result is absurd (lots of tiny "chapters"), re-run trusting headings only.
-  let chapters = chapterize(true);
-  if (chapters.length > 6 && countAllWords(chapters) / chapters.length < 250) {
-    chapters = chapterize(false);
+  let chapters;
+  if (opts.poetry) { /* RHEMA */
+    chapters = poemize();
+  } else {
+    chapters = chapterize(true);
+    if (chapters.length > 6 && countAllWords(chapters) / chapters.length < 250) {
+      chapters = chapterize(false);
+    }
   }
   if (!chapters.length) chapters.push({ title: '', paras: [{ text: '' }] });
 
@@ -2129,16 +2212,16 @@ async function importFile(fp) {
     if ((ch.role === 'prologue' && i !== 0) || (ch.role === 'epilogue' && i !== chapters.length - 1) || chapters.length < 2) ch.role = null;
   });
   if (styledTitle && title === styledTitle) title = bare(title);
-  return { name, title, author, chapters };
+  return { name, title, author, chapters, poetry: !!opts.poetry /* RHEMA */ };
 }
 
 // Same parsing as the picker, but for files dropped from Finder/Explorer
-ipcMain.handle('import:files', async (_e, paths) => {
+ipcMain.handle('import:files', async (_e, paths, opts) => { /* RHEMA — opts carries the poetry mode */
   const out = [];
   for (const fp of paths || []) {
-    if (!/\.(docx|txt|md|fountain|fdx)$/i.test(fp)) continue;
+    if (!/\.(docx|txt|md|fountain|fdx|pdf)$/i.test(fp)) continue; /* RHEMA — .pdf joins for poem import */
     try {
-      out.push(await importFile(fp));
+      out.push(await importFile(fp, opts || {}));
     } catch (err) {
       logError('import', err);
       out.push({ name: path.basename(fp), error: String(err.message || err) });
@@ -2152,16 +2235,17 @@ ipcMain.handle('import:files', async (_e, paths) => {
 ipcMain.handle('import:pick', async (_e, opts) => {
   const win = BrowserWindow.getFocusedWindow();
   const chapters = !!(opts && opts.chapters);
+  const poetry = !!(opts && opts.poetry); /* RHEMA — Stone 12: poems keep their lines; PDFs are readable too */
   const { canceled, filePaths } = await dialog.showOpenDialog(win, {
-    title: chapters ? t('Bring chapters into this book') : t('Bring your manuscripts home'),
+    title: poetry ? t('Bring your poems home') : chapters ? t('Bring chapters into this book') : t('Bring your manuscripts home'),
     properties: ['openFile', 'multiSelections'],
-    filters: [{ name: t('Manuscripts'), extensions: chapters || !moreState ? ['docx', 'txt', 'md'] : ['docx', 'txt', 'md', 'fountain', 'fdx'] }] // scripts: Show More Features
+    filters: [{ name: t('Manuscripts'), extensions: poetry ? ['docx', 'txt', 'md', 'pdf'] : chapters || !moreState ? ['docx', 'txt', 'md'] : ['docx', 'txt', 'md', 'fountain', 'fdx'] }] // scripts: Show More Features
   });
   if (canceled || !filePaths.length) return [];
   const out = [];
   for (const fp of filePaths) {
     try {
-      out.push(await importFile(fp));
+      out.push(await importFile(fp, opts || {}));
     } catch (err) {
       logError('import', err);
       out.push({ name: path.basename(fp), error: String(err.message || err) });
@@ -2776,6 +2860,7 @@ function buildMenu() {
           enabled: bookOpenState && !scriptState.on,
           click: () => sendToWindow({ type: 'importChapters' })
         },
+        { label: t('Import Poems…'), click: () => sendToWindow({ type: 'importPoems' }) }, /* RHEMA — Stone 12: each file becomes a poem collection */
         { more: true, label: t('Reshelve a Book…'), click: () => sendToWindow({ type: 'reshelve' }) },
         { label: t('Library Folder…'), click: () => { chooseLibraryFolder().catch((err) => logError('library folder', err)); } },
         { type: 'separator' },

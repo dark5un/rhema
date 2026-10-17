@@ -29,3 +29,7 @@ pocket/www/dict/
 # working files beside the repo, never part of it
 Claude outputs/
 docs/sessions/
+# prowl-agent: derived state — the whole directory, never part of the repo
+.prowl/
+.prowl-setup.lock
+# /prowl-agent: derived state

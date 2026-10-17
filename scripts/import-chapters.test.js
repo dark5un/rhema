@@ -35,6 +35,10 @@ function room(opts = {}) {
     dialogueDashes: (s) => s,
     dashStyle: () => 'em',
     isScript: () => !!(opts.script),
+    /* RHEMA — the poem-book seam in importChaptersIntoBook/importChapters:
+       this harness holds novels, so the prose path always answers */
+    poemBook: () => false,
+    NeoHooks: { format: () => null },
     snapshotStructure: (label) => { log.push('snapshot ' + label); ctx.undoStack.push({ label }); },
     persistChapter: async (chId) => {
       if (opts.failOn && ctx.chapterHTML[chId] && ctx.chapterHTML[chId].includes(opts.failOn)) throw new Error('disk full');
@@ -45,7 +49,7 @@ function room(opts = {}) {
     renderOutline: () => {},
     updateCounters: () => {},
     $: () => ({ hidden: false }),
-    window: { neo: { logError: (m) => log.push('logError ' + m), importPick: async () => opts.picked || [] } }
+    window: { neo: { logError: (m) => log.push('logError ' + m), importPick: async () => opts.picked || [], importFiles: async () => [] /* RHEMA */ } }
   });
   vm.runInContext(app.slice(from, to), ctx);
   return ctx;

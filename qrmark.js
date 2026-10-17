@@ -107,6 +107,16 @@ const RhemaQr = (() => {
     return markHtml(sec.chId, sec.heading || poemTitle(sec.chId), (d && d.title) || book.title, (d && d.author) || book.author);
   }
 
+  // ---- EPUB (Stone 13): the same mark, written as XHTML — a reading app
+  // refuses an unclosed <img>, and contenteditable means nothing there ----
+  function epubSectionEnd(sec, d) {
+    const html = exportSectionEnd(sec, d);
+    if (!html) return undefined;
+    return html
+      .replace(/ contenteditable="false"/g, '')
+      .replace(/<img([^>]*[^/])>/g, '<img$1/>');
+  }
+
   // ---- the drawings (rhema-drawing.* / rhema-drawing-<chId>.* in the book folder) ----
   async function loadDrawing(bookId, key) {
     try {
@@ -233,6 +243,7 @@ const RhemaQr = (() => {
 
   NeoHooks.on('chapterRendered', chapterRendered);
   NeoHooks.on('exportSectionEnd', exportSectionEnd);
+  NeoHooks.on('epubSectionEnd', epubSectionEnd); /* RHEMA — the mark rides into EPUB too */
   // the drawings load over IPC; when they land, re-render so the mark is
   // complete on first open (bookOpened fires before renderChapters, and the
   // async load would otherwise lose the race — review 2026-10-17)

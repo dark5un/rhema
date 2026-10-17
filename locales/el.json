@@ -994,5 +994,23 @@
  "Your mail program opened — attach the PDF NEO revealed, then send": "Άνοιξε το πρόγραμμα αλληλογραφίας — επισυνάψτε το PDF που έδειξε το NEO και στείλτε",
  "Zoom out until two pages fit side by side": "Σμικρύνετε ώσπου δύο σελίδες να χωρέσουν δίπλα-δίπλα",
  "Finished": "Ολοκληρωμένο",
- "QR code": "Κωδικός QR"
+ "QR code": "Κωδικός QR",
+ "Import Poems…": "Εισαγωγή Ποιημάτων…",
+ "Bring your poems home": "Φέρτε τα ποιήματά σας στο Ρήμα",
+ "Import poems…": "Εισαγωγή ποιημάτων…",
+ "{n} poem collections imported onto “{shelf}” — lines and stanzas kept": {
+  "one": "Εισήχθη {n} συλλογή ποιημάτων στο «{shelf}» — οι στίχοι και οι στροφές διατηρήθηκαν",
+  "other": "Εισήχθησαν {n} συλλογές ποιημάτων στο «{shelf}» — οι στίχοι και οι στροφές διατηρήθηκαν"
+ },
+ "{n} poems added to “{title}”": {
+  "one": "Προστέθηκε {n} ποίημα στο «{title}»",
+  "other": "Προστέθηκαν {n} ποιήματα στο «{title}»"
+ },
+ "Chapbook PDF (5×8)…": "Φυλλάδιο PDF (5×8)…",
+ "Importing poems": "Εισαγωγή ποιημάτων",
+ "Split a file into poems by": "Διαχωρισμός αρχείου σε ποιήματα:",
+ "headings, separators, page breaks and wide gaps": "επικεφαλίδες, διαχωριστικά, αλλαγές σελίδας και μεγάλα κενά",
+ "headings, separators and page breaks only": "μόνο επικεφαλίδες, διαχωριστικά και αλλαγές σελίδας",
+ "never — one file, one poem": "ποτέ — ένα αρχείο, ένα ποίημα",
+ "A single blank line is always a stanza break. Whatever the split, you can join poems or split them again in the editor: Enter three times starts a new poem.": "Μία κενή γραμμή είναι πάντα αλλαγή στροφής. Όποιος και αν είναι ο διαχωρισμός, μπορείτε να ενώσετε ή να χωρίσετε ποιήματα στον επεξεργαστή: τρία Enter ξεκινούν νέο ποίημα."
 }

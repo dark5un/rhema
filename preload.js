@@ -51,7 +51,7 @@ contextBridge.exposeInMainWorld('neo', {
     assetRead: (bookId, key) => ipcRenderer.invoke('rhema:asset:read', bookId, key),
     assetClear: (bookId, key) => ipcRenderer.invoke('rhema:asset:clear', bookId, key)
   },
-  importFiles: (paths) => ipcRenderer.invoke('import:files', paths),
+  importFiles: (paths, opts) => ipcRenderer.invoke('import:files', paths, opts), /* RHEMA — opts carries the poetry mode */
   pathForFile: (file) => webUtils.getPathForFile(file),
   fullscreenEscape: () => ipcRenderer.invoke('fullscreen:escape'),
   fullscreenToggle: () => ipcRenderer.invoke('fullscreen:toggle'),
