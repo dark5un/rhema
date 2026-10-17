@@ -3,6 +3,14 @@
     "name": "English"
   },
   "{n} lines": {"one": "{n} line", "other": "{n} lines"},
+  "{n} poem collections imported onto “{shelf}” — lines and stanzas kept": {
+    "one": "{n} poem collection imported onto “{shelf}” — lines and stanzas kept",
+    "other": "{n} poem collections imported onto “{shelf}” — lines and stanzas kept"
+  },
+  "{n} poems added to “{title}”": {
+    "one": "{n} poem added to “{title}”",
+    "other": "{n} poems added to “{title}”"
+  },
   "ok — {n} models": {"one": "ok — {n} model", "other": "ok — {n} models"},
   "{done} of {total} poems finished": {"one": "{done} of {total} poem finished", "other": "{done} of {total} poems finished"},
   "{n} books imported onto “{shelf}” — chapters and scene breaks detected": {

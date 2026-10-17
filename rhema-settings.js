@@ -1,6 +1,6 @@
 // Rhema — AI settings pane /* RHEMA */
 //
-// File → Rhema AI…: the local text endpoint (OpenAI-compatible), the image
+// File → Rhema Settings…: the local text endpoint (OpenAI-compatible), the image
 // endpoint (ComfyUI or OpenAI-compatible), and the backup/snapshot retention
 // knobs (Stone 6, unlimited included). Everything lives in library.rhema —
 // namespaced so upstream's library.json keys never collide. The API key goes
@@ -54,7 +54,7 @@ const RhemaSettings = (() => {
     };
     bd.innerHTML = `
       <div class="modal" style="width:600px">
-        <h2 style="font-size:17px">${t('Rhema AI')}</h2>
+        <h2 style="font-size:17px">${t('Rhema Settings')}</h2>
         <p>${t('Rhema can read a book once it passes {n} words and paint its cover with your own local models: a language model writes the brief, an image model paints it. When the addresses below point to this computer, nothing leaves it. Here you can also choose how long Rhema keeps your backups and snapshots.', { n: PAINT_AT })}</p>
         <div class="stats-row">
           <label>${t('Where your language model lives')} <input id="ra-base" type="text" spellcheck="false" style="width:300px" placeholder="${DEFAULT_BASE}"/></label>
@@ -104,11 +104,11 @@ const RhemaSettings = (() => {
         <details class="st-advanced">
           <summary class="soft">${t('Importing poems')}</summary>
           <div class="stats-row">
-            <label>${t('Split a file into poems by')}
+            <label>${t('Split a file into poems')}
               <select id="ra-split">${sel((cfg().import || {}).split || 'auto', [['auto', 'headings, separators, page breaks and wide gaps'], ['headings', 'headings, separators and page breaks only'], ['whole', 'never — one file, one poem']])}</select>
             </label>
           </div>
-          <p class="soft" style="font-size:12px;margin:0 0 6px">${t('A single blank line is always a stanza break. Whatever the split, you can join poems or split them again in the editor: Enter three times starts a new poem.')}</p>
+          <p class="soft" style="font-size:12px;margin:0 0 6px">${t('A single blank line is always a stanza break. Whatever the split, you can join poems or split them again in the editor: press Enter three times to start a new poem.')}</p>
         </details>
         <div style="text-align:right;margin-top:14px">
           <button id="ra-test" class="btn-quiet" style="margin-right:10px;border:1px solid rgba(255,255,255,.35);padding:5px 14px">${t('Test')}</button>

@@ -38,17 +38,19 @@ carry anchors. Target: <300 changed lines across core files.
 | `checkForUpdate()` `state === 'off'` branch | honest "Updates arrive by hand" notice instead of a fake "up to date" (Stone 15) | 0 |
 | `showAbout()` `<h2>Rhema</h2>` | About modal heading (hardcoded, bypasses t()) | 0 |
 | `requestPaint()` provider line + `hasSecret` guard | `RhemaSettings.configured()` routes covers through ai.js (provider `'rhema'`); the key check is skipped for local endpoints | 1 |
-| `requestPaint()` nudge toast | reworded for Rhema builds: points at File → Rhema AI… (local models), not at an OpenAI key | 1 |
+| `requestPaint()` nudge toast | reworded for Rhema builds: points at File → Rhema Settings… (local models), not at an OpenAI key | 1 |
 | `refreshCover()` `hasKey` line | a configured Rhema AI counts as "paintable" without an OpenAI secret | 1 |
 | `refreshCover()` paint-menu desc | on the Rhema path: "about a minute, on your own machine" — no "few cents" | 1 |
 | `snapsToThin(snaps, now, keepDays)` | Stone 6: retention parameter (default = upstream 30; 0/Infinity = unlimited); call site passes `RhemaSettings.snapKeepDays()` | 1 |
-| `WINDOWS` list + `msg.type === 'rhemaSettings'` | File → Rhema AI… opens `RhemaSettings.open()` | 1 |
+| `WINDOWS` list + `msg.type === 'rhemaSettings'` | File → Rhema Settings… opens `RhemaSettings.open()` | 1 |
 | bookTile export menu: `Chapbook PDF (5×8)…` label for poem books (value stays `'paperback'`) | poets print chapbooks (Stone 13) | 3a |
 | `importChaptersIntoBook()`: `poemBook() ? NeoHooks.format('poetry').poemChapterHTML(ch) : importedChapterHTML(ch)` | a poem book takes imported chapters as poems: stanzas + soft breaks | 3a |
 | `importDroppedChapters()`: pdf in the drop filter + `{ poetry: true }` when `poemBook()` | dropped files into an open collection keep lines | 3a |
 | `importChapters()`: `{ chapters: true, poetry: true }` for poem books | the in-book Import… keeps lines | 3a |
 | `printPaperback()` ×2 (trim preselect + `let trim`): `bp.trim || (poemBook() ? '5x8' : '5.5x8.5')` | the paperback dialog opens as a chapbook for poem books (upstream `PRINT_TRIMS` already has 5×8) | 3a |
 | `buildMd()`: `p.poetry` branch — `'  \n> '` between lines | Markdown export keeps verse lines (hard break, continuing blockquote) | 3a |
+| `chapterHeading()`: poem books get the title alone (no 'Poem 1 — Κεριά' double-name in print/EPUB; untitled keeps the 'Poem n' fallback) | UX gate: chapter chrome leaked into the chapbook and EPUB h1 | 3b |
+| `printPaperback()` dialog chrome: h2 `Chapbook PDF` + KDP-free hint when `poemBook()`; `pm-fiction` and `pm-review` checkboxes default OFF for poem books (explicit on still works) | the menu says Chapbook, the dialog must too; a poetry chapbook is not 'a work of fiction' and does not beg for Amazon reviews by default (UX gate) | 3b |
 | `buildTxt()`: `p.poetry` takes text from runs (`{ br, text:'\n' }`) | plain-text export keeps verse lines — `p.innerText` on the detached holder never renders, so `<br>` vanished and lines ran together (found by e2e; novels have no soft breaks, prose path untouched) | 3a |
 | EPUB chapter `inner`: `NeoHooks.emit('epubSectionEnd', ch, d)` | the poem mark closes each EPUB chapter (qrmark.js emits XHTML: closed `<img/>`, no contenteditable) | 3a |
 | `onMenu`: `msg.type === 'importPoems'` → `NeoHooks.format('poetry').importPoems()` | File → Import Poems… | 3a |
@@ -80,11 +82,11 @@ name are the only literal renames (both listed above).
 | `cover:paint` handler | provider `'rhema'` branch → `ai.js` `paintCover`; settings read from the user's library file (never renderer-supplied), secret name `rhema-ai`, key optional for local endpoints | 1 |
 | `rhemaAiSettings()` + `ai:test` handler | library.rhema.ai read (main-side source of truth); the Test button, with the saved key attached only when the tested base equals the saved base | 1 |
 | `dailyBackup()` `keep:` + `rhemaBackupKeep()` | Stone 6: backup retention from library.rhema.retention.backups (default 14, `'unlimited'` → keep all) | 1 |
-| File menu `Rhema AI…` item | opens the Rhema settings pane (behind Show More Features, like Cover Art…) | 1 |
+| File menu `Rhema Settings…` item (was `Rhema AI…` — the pane holds AI, QR, import split and retention; renamed at the Phase 3 UX gate) | opens the Rhema settings pane (behind Show More Features, like Cover Art…) | 1+3b |
 | `initLanguage()`: `loadLanguage(saved || 'el')` | Stone 11: first launch is Greek regardless of the system language (the poet's default; View → Language switches). The saved choice always wins. Spellcheck follows the interface, so first launch also gets dictionary-el. | 2f |
 | `rhema:asset:pick/set/read/clear` handlers | Stone 1a: poem-mark drawings — `rhema-drawing.(png|jpg|webp)` (collection) and `rhema-drawing-<chId>.*` (one poem); slug-validated key, fixed names; reuses COVER_EXTS + readCover. **2h-fix (security review): `set` takes a one-time token issued by `pick`, never a renderer path** — a compromised renderer cannot stage an arbitrary image-extension file from disk; handler wrapped in try/catch | 2e+2h-fix |
 | `importFile(fp, opts)` | Stone 12: `opts.poetry` keeps every line a line — txt/md poem files stream `{ text, line, indent }` + `{ gap, wide }` paras; docx empty Word paragraphs become stanza gaps (the split's `cont` flag from the first draft was dead and removed — the flatMap line stays byte-identical to upstream); `.pdf` joins via `require('./pdfimport.js').pdfParas` (lazy pdfjs-dist load) | 3a |
-| `poemize()` inside `importFile` | the multi-poem splitter: split knob `library.rhema.import.split` = `'auto'` (headings, separators, page breaks, two-blank-line gaps) / `'headings'` (gaps never split) / `'whole'`; Title-styled first line names the book, as in chapterize; prologue/epilogue roles ride along | 3a |
+| `poemize()` inside `importFile` | the multi-poem splitter: split knob `library.rhema.import.split` = `'auto'` / `'headings'` (gaps never split) / `'whole'`. 3b (UX gate BLOCKER): `'auto'` learns from the file — when it carries explicit structure (headings, separators, page breaks) gaps NEVER split (Η πόλις was cut mid-poem by a double blank line); only structure-free files split on wide gaps. Consecutive blanks collapse to one stanza gap; Title-styled first line names the book; prologue/epilogue roles ride along | 3a+3b |
 | `import:files` + `import:pick` handlers | carry `opts` (poetry mode); `.pdf` in the filter only for poetry picks; poetry dialog title 'Bring your poems home' | 3a |
 | File menu `Import Poems…` item | `sendToWindow({ type: 'importPoems' })` — each file becomes a poem collection | 3a |
 | `pdfimport.js` (new fork file, main-process only — no `<script>` tag) | PDF → paragraph stream: text items sharing a baseline join into lines; the 25th-percentile pitch separates stanza gaps (×1.6) from poem gaps (×2.4); pushed-in lines get the indent flag | 3a |

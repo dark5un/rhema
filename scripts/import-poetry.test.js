@@ -80,6 +80,25 @@ describe('poem import', () => {
     assert.deepEqual(linesOf(r.chapters[0]), [L1, L2]);
   });
 
+  // the UX gate BLOCKER (2026-10-17): 'auto' cut Η πόλις in half because a
+  // double blank line inside the poem read as a wide gap. With explicit
+  // structure in the file, 'auto' now trusts headings/separators/page breaks
+  // and leaves the poet's stanza spacing alone.
+  test('auto with headings: a wide gap inside a poem stays a stanza break', async () => {
+    setSplit(null);
+    const r = await importOne('polis-widegap.md',
+      '# Η πόλις\n' + P1 + '\n\n\n' + L1 + '\n\n# Κεριά\n' + L2 + '\n');
+    assert.equal(r.chapters.length, 2, 'the heading opened the second poem');
+    assert.deepEqual(linesOf(r.chapters[0]), [P1, L1], 'the triple blank line stayed inside poem one');
+    assert.equal(stanzaCount(r.chapters[0]), 2, 'and rode in as a stanza gap');
+  });
+
+  test('auto without structure: wide gaps still split (no headings to trust)', async () => {
+    setSplit(null);
+    const r = await importOne('bare.txt', L1 + '\n\n\n' + P1 + '\n');
+    assert.equal(r.chapters.length, 2, 'a bare file still becomes two poems');
+  });
+
   test('the split knob: whole keeps one poem; headings ignore gaps', async () => {
     setSplit('whole');
     let r = await importOne('whole.txt', L1 + '\n\n' + P1 + '\n');

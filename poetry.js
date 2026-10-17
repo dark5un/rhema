@@ -679,6 +679,15 @@ const RhemaPoetry = (() => {
     return stanzas.map((st) => `<p class="poetry">${st.map(line).join('<br>')}</p>`).join('') || '<p class="poetry"><br></p>';
   }
 
+  // A file's slug becomes a presentable book title: 'keria-polis' ->
+  // 'Keria Polis'. The raw filename was riding into the printed title page
+  // and the cover template (UX gate 2026-10-17).
+  function prettyName(name) {
+    const s = String(name || '').replace(/\.(txt|md|docx|pdf|fountain|fdx)$/i, '')
+      .replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
+    return s.replace(/(^|\s)(.)/g, (_m, sp, ch) => sp + ch.toUpperCase());
+  }
+
   // File → Import Poems…: each file becomes one poem collection on the
   // current author's first shelf (the Import Manuscripts landing).
   async function importPoems() {
@@ -690,9 +699,9 @@ const RhemaPoetry = (() => {
     let ok = 0;
     for (const r of results) {
       if (r.error) { toast(t('Couldn’t import {name}: {error}', { name: r.name, error: r.error }), 6000); continue; }
-      const meta = await window.neo.createBook({ author: r.author || displayAuthor(), title: r.title || r.name });
+      const meta = await window.neo.createBook({ author: r.author || displayAuthor(), title: r.title || prettyName(r.name) });
       meta.format = 'poetry';
-      meta.title = r.title || r.name;
+      meta.title = r.title || prettyName(r.name);
       const td = library.tabDefaults || {};
       meta.tabNames = { notes: td.notes || 'Notes', outline: td.outline || 'Outline' };
       meta.chapterTitles = {};

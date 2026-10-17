@@ -884,9 +884,9 @@
  "Reset": "Επαναφορά",
  "Restore This Chapter": "Επαναφορά Αυτού του Κεφαλαίου",
  "Restore Whole Book": "Επαναφορά Ολόκληρου του Βιβλίου",
- "Rhema AI": "Ρήμα AI",
- "Rhema AI…": "Ρήμα AI…",
- "Rhema can paint this book a cover with your own local models — set it up under File → Rhema AI… and it will paint once a story passes {n} words.": "Το Ρήμα μπορεί να ζωγραφίσει εξώφυλλο στο βιβλίο με τα τοπικά σας μοντέλα — ρυθμίστε το από Αρχείο → Ρήμα AI… και θα το ζωγραφίσει μόλις το κείμενο ξεπεράσει τις {n} λέξεις.",
+ "Rhema Settings": "Ρυθμίσεις Ρήματος",
+ "Rhema Settings…": "Ρυθμίσεις Ρήματος…",
+ "Rhema can paint this book a cover with your own local models — set it up under File → Rhema Settings… and it will paint once a story passes {n} words.": "Το Ρήμα μπορεί να ζωγραφίσει εξώφυλλο στο βιβλίο με τα τοπικά σας μοντέλα — ρυθμίστε το από Αρχείο → Ρυθμίσεις Ρήματος… και θα το ζωγραφίσει μόλις το κείμενο ξεπεράσει τις {n} λέξεις.",
  "Rhema can read a book once it passes {n} words and paint its cover with your own local models: a language model writes the brief, an image model paints it. When the addresses below point to this computer, nothing leaves it. Here you can also choose how long Rhema keeps your backups and snapshots.": "Το Ρήμα διαβάζει ένα βιβλίο μόλις ξεπεράσει τις {n} λέξεις και ζωγραφίζει το εξώφυλλό του με τα τοπικά σας μοντέλα: μια γλωσσική μονάδα γράφει την περίληψη, μια μονάδα εικόνας το ζωγραφίζει. Όταν οι παρακάτω διευθύνσεις δείχνουν σε αυτόν τον υπολογιστή, τίποτα δεν φεύγει από αυτόν. Εδώ μπορείτε επίσης να επιλέξετε πόσο καιρό κρατά το Ρήμα τα αντίγραφα ασφαλείας και τα στιγμιότυπά σας.",
  "Rhema reads the book and paints a new cover. About a minute, on your own machine.": "Το Ρήμα διαβάζει το βιβλίο και ζωγραφίζει νέο εξώφυλλο. Περίπου ένα λεπτό, στον υπολογιστή σας.",
  "Same as now": "Ίδιο με τώρα",
@@ -995,7 +995,7 @@
  "Zoom out until two pages fit side by side": "Σμικρύνετε ώσπου δύο σελίδες να χωρέσουν δίπλα-δίπλα",
  "Finished": "Ολοκληρωμένο",
  "QR code": "Κωδικός QR",
- "Import Poems…": "Εισαγωγή Ποιημάτων…",
+ "Import Poems…": "Εισαγωγή ποιημάτων…",
  "Bring your poems home": "Φέρτε τα ποιήματά σας στο Ρήμα",
  "Import poems…": "Εισαγωγή ποιημάτων…",
  "{n} poem collections imported onto “{shelf}” — lines and stanzas kept": {
@@ -1008,9 +1008,11 @@
  },
  "Chapbook PDF (5×8)…": "Φυλλάδιο PDF (5×8)…",
  "Importing poems": "Εισαγωγή ποιημάτων",
- "Split a file into poems by": "Διαχωρισμός αρχείου σε ποιήματα:",
+ "Split a file into poems": "Διαχωρισμός αρχείου σε ποιήματα:",
  "headings, separators, page breaks and wide gaps": "επικεφαλίδες, διαχωριστικά, αλλαγές σελίδας και μεγάλα κενά",
  "headings, separators and page breaks only": "μόνο επικεφαλίδες, διαχωριστικά και αλλαγές σελίδας",
  "never — one file, one poem": "ποτέ — ένα αρχείο, ένα ποίημα",
- "A single blank line is always a stanza break. Whatever the split, you can join poems or split them again in the editor: Enter three times starts a new poem.": "Μία κενή γραμμή είναι πάντα αλλαγή στροφής. Όποιος και αν είναι ο διαχωρισμός, μπορείτε να ενώσετε ή να χωρίσετε ποιήματα στον επεξεργαστή: τρία Enter ξεκινούν νέο ποίημα."
+ "A single blank line is always a stanza break. Whatever the split, you can join poems or split them again in the editor: press Enter three times to start a new poem.": "Μία κενή γραμμή είναι πάντα αλλαγή στροφής. Όποια και αν είναι η ρύθμιση διαχωρισμού, μπορείτε να ενώσετε ή να χωρίσετε ποιήματα στον επεξεργαστή: πατώντας τρεις φορές το Enter ξεκινά νέο ποίημα.",
+ "Chapbook PDF": "Φυλλάδιο PDF",
+ "A print-ready interior PDF and a cover template sized to its page count.": "Ένα έτοιμο για εκτύπωση εσωτερικό PDF και ένα πρότυπο εξωφύλλου προσαρμοσμένο στον αριθμό σελίδων του."
 }

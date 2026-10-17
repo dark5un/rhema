@@ -192,6 +192,10 @@ function chapterHeading(chId, meta = book, sep = ' ' + headingDash() + ' ') {
   const title = ((meta.chapterTitles || {})[chId] || '').trim();
   const k = chapterKind(chId, meta);
   if (k === 'unnumbered') return title;
+  /* RHEMA — a poem's heading is its title, full stop: no 'Poem 1 — Κεριά'
+     double-name in print or EPUB (UX gate 2026-10-17); untitled poems keep
+     the consistent 'Poem n' fallback through the next line */
+  if (title && NeoHooks.format(meta.format) && NeoHooks.format(meta.format).poem) return title;
   if (!title) return chapterName(chId, meta);
   return library.exportCustomChapterTitles ? title : chapterName(chId, meta) + sep + title;
 }
@@ -2232,7 +2236,7 @@ async function requestPaint(meta, text) {
     if (!library.coverArtNudged) {
       library.coverArtNudged = true;
       await writeLibrary(library);
-      toast(t('Rhema can paint this book a cover with your own local models — set it up under File → Rhema AI… and it will paint once a story passes {n} words.', { n: PAINT_AT }), 8000); /* RHEMA */
+      toast(t('Rhema can paint this book a cover with your own local models — set it up under File → Rhema Settings… and it will paint once a story passes {n} words.', { n: PAINT_AT }), 8000); /* RHEMA */
     }
     return;
   }
@@ -16126,8 +16130,8 @@ async function printPaperback() {
   bd.className = 'modal-backdrop';
   bd.innerHTML = `
     <div class="modal print-modal" style="width:560px">
-      <h2 style="font-size:17px">${t('Paperback for KDP')}</h2>
-      <p class="pm-hint">${t('A print-ready interior PDF and a cover template sized to its page count, for Amazon KDP.')}</p>
+      <h2 style="font-size:17px">${poemBook() ? t('Chapbook PDF') : t('Paperback for KDP')}</h2>
+      <p class="pm-hint">${poemBook() ? t('A print-ready interior PDF and a cover template sized to its page count.') : t('A print-ready interior PDF and a cover template sized to its page count, for Amazon KDP.')}</p> <!-- RHEMA: chrome follows the Chapbook menu label (UX gate) -->
       <div class="pm-row pm-trims">${PRINT_TRIMS.map((x) => `
         <button type="button" class="fr-choice${(bp.trim || (poemBook() ? '5x8' : '5.5x8.5')) === x.id ? ' sel' : ''}" data-trim="${x.id}"><strong>${x.label}</strong><span>${x.mm}</span></button>`).join('')}
       </div>
@@ -16139,10 +16143,10 @@ async function printPaperback() {
         </label>
         ${field('pm-isbn', t('ISBN (optional)'), bp.isbn, '979-8-…')}
       </div>
-      <label class="pm-check"><input id="pm-fiction" type="checkbox"${bp.fiction !== false ? ' checked' : ''}/> ${t('The standard fiction notice on the copyright page')}</label>
+      <label class="pm-check"><input id="pm-fiction" type="checkbox"${(poemBook() ? bp.fiction === true : bp.fiction !== false) ? ' checked' : ''}/> ${t('The standard fiction notice on the copyright page')}</label>
       ${hasDedication ? '' : field('pm-dedication', t('Dedication (optional)'), '', t('For…'))}
       <h3>${t('At the back of the book, for {name}', { name: escHtml(author.name || displayAuthor()) })}</h3>
-      <div class="pm-review-row"><label class="pm-check"><input id="pm-review" type="checkbox"${ap.review !== false ? ' checked' : ''}/> ${t('Ask readers for a review')}</label><button type="button" class="pm-edit btn-quiet">${t('Edit wording')}</button></div>
+      <div class="pm-review-row"><label class="pm-check"><input id="pm-review" type="checkbox"${(poemBook() ? ap.review === true : ap.review !== false) ? ' checked' : ''}/> ${t('Ask readers for a review')}</label><button type="button" class="pm-edit btn-quiet">${t('Edit wording')}</button></div>
       <textarea id="pm-review-text" rows="3" hidden>${escHtml(reviewText)}</textarea>
       <div class="pm-row">
         ${field('pm-web', t('Website'), ap.website, 'example.com')}

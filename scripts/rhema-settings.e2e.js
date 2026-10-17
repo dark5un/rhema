@@ -1,4 +1,4 @@
-// Rhema Phase 1 e2e /* RHEMA */ — the File → Rhema AI… pane: it opens,
+// Rhema Phase 1 e2e /* RHEMA */ — the File → Rhema Settings… pane: it opens,
 // saves library.rhema (endpoints + retention, unlimited included), and the
 // Test button reaches the bridge. Screenshots with NEO_SHOTS for the UX gate.
 // Run with `npm run test:rhema-settings`.

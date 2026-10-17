@@ -2062,6 +2062,14 @@ async function importFile(fp, opts = {}) {
     let lastWasHeading = false;
     let gapRun = 0;
     styledTitle = null;
+    /* RHEMA — 'auto' learns from the file: when it carries explicit poem
+       boundaries (headings, separator lines, page breaks) those are trusted
+       and a wide gap stays the poet's own stanza spacing — the UX gate
+       BLOCKER: Η πόλις was cut mid-poem by a double blank line. Only files
+       with no explicit structure at all split on wide gaps. */
+    const gapSplits = splitMode === 'auto' && !paras.some((p) =>
+      p.heading || p.title || p.pageBreak || isMdHeading(p.text || '') || isBreak(p.text) ||
+      (CHAPTER_WORDS.test(bare(p.text || '')) && (p.text || '').length < 60 && !readsAsSentence(p.text)));
     const close = () => {
       while (cur.length && cur[cur.length - 1].gap) cur.pop();
       if (cur.some((p) => p.text) || curTitle) poems.push({ title: curTitle, paras: cur, role: curRole });
@@ -2071,8 +2079,9 @@ async function importFile(fp, opts = {}) {
       if (p.pageEnd) { close(); continue; }
       if (p.gap) {
         gapRun += p.wide ? 2 : 1;
-        if (splitMode === 'auto' && gapRun >= 2) { close(); continue; }
-        if (cur.some((x) => x.text)) cur.push({ text: '', gap: true });
+        if (gapSplits && gapRun >= 2) { close(); continue; }
+        // consecutive blanks collapse to one stanza gap
+        if (cur.some((x) => x.text) && !(cur.length && cur[cur.length - 1].gap)) cur.push({ text: '', gap: true });
         continue;
       }
       gapRun = 0;
@@ -2840,7 +2849,7 @@ function buildMenu() {
         { label: t('Take Snapshot'), accelerator: 'CmdOrCtrl+S', registerAccelerator: false, click: () => sendToWindow({ type: 'snapshot' }) },
         { type: 'separator' },
         { more: true, label: t('Cover Art…'), click: () => sendToWindow({ type: 'coverArt' }) },
-        { more: true, label: t('Rhema AI…'), click: () => sendToWindow({ type: 'rhemaSettings' }) }, /* RHEMA */
+        { more: true, label: t('Rhema Settings…'), click: () => sendToWindow({ type: 'rhemaSettings' }) }, /* RHEMA — the pane holds AI, QR, import and retention: Settings, not AI */
         {
           label: t('Goals…'),
           accelerator: 'CmdOrCtrl+,',
