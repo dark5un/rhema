@@ -238,8 +238,10 @@ const RhemaQr = (() => {
   // async load would otherwise lose the race — review 2026-10-17)
   NeoHooks.on('bookOpened', async (meta) => {
     const id = meta.id;
-    await loadAllDrawings(meta);
-    if (book && book.id === id && poemBook()) renderChapters();
+    try {
+      await loadAllDrawings(meta);
+      if (book && book.id === id && poemBook()) renderChapters();
+    } catch (err) { if (window.neo && neo.logError) neo.logError('rhema-qr-open: ' + ((err && err.message) || err)); }
   });
   NeoHooks.on('chapterMenuItems', chapterMenuItems);
   NeoHooks.on('chapterMenuChoice', chapterMenuChoice);

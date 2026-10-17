@@ -134,6 +134,7 @@ const RhemaPoetry = (() => {
     [/\bchapters\b/g, 'poems'], [/\bchapter\b/g, 'poem'],
     [/\bch\.(?= \{ch\})/g, 'poem'],
     [/Κεφάλαια/g, 'Ποιήματα'], [/κεφάλαια/g, 'ποιήματα'],
+    [/Κεφαλαίων/g, 'Ποιημάτων'], [/κεφαλαίων/g, 'ποιημάτων'], // genitive plural (review)
     [/Κεφαλαίου/g, 'Ποιήματος'], [/κεφαλαίου/g, 'ποιήματος'],
     [/Κεφάλαιο/g, 'Ποίημα'], [/κεφάλαιο/g, 'ποίημα'],
     [/κεφ\.(?= \{ch\})/g, 'ποι.']
@@ -144,6 +145,8 @@ const RhemaPoetry = (() => {
     // spEditorMode's own nav-head update)
     const addSpan = document.querySelector('#nav-add [data-i18n]');
     if (addSpan) addSpan.textContent = t('Chapter');
+    const headSpan = document.querySelector('#nav-head span');
+    if (headSpan) headSpan.textContent = t('Chapters'); // spEditorMode's pass can precede the terms
   }
 
   /* ---------------- DOM <-> model ---------------- */
@@ -583,9 +586,13 @@ const RhemaPoetry = (() => {
       if (lines.length) {
         const fs = document.createElement('div');
         fs.className = 'rhema-card-line';
+        const first = lines[0];
+        const trunc = first.length > 220 ? first.slice(0, 220).trim() + '…' : first;
+        // Greek convention: guillemets — but a line that already opens a
+        // quote carries its own; nesting ««…»» reads wrong (UI review)
         fs.textContent = NeoI18n.getLocale() === 'el'
-          ? '«' + (lines[0].length > 220 ? lines[0].slice(0, 220).trim() + '…' : lines[0]) + '»'
-          : quoted(lines[0]); // Greek convention: guillemets (all 28 quoted el.json values agree)
+          ? (/[«»]/.test(first) ? trunc : '«' + trunc + '»')
+          : quoted(first);
         text.appendChild(fs);
       }
     }

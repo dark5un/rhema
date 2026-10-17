@@ -47,7 +47,7 @@ contextBridge.exposeInMainWorld('neo', {
     test: (settings) => ipcRenderer.invoke('ai:test', settings),
     /* RHEMA — Stone 1a: the poem-mark drawings (key: 'collection' or a chapter id) */
     assetPick: () => ipcRenderer.invoke('rhema:asset:pick'),
-    assetSet: (bookId, srcPath, key) => ipcRenderer.invoke('rhema:asset:set', bookId, srcPath, key),
+    assetSet: (bookId, token, key) => ipcRenderer.invoke('rhema:asset:set', bookId, token, key), // one-time pick token, not a path
     assetRead: (bookId, key) => ipcRenderer.invoke('rhema:asset:read', bookId, key),
     assetClear: (bookId, key) => ipcRenderer.invoke('rhema:asset:clear', bookId, key)
   },

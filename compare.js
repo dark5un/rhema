@@ -14,6 +14,9 @@ const RhemaCompare = (() => {
   const isPoem = () => !!(book && NeoHooks.format(book.format) && NeoHooks.format(book.format).poem);
 
   function enhance(v) {
+    // the class drives the CSS widening — remove it first so a novel's
+    // snapshot view never inherits a poem's layout (review 2026-10-17)
+    v.classList.remove('rhema-compare');
     if (!isPoem() || !snapShown) return;
     v.classList.add('rhema-compare');
     if (window.CSS && CSS.highlights) CSS.highlights.delete('rhema-snap-added');

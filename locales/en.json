@@ -4,6 +4,7 @@
   },
   "{n} lines": {"one": "{n} line", "other": "{n} lines"},
   "ok — {n} models": {"one": "ok — {n} model", "other": "ok — {n} models"},
+  "{done} of {total} poems finished": {"one": "{done} of {total} poem finished", "other": "{done} of {total} poems finished"},
   "{n} books imported onto “{shelf}” — chapters and scene breaks detected": {
     "one": "{n} book imported onto “{shelf}” — chapters and scene breaks detected",
     "other": "{n} books imported onto “{shelf}” — chapters and scene breaks detected"

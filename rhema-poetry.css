@@ -49,16 +49,26 @@
 .rhema-scrap-empty { opacity: 0.7; padding: 8px 4px; }
 
 /* the compare view: snapshot poem beside the poem as it is.
-   BLOCKER fix (UX review 2026-10-17): verse must not wrap — while a
-   snapshot is open, the scroll container AND the sheet widen so each
-   column gets real measure (the paper-scroll cap, not aux-paper's
-   max-width, was the binding constraint — probe 2026-10-17).
-/* Pure CSS :has(): no JS, no anchor, cleans up when the view closes.
-   Scoped to .rhema-compare (compare.js adds it only for poem books) —
-   a novel's snapshot view keeps NEO's layout untouched. */
-#editor-view:has(#snap-view.rhema-compare:not([hidden])) #paper-scroll { left: 0; right: 250px; width: auto; }
-#editor-view:has(#snap-view.rhema-compare:not([hidden]).nav-pinned) #paper-scroll { left: 248px; }
-#editor-view:has(#snap-view.rhema-compare:not([hidden])) #aux-paper { width: min(1150px, 94%); padding-left: 40px; padding-right: 40px; }
+   BLOCKER fix (UX review 2026-10-17, take 3): verse must not wrap.
+   Three things were needed, each missed by an earlier take: widen the
+   SCROLL CONTAINER (its own cap was the binding constraint, not
+   aux-paper's max-width), cancel the base rule's left:50% +
+   translateX(-50%) centering (upstream's board-on rule does the same —
+   without it the paper renders off-screen), and zero the manuscript's
+   stanza side-margins inside the columns (2.5em each side ate 85px of
+   every column). The font steps down 0.95em so Kavafis's longest
+   Η πόλις line (~454px) fits a 1280px window. Scoped to
+   #snap-view.rhema-compare — compare.js adds it only for poem books
+   and removes it otherwise — so a novel's snapshot view keeps NEO's
+   layout. Pure CSS :has(): no anchors, self-cleaning. */
+#editor-view:has(#snap-view.rhema-compare:not([hidden])) #paper-scroll {
+  left: 0; right: calc(250px * var(--ui-zoom)); width: auto; transform: none;
+}
+#editor-view:has(#snap-view.rhema-compare:not([hidden])) #aux-paper {
+  width: min(1150px, 94%); padding-left: 16px; padding-right: 16px;
+}
+.rhema-compare .snap-body p.poetry, .rhema-compare .rhema-now p.poetry { margin-left: 0; margin-right: 0; }
+.rhema-compare .snap-body, .rhema-compare .rhema-now { font-size: 0.95em; }
 .rhema-compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
 .rhema-compare-col { min-width: 0; }
 .rhema-compare-label { font-size: 11px; opacity: 0.6; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.06em; }
@@ -71,3 +81,13 @@
   outline: 2px dashed rgba(201, 168, 106, 0.65);
   outline-offset: 6px;
 }
+
+/* light theme (UI/UX review 2026-10-17): blanket opacity reads faint on
+   paper-white — legend and chip get real ink, the drop cue a darker gold,
+   the status dots step down to 3:1+ against the page */
+body.light .rhema-legend { opacity: 1; color: #55514a; }
+body.light .rhema-progress { opacity: 1; color: #46433d; }
+body.light .chapter-body.rhema-drop-target { outline-color: rgba(122, 94, 30, 0.9); }
+body.light .st-draft { background: #8a6a1f; }
+body.light .st-fair { background: #2f6ea6; }
+body.light .st-done { background: #2e7d43; }
