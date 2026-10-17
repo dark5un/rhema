@@ -38,6 +38,50 @@ test('the default ComfyUI workflow fills its tokens and keeps the graph shape', 
   assert.doesNotMatch(JSON.stringify(g), /\{\{[A-Z]+\}\}/);
 });
 
+test('tokens fill EVERY occurrence and $-sequences in a brief stay literal', () => {
+  // review finding (coding, Phase 1): repeated tokens and "$'"/"$&" used to
+  // corrupt the graph — replacement must be global and function-escaped
+  const custom = {
+    A: { class_type: 'CLIPTextEncode', inputs: { text: '{{POSITIVE}}' } },
+    B: { class_type: 'CLIPTextEncode', inputs: { text: '{{POSITIVE}}' } },
+    C: { class_type: 'KSampler', inputs: { seed: '{{SEED}}', steps: '{{SEED}}' } }
+  };
+  const g = ai.buildWorkflow(custom, {
+    positive: "she said $'cause & then $& stopped", negative: '', checkpoint: 'm',
+    width: 8, height: 9, steps: 1, cfg: 2, seed: 7
+  });
+  assert.equal(g.A.inputs.text, g.B.inputs.text);
+  assert.equal(g.A.inputs.text, "she said $'cause & then $& stopped");
+  assert.equal(g.C.inputs.seed, 7);
+  assert.equal(g.C.inputs.steps, 7);
+  assert.doesNotMatch(JSON.stringify(g), /\{\{[A-Z]+\}\}/);
+});
+
+test('a set seed stays set (0 included); big seeds are not truncated', () => {
+  const seedOf = (seed) => ai.buildWorkflow(null, {
+    positive: 'p', negative: 'n', checkpoint: 'm',
+    width: 1, height: 1, steps: 1, cfg: 1, seed
+  })['5'].inputs.seed;
+  assert.equal(seedOf(0), 0);
+  assert.equal(seedOf(3000000000), 3000000000);
+});
+
+test('comfyuiPaint randomizes only an absent seed', async () => {
+  let graph;
+  const capture = async (url, init) => {
+    if (String(url).includes('/prompt')) {
+      graph = JSON.parse(init.body).prompt;
+      return jsonResponse({ prompt_id: 'p1' });
+    }
+    if (String(url).includes('/view')) return jsonResponse(null);
+    return jsonResponse({ p1: { status: { status_str: 'success' }, outputs: { '7': { images: [{ filename: 'c.png' }] } } } });
+  };
+  await withFetch(capture, () => ai.comfyuiPaint({ url: 'http://x', brief: 'b', seed: 0 }));
+  assert.equal(graph['5'].inputs.seed, 0);
+  await withFetch(capture, () => ai.comfyuiPaint({ url: 'http://x', brief: 'b' }));
+  assert.equal(typeof graph['5'].inputs.seed, 'number');
+});
+
 test('a custom workflow uses the same tokens', () => {
   const custom = {
     A: { class_type: 'CheckpointLoaderSimple', inputs: { ckpt_name: '{{CHECKPOINT}}' } },
@@ -129,4 +173,77 @@ test('the brief and paint prompts forbid text in the picture', () => {
   assert.match(ai.BRIEF_SYSTEM, /Never describe or request any text/i);
   assert.match(ai.PAINT_SUFFIX, /absolutely no text/i);
   assert.match(ai.DEFAULT_NEGATIVE, /text/);
+});
+
+// ---------------------------------------------------------------------------
+// The polling loop and the brief retry, on a fake fetch (review: the
+// riskiest paths were only covered by the live script)
+// ---------------------------------------------------------------------------
+
+const withFetch = async (handler, fn) => {
+  const real = globalThis.fetch;
+  globalThis.fetch = handler;
+  try { return await fn(); } finally { globalThis.fetch = real; }
+};
+const jsonResponse = (obj, status = 200) => ({
+  ok: status >= 200 && status < 300, status,
+  json: async () => obj, arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer
+});
+
+test('comfyuiPaint surfaces the real exception_message from an execution error', async () => {
+  await withFetch(async (url) => {
+    if (String(url).includes('/prompt')) return jsonResponse({ prompt_id: 'p1' });
+    return jsonResponse({ p1: { status: { status_str: 'error', messages: [
+      ['execution_error', { node_id: '5', exception_type: 'ValueError', exception_message: 'checkpoint not found' }]
+    ] } } });
+  }, () => ai.comfyuiPaint({ url: 'http://x', brief: 'b' }).then(
+    () => assert.fail('should have thrown'),
+    (err) => assert.match(err.message, /ComfyUI: checkpoint not found/)
+  ));
+});
+
+test('comfyuiPaint: completed without a picture is an error, a picture is a buffer', async () => {
+  await withFetch(async (url) => {
+    if (String(url).includes('/prompt')) return jsonResponse({ prompt_id: 'p1' });
+    if (String(url).includes('/view')) return jsonResponse(null); // unused; ok path below
+    return jsonResponse({ p1: { status: { status_str: 'success', completed: true }, outputs: {} } });
+  }, () => ai.comfyuiPaint({ url: 'http://x', brief: 'b' }).then(
+    () => assert.fail('should have thrown'),
+    (err) => assert.match(err.message, /finished without producing a picture/)
+  ));
+  const out = await withFetch(async (url) => {
+    if (String(url).includes('/prompt')) return jsonResponse({ prompt_id: 'p1' });
+    if (String(url).includes('/view')) return jsonResponse(null);
+    return jsonResponse({ p1: { status: { status_str: 'success' }, outputs: { '7': { images: [{ filename: 'cover-00001.png', subfolder: 'rhema', type: 'output' }] } } } });
+  }, () => ai.comfyuiPaint({ url: 'http://x', brief: 'b' }));
+  assert.equal(out.ext, 'png');
+  assert.equal(out.buffer.length, 3);
+});
+
+test('writeBrief gives a reasoning model more room once, then gives up honestly', async () => {
+  const calls = [];
+  await withFetch(async (url, init) => {
+    if (String(url).includes('/models')) return jsonResponse({ data: [{ id: 'm1' }] });
+    const body = JSON.parse((init && init.body) || '{}');
+    calls.push(body[tokenKey(body)]);
+    if (calls.length === 1) return jsonResponse({ choices: [{ message: { content: '', reasoning_content: 'thinking...' } }] });
+    return jsonResponse({ choices: [{ message: { content: 'a real brief' } }] });
+  }, async () => {
+    const r = await ai.writeBrief({ base: 'http://x/v1', apiKey: '', model: 'm1', text: 'poem' });
+    assert.equal(r.result, 'a real brief');
+  });
+  function tokenKey(body) { return body.max_tokens !== undefined ? 'max_tokens' : 'max_completion_tokens'; }
+  assert.equal(calls.length, 2);
+  assert.ok(calls[1] > calls[0]); // the retry asked for more room
+});
+
+test('testEndpoints calls a missing checkpoint out instead of a false all-clear', async () => {
+  const out = await withFetch(async (url) => {
+    if (String(url).includes('/system_stats')) return jsonResponse({ system: { comfyui_version: '0.34.0' } });
+    if (String(url).includes('/object_info')) return jsonResponse({ CheckpointLoaderSimple: { input: { required: { ckpt_name: [['other.safetensors']] } } } });
+    return jsonResponse({ data: [] });
+  }, () => ai.testEndpoints({ settings: { text: { base: 'http://x/v1' }, image: { provider: 'comfyui', url: 'http://y', checkpoint: 'missing.safetensors' } }, apiKey: '' }));
+  assert.equal(out.image.ok, false);
+  assert.equal(out.image.kind, 'no_checkpoint');
+  assert.deepEqual(out.image.checkpoints, ['other.safetensors']);
 });

@@ -34,6 +34,10 @@ const RhemaSettings = (() => {
   // Snapshot thinning days for snapsToThin (app.js); Infinity = keep everything.
   const snapKeepDays = () => keepValue(retention().snapshots, 30);
 
+  // The addresses this machine's stack answers on (Strata :11434, ComfyUI :3101)
+  const DEFAULT_BASE = 'http://localhost:11434/v1';
+  const DEFAULT_COMFY = 'http://localhost:3101';
+
   function open() {
     const ai = aiSettings();
     const ret = retention();
@@ -41,16 +45,22 @@ const RhemaSettings = (() => {
     const img = ai.image || {};
     const bd = document.createElement('div');
     bd.className = 'modal-backdrop';
-    const sel = (v, opts) => opts.map((o) => `<option value="${o[0]}"${String(v) === String(o[0]) ? ' selected' : ''}>${t(o[1])}</option>`).join('');
+    // a select that keeps values outside its option list: a hand-edited
+    // library must not be silently rewritten by opening this pane
+    const sel = (v, opts) => {
+      const list = opts.slice();
+      if (v !== '' && !list.some((o) => String(o[0]) === String(v))) list.unshift([v, String(v)]);
+      return list.map((o) => `<option value="${escHtml(String(o[0]))}"${String(v) === String(o[0]) ? ' selected' : ''}>${t(o[1])}</option>`).join('');
+    };
     bd.innerHTML = `
       <div class="modal" style="width:600px">
         <h2 style="font-size:17px">${t('Rhema AI')}</h2>
-        <p>${t('Rhema can read a book once it passes {n} words and paint its cover with your own local models: a language model writes the brief, an image model paints it. Nothing leaves this computer.', { n: PAINT_AT })}</p>
+        <p>${t('Rhema can read a book once it passes {n} words and paint its cover with your own local models: a language model writes the brief, an image model paints it. When the addresses below point to this computer, nothing leaves it. Here you can also choose how long Rhema keeps your backups and snapshots.', { n: PAINT_AT })}</p>
         <div class="stats-row">
-          <label>${t('Text model URL')} <input id="ra-base" type="text" spellcheck="false" style="width:300px" placeholder="http://localhost:11434/v1" value="${escHtml(text.base || '')}"/></label>
+          <label>${t('Where your language model lives')} <input id="ra-base" type="text" spellcheck="false" style="width:300px" placeholder="${DEFAULT_BASE}"/></label>
         </div>
         <div class="stats-row">
-          <label>${t('Model')} <input id="ra-model" type="text" spellcheck="false" style="width:220px" placeholder="qwen3.8-flash-next-iq3_s" value="${escHtml(text.model || '')}"/></label>
+          <label>${t('Model name')} <input id="ra-model" type="text" spellcheck="false" style="width:220px" placeholder="qwen3.8-flash-next-iq3_s"/></label>
           <label>${t('API key')} <input id="ra-key" type="password" autocomplete="off" spellcheck="false" style="width:220px"/></label>
         </div>
         <p class="soft" id="ra-keynote" style="margin:-6px 0 12px;font-size:12px"></p>
@@ -58,12 +68,12 @@ const RhemaSettings = (() => {
           <label>${t('Paint with')}
             <select id="ra-imgprovider">${sel(img.provider || '', [['', 'no image endpoint'], ['comfyui', 'ComfyUI'], ['openai', 'OpenAI-compatible']])}</select>
           </label>
-          <label>${t('Image URL')} <input id="ra-imgurl" type="text" spellcheck="false" style="width:240px" placeholder="http://localhost:3101" value="${escHtml(img.url || '')}"/></label>
+          <label>${t('Image URL')} <input id="ra-imgurl" type="text" spellcheck="false" style="width:240px" placeholder="${DEFAULT_COMFY}"/></label>
         </div>
         <details class="st-advanced"${img.provider === 'comfyui' ? ' open' : ''}>
           <summary class="soft">${t('ComfyUI')}</summary>
           <div class="stats-row">
-            <label>${t('Checkpoint')} <input id="ra-ckpt" type="text" spellcheck="false" style="width:240px" placeholder="juggernautXL_v9.safetensors" value="${escHtml(img.checkpoint || '')}"/></label>
+            <label>${t('Checkpoint')} <input id="ra-ckpt" type="text" spellcheck="false" style="width:240px" placeholder="juggernautXL_v9.safetensors"/></label>
             <label>${t('Size')}
               <select id="ra-size">${sel(img.width ? img.width + 'x' + img.height : '832x1216', [['832x1216', '832 × 1216'], ['1024x1536', '1024 × 1536'], ['672x1344', '672 × 1344']])}</select>
             </label>
@@ -82,22 +92,30 @@ const RhemaSettings = (() => {
               <select id="ra-retsnaps">${sel(ret.snapshots === undefined ? 30 : ret.snapshots, [[30, '30 days'], [90, '90 days'], [365, '365 days'], ['unlimited', 'unlimited']])}</select>
             </label>
           </div>
-          <p class="soft" style="font-size:12px;margin:0 0 6px">${t('Snapshots you take yourself (⌘S) are always kept. “Unlimited” never deletes — the library folder just grows.')}</p>
+          <p class="soft" style="font-size:12px;margin:0 0 6px">${t('Snapshots you take yourself ({key}) are always kept. “Unlimited” never deletes — the library folder just grows.', { key: K('⌘S', 'Ctrl+S') })}</p>
         </details>
         <div style="text-align:right;margin-top:14px">
-          <button id="ra-test" class="btn-quiet" style="margin-right:10px">${t('Test')}</button>
+          <button id="ra-test" class="btn-quiet" style="margin-right:10px;border:1px solid rgba(255,255,255,.35);padding:5px 14px">${t('Test')}</button>
           <button class="m-cancel btn-quiet" style="margin-right:10px">${t('Cancel')}</button>
           <button class="m-ok btn-gold">${t('Save')}</button>
         </div>
         <p class="soft" id="ra-testnote" style="margin:8px 0 0;font-size:12px"></p>
       </div>`;
     document.body.appendChild(bd);
+    // values land through the DOM (the openCoverArt pattern): no attribute
+    // escaping needed, and a quote in a saved URL cannot break out. The
+    // localhost defaults are pre-filled, not just hinted in placeholders.
+    const fill = (id, v) => { bd.querySelector('#' + id).value = v == null ? '' : String(v); };
+    fill('ra-base', text.base || DEFAULT_BASE);
+    fill('ra-model', text.model);
+    fill('ra-imgurl', img.url || DEFAULT_COMFY);
+    fill('ra-ckpt', img.checkpoint);
     const note = bd.querySelector('#ra-keynote');
     const key = bd.querySelector('#ra-key');
     window.neo.hasSecret('rhema-ai').then((has) => {
       note.textContent = has
         ? t('A key is saved, encrypted, outside your library folder. Paste a new one to replace it, or type “{remove}” to forget it.', { remove: t('remove') })
-        : t('Local endpoints usually need no key. If yours does, it is stored encrypted on this computer and only ever sent to the URL above.');
+        : t('Local endpoints usually need no key. If yours does, it is stored encrypted on this computer and only ever sent to the address above.');
     });
     const done = () => bd.remove();
     bd.querySelector('.m-cancel').onclick = done;
@@ -125,9 +143,23 @@ const RhemaSettings = (() => {
     bd.querySelector('#ra-test').onclick = async () => {
       const tn = bd.querySelector('#ra-testnote');
       tn.textContent = t('Testing…');
-      const res = await window.neo.rhema.test(collect()).catch((err) => ({ error: String(err) }));
-      const line = (r) => r && r.ok ? (r.models ? t('ok — {n} models', { n: String(r.models.length) }) : t('ok')) : t('failed: {error}', { error: (r && r.error) || '?' });
+      const res = await window.neo.rhema.test(collect()).catch((err) => ({ text: { ok: false, kind: 'error', error: String(err) }, image: { ok: false, kind: 'error', error: String(err) } }));
+      // plain language for a writer, not Node's vocabulary
+      const line = (r) => {
+        if (!r) return '—';
+        if (r.ok) return r.models ? '✓ ' + t('ok — {n} models', { n: String(r.models.length) }) : '✓ ' + t('ok');
+        const say = {
+          unreachable: t('can’t be reached — is the model server running?'),
+          auth: t('asked for a key — type it in the API key box'),
+          no_checkpoint: t('answers, but the Checkpoint named below isn’t installed') + (r.checkpoints && r.checkpoints.length ? ' (' + t('installed: {list}', { list: r.checkpoints.join(', ') }) + ')' : ''),
+          unset: t('is not set')
+        }[r.kind] || t('failed: {error}', { error: r.error || '?' });
+        return '✗ ' + say;
+      };
+      const bad = (res.text && !res.text.ok) || (res.image && !res.image.ok);
+      tn.style.color = bad ? 'var(--warn, #d9a441)' : '';
       tn.textContent = t('Text: {text} · Paint: {image}', { text: line(res.text), image: line(res.image) });
+      if (res.image && res.image.kind === 'no_checkpoint') bd.querySelector('details.st-advanced').open = true;
     };
     bd.querySelector('.m-ok').onclick = async () => {
       const k = key.value.trim();
@@ -135,16 +167,19 @@ const RhemaSettings = (() => {
       else if (k) await window.neo.setSecret('rhema-ai', k);
       const back = bd.querySelector('#ra-retbackups').value;
       const snaps = bd.querySelector('#ra-retsnaps').value;
-      library.rhema = {
+      // merge, never replace: other library.rhema sub-keys (Phase 2+) survive
+      library.rhema = Object.assign({}, cfg(), {
         ai: collect(),
         retention: {
           backups: back === 'unlimited' ? 'unlimited' : parseInt(back, 10),
           snapshots: snaps === 'unlimited' ? 'unlimited' : parseInt(snaps, 10)
         }
-      };
+      });
       await writeLibrary(library);
       done();
+      toast(t('Saved. Rhema will paint a cover once a book passes {n} words.', { n: PAINT_AT }), 5000);
     };
+    bd.querySelector('#ra-base').focus();
   }
 
   return {

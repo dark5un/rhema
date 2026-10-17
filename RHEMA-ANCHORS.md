@@ -19,8 +19,9 @@ carry anchors. Target: <300 changed lines across core files.
 | `checkForUpdate()` `state === 'off'` branch | honest "Updates arrive by hand" notice instead of a fake "up to date" (Stone 15) | 0 |
 | `showAbout()` `<h2>Rhema</h2>` | About modal heading (hardcoded, bypasses t()) | 0 |
 | `requestPaint()` provider line + `hasSecret` guard | `RhemaSettings.configured()` routes covers through ai.js (provider `'rhema'`); the key check is skipped for local endpoints | 1 |
-| `paintCover` call options | `settings: RhemaSettings.aiSettings()` passed to `cover:paint` | 1 |
+| `requestPaint()` nudge toast | reworded for Rhema builds: points at File → Rhema AI… (local models), not at an OpenAI key | 1 |
 | `refreshCover()` `hasKey` line | a configured Rhema AI counts as "paintable" without an OpenAI secret | 1 |
+| `refreshCover()` paint-menu desc | on the Rhema path: "about a minute, on your own machine" — no "few cents" | 1 |
 | `snapsToThin(snaps, now, keepDays)` | Stone 6: retention parameter (default = upstream 30; 0/Infinity = unlimited); call site passes `RhemaSettings.snapKeepDays()` | 1 |
 | `WINDOWS` list + `msg.type === 'rhemaSettings'` | File → Rhema AI… opens `RhemaSettings.open()` | 1 |
 | (future) enter-key call-site, menu call-sites, cards, export formats | one `NeoHooks.emit(...)` per hook surface | 2+ |
@@ -47,8 +48,8 @@ name are the only literal renames (both listed above).
 | `Rhema Library` (6 sites, was `NEO Library`) | library folder name | 0 |
 | `applicationName: 'Rhema'` (about panel) | product name | 0 |
 | startup migration block after `LIBRARY_FILE` | first-run adoption: if Rhema Library is empty but a NEO Library exists, ask once to open it (books from NEO never look "gone") | 0 |
-| `cover:paint` handler | provider `'rhema'` branch → `ai.js` `paintCover`; secret name `rhema-ai`, key optional for local endpoints | 1 |
-| `rhemaAiSettings()` + `ai:test` handler | library.rhema.ai fallback read; the settings pane's Test button | 1 |
+| `cover:paint` handler | provider `'rhema'` branch → `ai.js` `paintCover`; settings read from the user's library file (never renderer-supplied), secret name `rhema-ai`, key optional for local endpoints | 1 |
+| `rhemaAiSettings()` + `ai:test` handler | library.rhema.ai read (main-side source of truth); the Test button, with the saved key attached only when the tested base equals the saved base | 1 |
 | `dailyBackup()` `keep:` + `rhemaBackupKeep()` | Stone 6: backup retention from library.rhema.retention.backups (default 14, `'unlimited'` → keep all) | 1 |
 | File menu `Rhema AI…` item | opens the Rhema settings pane (behind Show More Features, like Cover Art…) | 1 |
 | (future) import formats | | 3 |
@@ -80,6 +81,7 @@ name are the only literal renames (both listed above).
   don't associate with the desktop icon (Phase 5 depends on it).
 - `homepage` and `linux.maintainer` (Hugh Howey) KEPT as attribution —
   explicit decision (review 2026-10-17); revisit only at public release.
+- `test:rhema-settings` script — runs scripts/rhema-settings.e2e.js (Electron pane test).
 
 ## scripts/
 

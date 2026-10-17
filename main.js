@@ -1076,10 +1076,18 @@ function rhemaAiSettings() {
   try { const lib = readJSON(LIBRARY_FILE, {}); return (lib.rhema && lib.rhema.ai) || {}; } catch { return {}; }
 }
 
-/* RHEMA — the Rhema AI pane's Test button: ping both endpoints, report */
-ipcMain.handle('ai:test', (_e, settings) =>
-  require('./ai.js').testEndpoints({ settings, apiKey: readSecret('rhema-ai') })
-    .catch((err) => ({ error: String((err && err.message) || err) })));
+/* RHEMA — the Rhema AI pane's Test button: ping both endpoints, report.
+   The saved key is attached only when the tested base is the base the user
+   saved to library.rhema — a page in the renderer cannot fish it toward
+   another address. */
+ipcMain.handle('ai:test', (_e, settings) => {
+  const saved = rhemaAiSettings();
+  const norm = (u) => String(u || '').trim().replace(/\/+$/, '');
+  const tested = norm(settings && settings.text && settings.text.base);
+  const apiKey = tested && tested === norm(saved.text && saved.text.base) ? readSecret('rhema-ai') : '';
+  return require('./ai.js').testEndpoints({ settings, apiKey })
+    .catch((err) => ({ error: String((err && err.message) || err) }));
+});
 
 // One painting at a time per book; a second request while one is running
 // simply gets the running one's answer.
@@ -1099,7 +1107,10 @@ ipcMain.handle('cover:paint', (_e, bookId, text, options) => {
     try {
       const out = isRhema
         ? await require('./ai.js').paintCover({
-            settings: (options && options.settings) || rhemaAiSettings(),
+            // settings come from the user's own library file, never from the
+            // renderer: a page in the window cannot steer the main process
+            // (or the saved key) toward another endpoint
+            settings: rhemaAiSettings(),
             apiKey,
             text: String(text || '')
           })

@@ -53,8 +53,25 @@ function isModelError(status, body) {
   return status === 404 || /model/i.test(String(code)) || /model|not (found|supported|exist|available)|no longer|deprecated|retired/i.test(msg);
 }
 
-async function post(url, headers, payload) {
-  const res = await fetch(url, {
+// Local endpoints only: never follow redirects (a pivot toward other
+// internal hosts), and never hang forever (a wedged server would leave the
+// book stuck "painting" until restart).
+function localFetch(url, init = {}) {
+  return fetch(url, { redirect: 'error', signal: AbortSignal.timeout(init.timeoutMs || 30000), ...init });
+}
+
+// A configured endpoint must be a plain http(s) URL — no file:, no custom
+// schemes, whatever the settings or a page in the renderer say.
+function assertHttpUrl(url, what) {
+  let u;
+  try { u = new URL(url); } catch { throw new Error('Not a valid URL: ' + what); }
+  if (u.protocol !== 'http:' && u.protocol !== 'https:') throw new Error('Not an http(s) URL: ' + what);
+  return u.toString().replace(/\/+$/, '');
+}
+
+async function post(url, headers, payload, timeoutMs = 120000) {
+  const res = await localFetch(url, {
+    timeoutMs,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...headers },
     body: JSON.stringify(payload)
@@ -93,7 +110,7 @@ function authHeaders(apiKey) {
 // OpenAI's catalog only). Used as fallback candidates when a configured
 // model name has gone away.
 async function listModels(base, apiKey) {
-  const res = await fetch(base + '/models', { headers: authHeaders(apiKey) });
+  const res = await localFetch(assertHttpUrl(base, 'the text model URL') + '/models', { headers: authHeaders(apiKey) });
   if (!res.ok) throw new Error('Could not list models (' + res.status + ')');
   return ((await res.json()).data || []).map((m) => String(m.id || '')).filter(Boolean);
 }
@@ -104,6 +121,7 @@ async function listModels(base, apiKey) {
 
 async function writeBrief({ base, apiKey, model, tokenParam, text }) {
   if (!base) throw new Error('No AI base URL set — add one under File → Rhema AI…');
+  base = assertHttpUrl(base, 'the text model URL');
   const defaults = [model];
   try { defaults.push(...(await listModels(base, apiKey))); } catch { /* the configured name will have to do */ }
   return withModels(model, defaults, async (m) => {
@@ -134,12 +152,12 @@ async function writeBrief({ base, apiKey, model, tokenParam, text }) {
 // like llama.cpp's image endpoints speak it)
 // ---------------------------------------------------------------------------
 
-async function paintOpenaiCompat({ url, apiKey, model, prompt }) {
-  const body = await post(url + '/images/generations', authHeaders(apiKey), {
+async function paintOpenaiCompat({ url, apiKey, model, prompt, width, height }) {
+  const body = await post(assertHttpUrl(url, 'the image URL') + '/images/generations', authHeaders(apiKey), {
     model: model || 'image',
     prompt: prompt + PAINT_SUFFIX,
     n: 1,
-    size: '1024x1536',
+    size: (width || 1024) + 'x' + (height || 1536),
     response_format: 'b64_json'
   });
   const b64 = body.data && body.data[0] && (body.data[0].b64_json || body.data[0].b64);
@@ -169,18 +187,24 @@ const DEFAULT_WORKFLOW = {
 };
 
 // Fill the workflow's {{TOKENS}}. Numbers stay numbers; the prompt is
-// inserted as a plain string (JSON-escaped by the round-trip).
+// inserted as a plain string (JSON-escaped by the round-trip). replaceAll
+// with a FUNCTION replacer: every occurrence counts, and $-sequences in a
+// brief ("$'cause") are inserted literally, never as replacement patterns.
 function buildWorkflow(workflow, { positive, negative, checkpoint, width, height, steps, cfg, seed }) {
-  const json = JSON.stringify(workflow || DEFAULT_WORKFLOW);
-  const filled = json
-    .replace('"{{POSITIVE}}"', JSON.stringify(positive))
-    .replace('"{{NEGATIVE}}"', JSON.stringify(negative || DEFAULT_NEGATIVE))
-    .replace('"{{CHECKPOINT}}"', JSON.stringify(checkpoint))
-    .replace('"{{WIDTH}}"', String(width))
-    .replace('"{{HEIGHT}}"', String(height))
-    .replace('"{{SEED}}"', String(seed))
-    .replace('"{{STEPS}}"', String(steps))
-    .replace('"{{CFG}}"', String(cfg));
+  const tokens = {
+    POSITIVE: JSON.stringify(positive),
+    NEGATIVE: JSON.stringify(negative || DEFAULT_NEGATIVE),
+    CHECKPOINT: JSON.stringify(checkpoint),
+    WIDTH: String(width),
+    HEIGHT: String(height),
+    SEED: String(seed),
+    STEPS: String(steps),
+    CFG: String(cfg)
+  };
+  let filled = JSON.stringify(workflow || DEFAULT_WORKFLOW);
+  for (const [token, value] of Object.entries(tokens)) {
+    filled = filled.replaceAll('"{{' + token + '}}"', () => value);
+  }
   return JSON.parse(filled);
 }
 
@@ -188,15 +212,22 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function comfyuiPaint({ url, workflow, brief, checkpoint, width, height, steps, cfg, seed, timeoutMs = 5 * 60 * 1000 }) {
   if (!url) throw new Error('No ComfyUI URL set — add one under File → Rhema AI…');
-  const positive = String(brief) + PAINT_SUFFIX;
-  const graph = buildWorkflow(workflow ? JSON.parse(workflow) : DEFAULT_WORKFLOW, {
-    positive,
-    negative: DEFAULT_NEGATIVE,
-    checkpoint: checkpoint || 'juggernautXL_v9.safetensors',
-    width: width || 832, height: height || 1216,
-    steps: steps || 30, cfg: cfg || 6,
-    seed: seed ? (seed | 0) : Math.floor(Math.random() * 2 ** 31)
-  });
+  url = assertHttpUrl(url, 'the ComfyUI URL');
+  let graph;
+  try {
+    graph = buildWorkflow(workflow ? JSON.parse(workflow) : DEFAULT_WORKFLOW, {
+      positive: String(brief) + PAINT_SUFFIX,
+      negative: DEFAULT_NEGATIVE,
+      checkpoint: checkpoint || 'juggernautXL_v9.safetensors',
+      width: width || 832, height: height || 1216,
+      steps: steps || 30, cfg: cfg || 6,
+      // a set seed stays set (0 included); only an absent seed re-randomizes
+      seed: Number.isFinite(seed) ? Math.trunc(seed) : Math.floor(Math.random() * 2 ** 31)
+    });
+  } catch (err) {
+    if (workflow && err instanceof SyntaxError) throw new Error('The custom ComfyUI workflow in your library file is not valid JSON: ' + err.message);
+    throw err;
+  }
   const submitted = await post(url + '/prompt', {}, { prompt: graph, client_id: 'rhema' });
   if (!submitted || !submitted.prompt_id) throw new Error('ComfyUI did not accept the workflow');
   const deadline = Date.now() + timeoutMs;
@@ -204,21 +235,26 @@ async function comfyuiPaint({ url, workflow, brief, checkpoint, width, height, s
     await sleep(1500);
     let hist = null;
     try {
-      const res = await fetch(url + '/history/' + encodeURIComponent(submitted.prompt_id));
+      const res = await localFetch(url + '/history/' + encodeURIComponent(submitted.prompt_id));
       if (res.ok) hist = await res.json();
     } catch { /* server busy; keep polling */ }
     const entry = hist && hist[submitted.prompt_id];
     if (!entry) continue;
     const status = entry.status || {};
     if (status.status_str && status.status_str !== 'success' && status.status_str !== 'completed') {
-      const msgs = (status.messages || []).map((m) => (m && m.message && m.message[1] && String(m.message[1].error || '')) || '').filter(Boolean);
+      // ComfyUI history messages are [event, detail] tuples; the execution_error
+      // detail carries exception_message / exception_type / node_type
+      const msgs = (status.messages || []).map((m) => {
+        const d = (Array.isArray(m) ? m[1] : (m && m.message && m.message[1])) || {};
+        return String(d.exception_message || d.exception_type || d.error || '');
+      }).filter(Boolean);
       throw new Error('ComfyUI: ' + (msgs[0] || status.status_str));
     }
     for (const out of Object.values(entry.outputs || {})) {
       const img = out && out.images && out.images[0];
       if (!img) continue;
       const q = new URLSearchParams({ filename: img.filename, subfolder: img.subfolder || '', type: img.type || 'output' });
-      const res = await fetch(url + '/view?' + q.toString());
+      const res = await localFetch(url + '/view?' + q.toString(), { timeoutMs: 30000 });
       if (!res.ok) throw new Error('ComfyUI could not serve the picture (' + res.status + ')');
       const buf = Buffer.from(await res.arrayBuffer());
       return { buffer: buf, ext: /\.png$/i.test(img.filename) ? 'png' : 'jpg' };
@@ -246,7 +282,7 @@ async function paintCover({ settings, apiKey, text }) {
         checkpoint: img.checkpoint, width: img.width, height: img.height,
         steps: img.steps, cfg: img.cfg, seed: img.seed
       })
-    : await paintOpenaiCompat({ url: img.url, apiKey, model: img.model, prompt: b.result });
+    : await paintOpenaiCompat({ url: img.url, apiKey, model: img.model, prompt: b.result, width: img.width, height: img.height });
   return {
     buffer: painted.buffer, ext: painted.ext,
     brief: b.result, textModel: b.model,
@@ -254,29 +290,52 @@ async function paintCover({ settings, apiKey, text }) {
   };
 }
 
-// The settings pane's Test button: what answers, what doesn't.
+// The settings pane's Test button: what answers, what doesn't. Errors come
+// back with a `kind` the pane turns into plain language for the writer.
+const errKind = (err, status) => {
+  if (status === 401 || status === 403) return 'auth';
+  const m = String((err && err.message) || err);
+  if (/fetch failed|ECONNREFUSED|ENOTFOUND|timed? ?out|abort/i.test(m)) return 'unreachable';
+  return 'error';
+};
+
 async function testEndpoints({ settings, apiKey }) {
   const s = settings || {};
   const out = {};
   const base = (s.text || {}).base;
   if (base) {
     try {
-      const models = await listModels(base.replace(/\/+$/, ''), apiKey);
+      const models = await listModels(base, apiKey);
       out.text = { ok: true, models: models.slice(0, 20) };
-    } catch (err) { out.text = { ok: false, error: String(err.message || err) }; }
-  } else out.text = { ok: false, error: 'no base URL' };
+    } catch (err) { out.text = { ok: false, kind: errKind(err, err.status), error: String(err.message || err) }; }
+  } else out.text = { ok: false, kind: 'unset', error: 'no base URL' };
   const img = s.image || {};
   if (img.provider === 'comfyui' && img.url) {
     try {
-      const res = await fetch(img.url.replace(/\/+$/, '') + '/system_stats');
+      const url = assertHttpUrl(img.url, 'the ComfyUI URL');
+      const res = await localFetch(url + '/system_stats');
       const body = res.ok ? await res.json() : null;
-      out.image = res.ok
-        ? { ok: true, version: body && body.system && body.system.comfyui_version }
-        : { ok: false, error: 'HTTP ' + res.status };
-    } catch (err) { out.image = { ok: false, error: String(err.message || err) }; }
+      if (!res.ok) {
+        out.image = { ok: false, kind: errKind(null, res.status), error: 'HTTP ' + res.status };
+      } else {
+        // an honest all-clear: the configured checkpoint must actually be installed
+        out.image = { ok: true, version: body && body.system && body.system.comfyui_version };
+        const ckpt = img.checkpoint || 'juggernautXL_v9.safetensors';
+        try {
+          const oi = await localFetch(url + '/object_info/CheckpointLoaderSimple');
+          const names = oi.ok ? ((((await oi.json()) || {})['CheckpointLoaderSimple'] || {}).input || {}).required.ckpt_name[0] : null;
+          out.image.checkpoints = Array.isArray(names) ? names : [];
+          if (Array.isArray(names) && !names.includes(ckpt)) {
+            out.image.ok = false;
+            out.image.kind = 'no_checkpoint';
+            out.image.error = 'checkpoint not installed: ' + ckpt;
+          }
+        } catch { /* object_info missing; the ping still counted */ }
+      }
+    } catch (err) { out.image = { ok: false, kind: errKind(err, err.status), error: String(err.message || err) }; }
   } else if (img.provider === 'openai' && img.url) {
     out.image = { ok: true, note: 'will use ' + img.url + '/images/generations' };
-  } else out.image = { ok: false, error: 'no image endpoint configured' };
+  } else out.image = { ok: false, kind: 'unset', error: 'no image endpoint configured' };
   return out;
 }
 

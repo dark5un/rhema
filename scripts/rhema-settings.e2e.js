@@ -6,7 +6,6 @@
 'use strict';
 
 const { app, BrowserWindow } = require('electron');
-const assert = require('node:assert/strict');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -58,6 +57,8 @@ app.whenReady().then(async () => {
   await tick(200);
   check('the pane opens with endpoint and retention fields',
     await js('!!document.querySelector("#ra-base") && !!document.querySelector("#ra-imgprovider") && !!document.querySelector("#ra-retbackups") && !!document.querySelector("#ra-retsnaps")'));
+  check('the local defaults are pre-filled, not just placeholders',
+    await js('document.querySelector("#ra-base").value === "http://localhost:11434/v1" && document.querySelector("#ra-imgurl").value === "http://localhost:3101"'));
   await shot('rhema-settings-pane');
 
   // fill it like a writer would: local Strata + local ComfyUI, unlimited backups
@@ -86,11 +87,17 @@ app.whenReady().then(async () => {
   // the Test button goes through the preload bridge to ai:test
   await js('RhemaSettings.open()');
   await tick(150);
+  // a future Phase 2 sub-key under library.rhema must survive the pane's Save
+  await js('library.rhema.poetry = { seeded: true }');
   const testRes = await js('window.neo.rhema.test({ text: { base: "http://127.0.0.2:9/v1" }, image: { provider: "comfyui", url: "http://127.0.0.2:9" } })');
   check('ai:test answers and reports dead endpoints as failed (no crash)',
-    !!(testRes && testRes.text && testRes.text.ok === false && testRes.image && testRes.image.ok === false),
+    !!(testRes && testRes.text && testRes.text.ok === false && testRes.text.kind === 'unreachable' &&
+       testRes.image && testRes.image.ok === false),
     JSON.stringify(testRes));
-  await js('document.querySelector(".m-cancel").click()');
+  await js('document.querySelector(".m-ok").click()');
+  await tick(300);
+  check('saving the pane merges, never wipes, other library.rhema sub-keys',
+    !!(onDisk().rhema && onDisk().rhema.poetry && onDisk().rhema.poetry.seeded === true));
 
   console.log(results.join('\n'));
   const failed = results.filter((r) => r.startsWith('FAIL')).length;

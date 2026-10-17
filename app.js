@@ -2186,7 +2186,7 @@ async function requestPaint(meta, text) {
     if (!library.coverArtNudged) {
       library.coverArtNudged = true;
       await writeLibrary(library);
-      toast(t('This story just passed {n} words — add an API key under File → Cover Art… and NEO will paint it a cover.', { n: PAINT_AT }), 8000);
+      toast(t('Rhema can paint this book a cover with your own local models — set it up under File → Rhema AI… and it will paint once a story passes {n} words.', { n: PAINT_AT }), 8000); /* RHEMA */
     }
     return;
   }
@@ -2210,7 +2210,7 @@ async function requestPaint(meta, text) {
   const mine = (cs.models && cs.models[provider]) || {};
   let res = null;
   try {
-    res = await window.neo.paintCover(meta.id, text, { provider, textModel: mine.text, imageModel: mine.image, quality: cs.quality, /* RHEMA */ settings: provider === 'rhema' ? RhemaSettings.aiSettings() : undefined });
+    res = await window.neo.paintCover(meta.id, text, { provider, textModel: mine.text, imageModel: mine.image, quality: cs.quality });
   } catch (err) {
     window.neo.logError('paint request: ' + (err && err.stack || err));
     res = { error: String((err && err.message) || err) };
@@ -2256,7 +2256,7 @@ async function refreshCover(meta, el) {
   options.push({ label: t('New type & colours'), desc: mode === 'abstract' ? t('A fresh abstract and a different title style.') : t('Re-sets the title in a different style over the same art.'), value: 'reroll' });
   if (hasKey) {
     options.push(enough
-      ? { label: hasPainting(meta) ? t('Paint it again') : t('Paint a cover from the text'), desc: t('NEO reads the manuscript and paints a new cover. About a minute; a few cents.'), value: 'paint' }
+      ? { label: hasPainting(meta) ? t('Paint it again') : t('Paint a cover from the text'), desc: RhemaSettings.configured() /* RHEMA */ ? t('Rhema reads the book and paints a new cover. About a minute, on your own machine.') : t('NEO reads the manuscript and paints a new cover. About a minute; a few cents.'), value: 'paint' }
       : { label: t('Paint a cover from the text'), desc: t('Once the story passes {n} words.', { n: PAINT_AT }), value: 'nope' });
   }
   // a plain abstract with nothing else to offer just re-rolls
