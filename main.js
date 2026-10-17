@@ -3428,9 +3428,11 @@ app.whenReady().then(() => {
           if (fs.existsSync(path.join(neoDir, 'library.json'))) {
             const adopt = dialog.showMessageBoxSync({
               type: 'question',
-              message: t('We found a NEO Library'),
-              detail: t('Your books from NEO are in {dir}. Open them in Rhema, or start a new empty Rhema Library?', { dir: neoDir }),
-              buttons: [t('Open my NEO Library'), t('Start a new Rhema Library')],
+              /* RHEMA — {neo} survives the brand seam on purpose (variables fill
+                 AFTER branding): these words mean the upstream NEO, not us. */
+              message: t('We found a {neo} Library', { neo: 'NEO' }),
+              detail: t('Your books from {neo} are in {dir}. Open them in Rhema, or start a new empty Rhema Library?', { neo: 'NEO', dir: neoDir }),
+              buttons: [t('Open my {neo} Library', { neo: 'NEO' }), t('Start a new Rhema Library')],
               defaultId: 0, cancelId: 1
             });
             if (adopt === 0) useLibraryDir(neoDir);

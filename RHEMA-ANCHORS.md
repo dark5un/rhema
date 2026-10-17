@@ -64,7 +64,7 @@ name are the only literal renames (both listed above).
 | `const RHEMA_AUTO_UPDATE = false` (updater section) | Stone 15: auto-update disabled. Flip to `true` to re-enable the whole path; `publish` in package.json already points at our repo. Guards: `getUpdater()` early-return, `checkForUpdates()` early-return, `update:check` handler early-return. | 0 |
 | `Rhema Library` (6 sites, was `NEO Library`) | library folder name | 0 |
 | `applicationName: 'Rhema'` (about panel) | product name | 0 |
-| startup migration block after `LIBRARY_FILE` | first-run adoption: if Rhema Library is empty but a NEO Library exists, ask once to open it (books from NEO never look "gone") | 0 |
+| startup migration block after `LIBRARY_FILE` | first-run adoption: if Rhema Library is empty but a NEO Library exists, ask once to open it (books from NEO never look "gone"). The NEO references ride a `{neo}` variable on purpose — the brand seam fills variables AFTER branding, so "NEO Library" survives as the upstream's name. | 0 |
 | `cover:paint` handler | provider `'rhema'` branch → `ai.js` `paintCover`; settings read from the user's library file (never renderer-supplied), secret name `rhema-ai`, key optional for local endpoints | 1 |
 | `rhemaAiSettings()` + `ai:test` handler | library.rhema.ai read (main-side source of truth); the Test button, with the saved key attached only when the tested base equals the saved base | 1 |
 | `dailyBackup()` `keep:` + `rhemaBackupKeep()` | Stone 6: backup retention from library.rhema.retention.backups (default 14, `'unlimited'` → keep all) | 1 |
@@ -133,5 +133,8 @@ semantics, extend emit then — don't special-case call-sites.
   crashes go upstream.
 - `locales/*.json` keys — English source strings are translation keys;
   product-name strings inside locales are handled with the Greek top-up
-  pass (Stone 11), not by renaming keys.
+  pass (Stone 11), not by renaming keys. el.json topped up 2026-10-17
+  (295 new Greek entries incl. every Rhema string; en.json gained the
+  fork's two English plurals). Other locales untouched — they fall back
+  to English keys, rebranded by the i18n seam.
 - `upstream` remote is fetch-only (`--push no_push`); never contact upstream.
