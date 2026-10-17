@@ -673,6 +673,31 @@ test('import into an open collection: the shelf card menu path', async () => {
   assert.equal(joined, 3, 'the poem joined the collection');
 });
 
+test('chapbook: a real 5x8 PDF renders with the verse, the mark, and 5x8 pages', async () => {
+  // the footnotes.e2e paperback pattern: answer the save dialog from main,
+  // click Make PDFs, wait for the file (Paged.js lays it out in the print window)
+  const until = async (fn, ms = 240000) => {
+    const t0 = Date.now();
+    while (Date.now() - t0 < ms) { if (await fn()) return true; await tick(200); }
+    return false;
+  };
+  const to = path.join(tmp, 'chapbook-5x8.pdf');
+  try { fs.unlinkSync(to); } catch { /* new */ }
+  dialog.showSaveDialog = async () => ({ canceled: false, filePath: to });
+  await js(`(() => { window.__pb = printPaperback(); })()`);
+  assert.ok(await until(() => js(`!!document.querySelector('.modal-backdrop .m-ok')`), 15000), 'the chapbook dialog opened');
+  await js(`document.querySelector('.modal-backdrop .m-ok').click()`);
+  assert.ok(await until(() => fs.existsSync(to) && fs.statSync(to).size > 0), 'the chapbook PDF was written');
+  const info = require('node:child_process').execFileSync('pdfinfo', [to]).toString();
+  assert.match(info, /Page size:\s+360 x 576 pts/, '5 x 8 in: 360x576 pt pages');
+  const text = require('node:child_process').execFileSync('pdftotext', [to, '-']).toString();
+  assert.ok(text.includes(L1), 'the Kavafis verse is in the printed book');
+  // the poem mark: the QR renders as vector paths; the mark div carries the class
+  const html = await js(`buildPrintHtml(bookExportData(), { trim: '5x8', paper: 'white', links: {}, alsoByText: '', reviewText: '', reviewWords: '' })`);
+  assert.ok(html.includes('rhema-poem-mark'), 'the print HTML carries the poem mark');
+  await js(`(async () => { try { await window.__pb; } catch {} })()`); // settle the job
+});
+
 async function main() {
   await app.whenReady();
   let failed = 0;
