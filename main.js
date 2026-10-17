@@ -1077,15 +1077,17 @@ function rhemaAiSettings() {
 }
 
 /* RHEMA — the Rhema AI pane's Test button: ping both endpoints, report.
-   The saved key is attached only when the tested base is the base the user
-   saved to library.rhema — a page in the renderer cannot fish it toward
-   another address. */
+   The saved key and any response CONTENT (model names, checkpoint lists)
+   are returned only for addresses that match what the user saved to
+   library.rhema — a page in the renderer cannot use the main process to
+   exfiltrate the key or read from an address of its own choosing. */
 ipcMain.handle('ai:test', (_e, settings) => {
   const saved = rhemaAiSettings();
   const norm = (u) => String(u || '').trim().replace(/\/+$/, '');
-  const tested = norm(settings && settings.text && settings.text.base);
-  const apiKey = tested && tested === norm(saved.text && saved.text.base) ? readSecret('rhema-ai') : '';
-  return require('./ai.js').testEndpoints({ settings, apiKey })
+  const echoText = norm(settings && settings.text && settings.text.base) === norm(saved.text && saved.text.base);
+  const echoImage = norm(settings && settings.image && settings.image.url) === norm(saved.image && saved.image.url);
+  const apiKey = echoText ? readSecret('rhema-ai') : '';
+  return require('./ai.js').testEndpoints({ settings, apiKey, echoText, echoImage })
     .catch((err) => ({ error: String((err && err.message) || err) }));
 });
 

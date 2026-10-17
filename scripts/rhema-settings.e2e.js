@@ -95,7 +95,7 @@ app.whenReady().then(async () => {
        testRes.image && testRes.image.ok === false),
     JSON.stringify(testRes));
   await js('document.querySelector(".m-ok").click()');
-  await tick(300);
+  for (let i = 0; i < 20 && !(onDisk().rhema && onDisk().rhema.poetry); i++) await tick(100);
   check('saving the pane merges, never wipes, other library.rhema sub-keys',
     !!(onDisk().rhema && onDisk().rhema.poetry && onDisk().rhema.poetry.seeded === true));
 

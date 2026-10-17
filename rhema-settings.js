@@ -50,7 +50,7 @@ const RhemaSettings = (() => {
     const sel = (v, opts) => {
       const list = opts.slice();
       if (v !== '' && !list.some((o) => String(o[0]) === String(v))) list.unshift([v, String(v)]);
-      return list.map((o) => `<option value="${escHtml(String(o[0]))}"${String(v) === String(o[0]) ? ' selected' : ''}>${t(o[1])}</option>`).join('');
+      return list.map((o) => `<option value="${escHtml(String(o[0]))}"${String(v) === String(o[0]) ? ' selected' : ''}>${escHtml(t(String(o[1])))}</option>`).join('');
     };
     bd.innerHTML = `
       <div class="modal" style="width:600px">
@@ -150,7 +150,7 @@ const RhemaSettings = (() => {
         if (r.ok) return r.models ? '✓ ' + t('ok — {n} models', { n: String(r.models.length) }) : '✓ ' + t('ok');
         const say = {
           unreachable: t('can’t be reached — is the model server running?'),
-          auth: t('asked for a key — type it in the API key box'),
+          auth: t('asked for a key — type it in the API key box, Save, then Test again'),
           no_checkpoint: t('answers, but the Checkpoint named below isn’t installed') + (r.checkpoints && r.checkpoints.length ? ' (' + t('installed: {list}', { list: r.checkpoints.join(', ') }) + ')' : ''),
           unset: t('is not set')
         }[r.kind] || t('failed: {error}', { error: r.error || '?' });

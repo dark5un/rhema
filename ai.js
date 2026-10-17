@@ -111,7 +111,7 @@ function authHeaders(apiKey) {
 // model name has gone away.
 async function listModels(base, apiKey) {
   const res = await localFetch(assertHttpUrl(base, 'the text model URL') + '/models', { headers: authHeaders(apiKey) });
-  if (!res.ok) throw new Error('Could not list models (' + res.status + ')');
+  if (!res.ok) { const err = new Error('Could not list models (' + res.status + ')'); err.status = res.status; throw err; }
   return ((await res.json()).data || []).map((m) => String(m.id || '')).filter(Boolean);
 }
 
@@ -292,6 +292,10 @@ async function paintCover({ settings, apiKey, text }) {
 
 // The settings pane's Test button: what answers, what doesn't. Errors come
 // back with a `kind` the pane turns into plain language for the writer.
+// echoText/echoImage: response CONTENT (model names, versions, checkpoint
+// lists) is returned only for endpoints that match the user's saved
+// settings; a renderer-supplied address that differs gets a reachability
+// ping only, so the main process never becomes a read proxy for it.
 const errKind = (err, status) => {
   if (status === 401 || status === 403) return 'auth';
   const m = String((err && err.message) || err);
@@ -299,14 +303,14 @@ const errKind = (err, status) => {
   return 'error';
 };
 
-async function testEndpoints({ settings, apiKey }) {
+async function testEndpoints({ settings, apiKey, echoText = true, echoImage = true }) {
   const s = settings || {};
   const out = {};
   const base = (s.text || {}).base;
   if (base) {
     try {
       const models = await listModels(base, apiKey);
-      out.text = { ok: true, models: models.slice(0, 20) };
+      out.text = echoText ? { ok: true, models: models.slice(0, 20) } : { ok: true };
     } catch (err) { out.text = { ok: false, kind: errKind(err, err.status), error: String(err.message || err) }; }
   } else out.text = { ok: false, kind: 'unset', error: 'no base URL' };
   const img = s.image || {};
@@ -319,9 +323,9 @@ async function testEndpoints({ settings, apiKey }) {
         out.image = { ok: false, kind: errKind(null, res.status), error: 'HTTP ' + res.status };
       } else {
         // an honest all-clear: the configured checkpoint must actually be installed
-        out.image = { ok: true, version: body && body.system && body.system.comfyui_version };
+        out.image = { ok: true, version: echoImage ? (body && body.system && body.system.comfyui_version) : undefined };
         const ckpt = img.checkpoint || 'juggernautXL_v9.safetensors';
-        try {
+        if (echoImage) try {
           const oi = await localFetch(url + '/object_info/CheckpointLoaderSimple');
           const names = oi.ok ? ((((await oi.json()) || {})['CheckpointLoaderSimple'] || {}).input || {}).required.ckpt_name[0] : null;
           out.image.checkpoints = Array.isArray(names) ? names : [];
