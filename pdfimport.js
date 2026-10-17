@@ -87,7 +87,7 @@ async function pdfParas(fp) {
   // metrics degrade silently (review 2026-10-17); the fonts ship in the package
   const doc = await getDocument({
     data, isEvalSupported: false,
-    standardFontDataUrl: path.join(__dirname, 'node_modules/pdfjs-dist/standard_fonts/') + '/'
+    standardFontDataUrl: path.join(__dirname, 'node_modules/pdfjs-dist/standard_fonts') + '/'
   }).promise;
   const pages = [];
   for (let n = 1; n <= doc.numPages; n++) {

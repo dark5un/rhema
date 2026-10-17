@@ -123,8 +123,14 @@ name are the only literal renames (both listed above).
 - `homepage` and `linux.maintainer` (Hugh Howey) KEPT as attribution —
   explicit decision (review 2026-10-17); revisit only at public release.
 - `test:rhema-settings` script — runs scripts/rhema-settings.e2e.js (Electron pane test).
-- `dependencies: pdfjs-dist ^6.4.299` — Stone 12 PDF import (legacy build,
-  lazily imported by pdfimport.js only during a PDF import).
+- `dependencies: pdfjs-dist 6.4.299` (exact pin, house convention) — Stone 12
+  PDF import (legacy build, lazily imported by pdfimport.js only during a PDF
+  import; getDocument runs isEvalSupported:false + standardFontDataUrl into
+  the packaged standard_fonts/).
+- `build.files: !node_modules/@napi-rs/canvas-*/**` — prunes pdfjs's optional
+  canvas binaries (same posture as koffi): the text-only import path never
+  instantiates NodeCanvasFactory; if a future feature touches PDF image
+  conversion, keep the host platform back.
 
 ## scripts/
 
