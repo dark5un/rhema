@@ -473,17 +473,156 @@ const RhemaPoetry = (() => {
     await openBook(meta.id);
   }
 
+  /* ---------------- status & progress (Stone 4) ---------------- */
+
+  // book.rhema.poems[<chId>].status — blank → draft → fair copy → done.
+  // Unknown book.json keys survive upstream save paths untouched.
+  const POEM_STATUSES = [
+    { v: 'draft', label: () => t('Draft') },
+    { v: 'fair', label: () => t('Fair copy') },
+    { v: 'done', label: () => t('Done') }
+  ];
+  const statusLabel = (v) => (POEM_STATUSES.find((s) => s.v === v) || { label: () => v }).label();
+
+  function poemRec(chId, create) {
+    if (!book) return null;
+    if (create) {
+      if (!book.rhema) book.rhema = {};
+      if (!book.rhema.poems) book.rhema.poems = {};
+      if (!book.rhema.poems[chId]) book.rhema.poems[chId] = {};
+    }
+    return (book.rhema && book.rhema.poems && book.rhema.poems[chId]) || null;
+  }
+  function poemStatus(chId) {
+    const r = poemRec(chId);
+    return (r && r.status) || '';
+  }
+  function setPoemStatus(chId, v) {
+    const r = poemRec(chId, true);
+    if (v) r.status = v; else delete r.status;
+    if (!Object.keys(r).length) delete book.rhema.poems[chId];
+    saveMeta();
+    renderNav();
+    if (currentTab === 'outline') renderOutline();
+  }
+
+  // written (non-blank) lines of a poem, straight from its saved HTML
+  function poemLines(chId) {
+    const html = chapterHTML[chId] || '';
+    if (!html.trim()) return [];
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const out = [];
+    for (const p of doc.querySelectorAll('p')) {
+      for (const seg of p.innerHTML.split(/<br\s*\/?>/i)) {
+        const txt = seg.replace(/<[^>]*>/g, '').replace(/\u2003/g, ' ').trim();
+        if (txt) out.push(txt);
+      }
+    }
+    return out;
+  }
+
+  /* ---------------- card, nav, menu, progress ---------------- */
+
+  function poemCard(cell, chId) {
+    if (!isPoemBook()) return;
+    const lines = poemLines(chId);
+    const words = cell.querySelector('.ob-words');
+    if (words) words.textContent = t('{n} lines', { n: lines.length });
+    const status = poemStatus(chId);
+    if (status) {
+      const dot = document.createElement('span');
+      dot.className = 'rhema-dot st-' + status;
+      dot.title = statusLabel(status);
+      cell.querySelector('.ob-head').appendChild(dot);
+    }
+    // the rich card: poem title, then its first line quoted
+    const title = (book.chapterTitles || {})[chId] || '';
+    const text = cell.querySelector('.ob-text');
+    if (text && (title || lines.length)) {
+      text.classList.remove('excerpt', 'empty');
+      text.innerHTML = '';
+      if (title) {
+        const ts = document.createElement('div');
+        ts.className = 'rhema-card-title';
+        ts.textContent = title;
+        text.appendChild(ts);
+      }
+      if (lines.length) {
+        const fs = document.createElement('div');
+        fs.className = 'rhema-card-line';
+        fs.textContent = quoted(lines[0]);
+        text.appendChild(fs);
+      }
+    }
+  }
+
+  function navItemDot(item, chId) {
+    if (!isPoemBook()) return;
+    const status = poemStatus(chId);
+    if (!status) return;
+    const dot = document.createElement('span');
+    dot.className = 'n-rhema-dot st-' + status;
+    dot.title = statusLabel(status);
+    const flex = item.querySelector('.n-row > span[style]') || item.querySelector('.n-row');
+    flex.appendChild(dot);
+  }
+
+  function chapterMenuItems(chId) {
+    if (!isPoemBook() || !isStory(chId)) return undefined;
+    return ['-', { label: t('Poem status…'), value: 'rhemaStatus' }];
+  }
+
+  function chapterMenuChoice(chId, choice) {
+    if (choice !== 'rhemaStatus') return false;
+    openStatusMenu(chId); // answers itself; the menu above has already closed
+    return true;
+  }
+
+  async function openStatusMenu(chId) {
+    const cur = poemStatus(chId);
+    const items = POEM_STATUSES.map((s) => ({ label: s.label(), value: s.v, checked: s.v === cur }));
+    items.push({ label: t('No status'), value: '', checked: !cur });
+    const from = document.querySelector(`.nav-item[data-id="${chId}"] .n-row`) ||
+      document.querySelector(`.ob-cell[data-ch="${chId}"]`);
+    const pick = await popMenu(0, 0, items, { title: t('Poem status'), from });
+    if (pick === null || pick === undefined) return;
+    if (pick !== cur) setPoemStatus(chId, pick);
+  }
+
+  function boardProgress(board) {
+    if (!isPoemBook()) return;
+    const poems = book.chapterOrder.filter((c) => isStory(c));
+    const done = poems.filter((c) => poemStatus(c) === 'done').length;
+    const chip = document.createElement('div');
+    chip.className = 'rhema-progress';
+    chip.textContent = t('{done} of {total} poems finished', { done, total: poems.length });
+    board.prepend(chip);
+  }
+
+  function chapterDeleted(chId) {
+    if (book && book.rhema && book.rhema.poems) delete book.rhema.poems[chId];
+  }
+
   /* ---------------- registration ---------------- */
 
   NeoHooks.registerFormat('poetry', {
     poem: true,
     createOnShelf,
-    isPoemBook
+    isPoemBook,
+    setStatus: setPoemStatus,
+    getStatus: poemStatus,
+    lines: poemLines
   });
   NeoHooks.on('poemKey', poemKey);
   NeoHooks.on('poemLineBreak', insertLineBreakDom);
   NeoHooks.on('chapterSynced', chapterSynced);
   NeoHooks.on('enterHint', enterHint);
+  NeoHooks.on('poemCard', poemCard);
+  NeoHooks.on('navItem', navItemDot);
+  NeoHooks.on('chapterMenuItems', chapterMenuItems);
+  NeoHooks.on('chapterMenuChoice', chapterMenuChoice);
+  NeoHooks.on('boardRendered', boardProgress);
+  NeoHooks.on('chapterDeleted', chapterDeleted);
 
   // test/probe window into the internals (harmless in production)
   window.RhemaPoetryDebug = { caretLine, stanzaParts, insertLineBreakDom, poemEnterRule };

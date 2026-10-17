@@ -227,6 +227,50 @@ test('the chapter file on disk keeps the poetry paragraphs', async () => {
   assert.doesNotMatch(html, /<span/, 'no engine junk saved');
 });
 
+test('the outline card shows title, first line, line count and status dot', async () => {
+  // give the first poem a title and a status
+  await js(`(() => { book.chapterTitles[book.chapterOrder[0]] = 'August'; saveMeta(); })()`);
+  await js(`NeoHooks.format('poetry').setStatus(book.chapterOrder[0], 'done')`);
+  await tick(300);
+  await js(`document.querySelector('.tab[data-tab="outline"]').click()`);
+  await tick(400);
+  const card = await js(`(() => {
+    const cell = document.querySelector('.ob-cell[data-ch="' + book.chapterOrder[0] + '"] .ob-card');
+    if (!cell) return null;
+    const q = (s) => { const el = cell.querySelector(s); return el ? el.textContent : null; };
+    return {
+      title: q('.rhema-card-title'),
+      line: q('.rhema-card-line'),
+      count: q('.ob-words'),
+      dot: !!cell.querySelector('.rhema-dot.st-done')
+    };
+  })()`);
+  assert.ok(card, 'the poem has an outline card');
+  assert.equal(card.title, 'August');
+  assert.equal(card.line, '“First line”', 'first written line, quoted');
+  assert.match(card.count, /\d+ lines/, 'line count, not words');
+  assert.equal(card.dot, true, 'status dot on the card');
+  // the nav carries the dot too
+  const navDot = await js(`!!document.querySelector('.nav-item[data-id="' + book.chapterOrder[0] + '"] .n-rhema-dot.st-done')`);
+  assert.equal(navDot, true, 'status dot in the nav');
+  // progress: one of two poems finished
+  const chip = await js(`document.querySelector('.rhema-progress') && document.querySelector('.rhema-progress').textContent`);
+  assert.match(chip, /1 of 2 poems finished/);
+  await js(`document.querySelector('.tab[data-tab="manuscript"]').click()`);
+  await tick(200);
+});
+
+test('deleting a poem prunes its status record', async () => {
+  await js(`NeoHooks.format('poetry').setStatus(book.chapterOrder[1], 'draft')`);
+  await js(`(() => { book.rhema.poems[book.chapterOrder[1]].note = 'x'; })()`); // any record
+  const gone = await js(`(async () => {
+    const chId = book.chapterOrder[1];
+    await deleteChapterQuiet(chId);
+    return !book.rhema.poems[chId];
+  })()`);
+  assert.equal(gone, true, 'book.rhema.poems follows the chapter out');
+});
+
 test('a novel still gets NEO\'s Enter rhythm (anchors change nothing)', async () => {
   await js(`(async () => {
     await addImportedBooks([{ name: 'A Novel', chapters: [{ title: 'One', paras: [{ text: 'Prose here.' }, { text: 'More prose.' }] }] }], library.shelves[0]);

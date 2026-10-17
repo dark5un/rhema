@@ -2830,8 +2830,12 @@ async function chapterMenu(chId, x = 0, y = 0, from = null) {
     items.push('-', { label: t('Restart Chapter Numbers at Each Part'), value: 'restart', checked: !!book.restartNumbering });
   }
   items.push('-', { label: t('Delete'), value: 'delete', danger: true });
+  /* RHEMA — poem books: the chapter menu grows poem items (poetry.js) */
+  const rhemaExtra = NeoHooks.emit('chapterMenuItems', chId);
+  if (rhemaExtra && rhemaExtra.length) items.push(...rhemaExtra);
   const choice = await popMenu(x, y, items, { title: chapterName(chId), from: from || document.querySelector(`.nav-item[data-id="${chId}"] .n-row`) });
   if (!choice || choice === kind) return null;
+  if (NeoHooks.emitTrue('chapterMenuChoice', chId, choice)) return null; /* RHEMA — poem items answer their own choices */
   if (choice === 'export') {
     const formats = [
       ...(moreOn() ? [{ label: t('Text (.txt)'), value: 'txt' }, { label: t('Markdown (.md)'), value: 'md' }, { label: t('HTML (.html)'), value: 'html' }] : []),
@@ -5494,6 +5498,7 @@ async function deleteChapterQuiet(chId) {
   if (book.sectionNotes) delete book.sectionNotes[chId];
   if (book.chapterNotes) delete book.chapterNotes[chId];
   if (book.chapterKinds) delete book.chapterKinds[chId];
+  NeoHooks.emit('chapterDeleted', chId); /* RHEMA — fork per-chapter metadata goes too (poetry.js) */
   stickies = stickies.filter((s) => s.chapterId !== chId);
   writeSidecar(book.id, 'stickies', stickies);
   const bookId = book.id;
@@ -7672,6 +7677,7 @@ function renderNav() {
     item.querySelector('.n-label').textContent = chId === solo
       ? (book.title ? shownTitle(book.title) : t('The story'))
       : (chTitle ? `${chapterMark(chId)} · ${chTitle}` : chapterName(chId));
+    NeoHooks.emit('navItem', item, chId); /* RHEMA — poem status dots in the nav (poetry.js) */
 
     // the row is the drag handle, so the note below stays freely editable
     const rowEl = item.querySelector('.n-row');
@@ -9581,6 +9587,7 @@ function renderBoard() {
   }
   boardAddCard(board);
   boardHint(board);
+  NeoHooks.emit('boardRendered', board); /* RHEMA — collection progress for poets (poetry.js) */
 }
 
 function boardHint(board) {
@@ -9687,6 +9694,7 @@ function chapterCard(chId, opening, solo) {
   card.append(head, text);
   cell.dataset.excerpt = opening && opening.first ? quoted(opening.first) : '';
   fillCardText(cell, (book.chapterNotes || {})[chId] || '');
+  NeoHooks.emit('poemCard', cell, chId); /* RHEMA — poem cards grow title, first line, lines, status dot (poetry.js) */
   cell.setAttribute('aria-label', (solo ? t('The story') : chapterName(chId)) + '. ' + text.textContent);
   return cell;
 }

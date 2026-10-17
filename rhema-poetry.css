@@ -1,0 +1,28 @@
+/* RHEMA — poetry format styles (fork file; styles.css stays upstream-clean) */
+
+/* poem status dots: card heads and nav rows */
+.rhema-dot, .n-rhema-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+.rhema-dot { margin-left: 8px; align-self: center; }
+.n-rhema-dot { margin-left: 6px; }
+.st-draft { background: #c8a24a; }
+.st-fair { background: #5aa0d8; }
+.st-done { background: #57b06a; }
+
+/* the rich outline card: poem title over its quoted first line */
+.ob-card .rhema-card-title { font-weight: 600; margin-bottom: 2px; }
+.ob-card .rhema-card-line { opacity: 0.75; font-style: italic; }
+
+/* collection progress chip, above the outline board */
+.rhema-progress {
+  grid-column: 1 / -1;
+  align-self: start;
+  padding: 6px 10px;
+  font-size: 12px;
+  opacity: 0.8;
+}
