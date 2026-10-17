@@ -11,6 +11,34 @@
 })();
 const { t, fmtNum, fmtDate } = NeoI18n;
 
+/* ================= RHEMA — hook bus =================
+   Thin-fork seam: Rhema features (poetry.js, scraps.js, compare.js, …) hook
+   into NEO surfaces here instead of editing them, so upstream merges stay
+   clean. Every call-site that emits a hook carries a RHEMA marker and is
+   listed in RHEMA-ANCHORS.md. Hooks are additive: an emit with no listeners
+   is a no-op, and a throwing listener is logged and skipped — NEO never
+   breaks. */
+const NeoHooks = {
+  _hooks: Object.create(null),
+  on(name, fn) { (this._hooks[name] || (this._hooks[name] = [])).push(fn); },
+  emit(name, ...args) {
+    const list = this._hooks[name];
+    if (!list || !list.length) return undefined;
+    let last;
+    for (const fn of list) {
+      try { const r = fn(...args); if (r !== undefined) last = r; }
+      catch (err) { console.error('[rhema hook]', name, err); }
+    }
+    return last;
+  },
+  has(name) { return !!(this._hooks[name] && this._hooks[name].length); },
+  // format registry (Phase 2): NeoHooks.registerFormat('poetry', {…})
+  _formats: Object.create(null),
+  registerFormat(name, impl) { this._formats[name] = impl; this.emit('formatRegistered', name, impl); },
+  format(name) { return this._formats[name]; }
+};
+/* ================= END RHEMA hook bus ================= */
+
 // index.html marks its words with data-i18n (text), data-i18n-title,
 // data-i18n-placeholder and data-i18n-ph (the empty-field hints)
 function applyStaticI18n(root = document) {

@@ -39,7 +39,7 @@ if (process.platform === 'linux') app.commandLine.appendSwitch('enable-speech-di
 // covers any early access and non-redirected setups.
 // (Electron's Documents from the start, not the home folder's: the tests stand
 // in a throwaway folder there, and never write into a writer's real library)
-let LIBRARY_DIR = path.join((() => { try { return app.getPath('documents'); } catch { return path.join(os.homedir(), 'Documents'); } })(), 'NEO Library');
+let LIBRARY_DIR = path.join((() => { try { return app.getPath('documents'); } catch { return path.join(os.homedir(), 'Documents'); } })(), 'Rhema Library');
 let LIBRARY_FILE = path.join(LIBRARY_DIR, 'library.json');
 // npm run try (scripts/try.js): NEO from source with settings of its own,
 // which point it at the throwaway copy of the library that script made, so
@@ -165,7 +165,7 @@ ipcMain.handle('i18n:reload', (e) => {
 // The library is plain files, so the writer moves them; NEO only follows.
 async function chooseLibraryFolder() {
   const win = BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0];
-  const defaultDir = path.join(app.getPath('documents'), 'NEO Library');
+  const defaultDir = path.join(app.getPath('documents'), 'Rhema Library');
   const custom = LIBRARY_DIR !== defaultDir;
   const ask = await dialog.showMessageBox(win, {
     type: 'question',
@@ -235,9 +235,9 @@ function fallbackLibraryDir() {
   const spots = [];
   try {
     const docs = path.join(home, 'Documents');
-    if (fs.statSync(docs).isDirectory()) spots.push(path.join(docs, 'NEO Library'));
+    if (fs.statSync(docs).isDirectory()) spots.push(path.join(docs, 'Rhema Library'));
   } catch { /* no plain Documents folder here */ }
-  spots.push(path.join(home, 'NEO Library'));
+  spots.push(path.join(home, 'Rhema Library'));
   return spots.find((dir) => dir !== LIBRARY_DIR && folderWritable(dir)) || null;
 }
 function useLibraryDir(dir) {
@@ -255,7 +255,7 @@ function useLibraryDir(dir) {
 // with the default folder for this session only; the choice stays saved.
 function isDir(dir) { try { return fs.statSync(dir).isDirectory(); } catch { return false; } }
 function awaitChosenLibrary(chosen) {
-  const fallback = path.join(app.getPath('documents'), 'NEO Library');
+  const fallback = path.join(app.getPath('documents'), 'Rhema Library');
   while (!isDir(chosen)) {
     const r = dialog.showMessageBoxSync({
       type: 'warning',
@@ -3143,10 +3143,12 @@ ipcMain.handle('app:version', () => app.getVersion());
 // start`, the Windows portable .exe, anything unsigned — falls back to the
 // release page on GitHub, as before.
 let updater = null;          // electron-updater's autoUpdater, wired once
+/* RHEMA */ const RHEMA_AUTO_UPDATE = false; // Stone 15: auto-update off; flip to true (publish config already points at our repo) to re-enable the whole path
 let updaterReady = false;    // an update is downloaded and waiting
 // where the background download stands, so the window can pick it up mid-way
 const upd = { state: 'idle', version: '', percent: 0, transferred: 0, total: 0, message: '' };
 function getUpdater() {
+  /* RHEMA */ if (!RHEMA_AUTO_UPDATE) return null;
   if (updater || !app.isPackaged) return updater;
   const { autoUpdater } = require('electron-updater');
   autoUpdater.logger = null;
@@ -3204,6 +3206,7 @@ async function latestReleaseFromGitHub() {
 
 ipcMain.handle('update:check', async () => {
   const currentVersion = app.getVersion();
+  /* RHEMA */ if (!RHEMA_AUTO_UPDATE) return { state: 'off', version: '', percent: 0, transferred: 0, total: 0, message: '', hasUpdate: false, latestVersion: '', currentVersion, canInstall: false, ready: false };
   try {
     const u = getUpdater();
     if (u) {
@@ -3276,6 +3279,7 @@ if (!app.requestSingleInstanceLock()) {
 // unsigned build never notices.
 const UPDATE_EVERY = 60 * 60 * 1000;
 function checkForUpdates() {
+  /* RHEMA */ if (!RHEMA_AUTO_UPDATE) return;
   if (!app.isPackaged) return;
   const look = () => { lookForUpdate().catch(() => { /* logged in lookForUpdate */ }); };
   setTimeout(look, 8000);
@@ -3294,7 +3298,7 @@ app.whenReady().then(() => {
     if (process.platform === 'darwin' && fs.existsSync(devIcon)) {
       if (app.dock) app.dock.setIcon(devIcon);
       app.setAboutPanelOptions({
-        applicationName: 'NEO',
+        applicationName: 'Rhema',
         applicationVersion: app.getVersion(),
         iconPath: devIcon
       });
@@ -3306,7 +3310,7 @@ app.whenReady().then(() => {
   try {
     // the real Documents folder (handles OneDrive-redirected Windows setups)
     try {
-      LIBRARY_DIR = path.join(app.getPath('documents'), 'NEO Library');
+      LIBRARY_DIR = path.join(app.getPath('documents'), 'Rhema Library');
       // …unless the writer chose their own folder (File → Library Folder…)
       const chosen = readSettings().libraryDir;
       if (chosen) LIBRARY_DIR = awaitChosenLibrary(chosen);

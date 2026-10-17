@@ -1,6 +1,6 @@
 {
-  "name": "neo",
-  "productName": "NEO",
+  "name": "rhema",
+  "productName": "Rhema",
   "version": "1.5.8",
   "description": "A word processor for authors. Distraction-free by default.",
   "homepage": "https://github.com/hughhowey/neo",
@@ -31,12 +31,12 @@
     "package:all": "electron-builder --mac --win --linux"
   },
   "build": {
-    "appId": "com.hughhowey.neo",
-    "productName": "NEO",
+    "appId": "io.onlyascii.rhema",
+    "productName": "Rhema",
     "publish": {
       "provider": "github",
-      "owner": "hughhowey",
-      "repo": "neo"
+      "owner": "dark5un",
+      "repo": "rhema"
     },
     "mac": {
       "category": "public.app-category.productivity",
