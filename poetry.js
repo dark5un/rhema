@@ -120,6 +120,32 @@ const RhemaPoetry = (() => {
 
   const isPoemBook = () => !!(book && NeoHooks.format(book.format) && NeoHooks.format(book.format).poem);
 
+  // macOS: Option is a typing modifier (Option+D = δ, Option+J = ∂,
+  // Option+Shift+X = Ξ), so the letter chords are off on darwin; the
+  // arrow chords stay (line moving is the poet's core loop).
+  const IS_MAC = /Mac|iPhone|iPad/i.test(navigator.userAgent || '');
+
+  // Poem chrome (UI review): while a poem book is open the i18n display
+  // seam renames chapter words to poem words in the translated template.
+  // Both language maps ride together — an English UI string never holds
+  // Greek words and vice versa — so a mid-book language switch is safe.
+  const TERMS = [
+    [/\bChapters\b/g, 'Poems'], [/\bChapter\b/g, 'Poem'],
+    [/\bchapters\b/g, 'poems'], [/\bchapter\b/g, 'poem'],
+    [/\bch\.(?= \{ch\})/g, 'poem'],
+    [/Κεφάλαια/g, 'Ποιήματα'], [/κεφάλαια/g, 'ποιήματα'],
+    [/Κεφαλαίου/g, 'Ποιήματος'], [/κεφαλαίου/g, 'ποιήματος'],
+    [/Κεφάλαιο/g, 'Ποίημα'], [/κεφάλαιο/g, 'ποίημα'],
+    [/κεφ\.(?= \{ch\})/g, 'ποι.']
+  ];
+  function armTerms(on) {
+    NeoI18n.setTerms(on ? TERMS : null);
+    // the nav "+ Chapter" label follows the book (setText pattern, like
+    // spEditorMode's own nav-head update)
+    const addSpan = document.querySelector('#nav-add [data-i18n]');
+    if (addSpan) addSpan.textContent = t('Chapter');
+  }
+
   /* ---------------- DOM <-> model ---------------- */
 
   // a stanza paragraph's lines, as arrays of child nodes split on <br>.
@@ -321,6 +347,7 @@ const RhemaPoetry = (() => {
     if (!at) return true;
     const code = e.code || '';
     if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { moveLine(e, body, chId, block, at, e.key === 'ArrowDown' ? 1 : -1); return true; }
+    if (IS_MAC) return false; // Option+letter types Greek on macOS — let it through
     if (code === 'KeyD') { duplicateLine(body, chId, block, at); return true; }
     if (code === 'KeyJ') { mergeLine(e, body, chId, block, at); return true; }
     return false;
@@ -348,7 +375,9 @@ const RhemaPoetry = (() => {
     parts.splice(at.k, 1);
     if (dir < 0) sp.push(nodes); else sp.unshift(nodes);
     setParts(sib, sp);
-    setParts(block, parts.length ? parts : [[]]);
+    // a stanza emptied by the move goes away (unless it is the poem's only one)
+    if (!parts.length && body.querySelector('p.poetry')) block.remove();
+    else setParts(block, parts.length ? parts : [[]]);
     const sk = dir < 0 ? sp.length - 1 : 0;
     commit(body, chId);
     setCaretLine(sib, sk, at.col);
@@ -437,7 +466,10 @@ const RhemaPoetry = (() => {
       const block = caretBlock(body);
       if (block && block.classList.contains('poetry')) {
         const at = caretLine(block);
-        if (at && at.k === 0 && at.col === 0) return true; // let the chain's guards run native
+        // veto the whole guard chain: its prose rules (turn-to-text, jump to
+        // the chapter before) are wrong for verse; native contentEditable then
+        // merges the line back, or the stanza into the stanza before
+        if (at && at.k === 0 && at.col === 0) return true;
       }
     }
     return false;
@@ -466,7 +498,8 @@ const RhemaPoetry = (() => {
     await window.neo.writeChapter(meta.id, chId, '<p class="poetry"><br></p>');
     meta.format = 'poetry';
     meta.chapterOrder = [chId];
-    meta.tabNames = { notes: (library.tabDefaults && library.tabDefaults.notes) || 'Notes', outline: 'Outline' };
+    const td = library.tabDefaults || {};
+    meta.tabNames = { notes: td.notes || 'Notes', outline: td.outline || 'Outline' };
     await writeBookMeta(meta.id, meta);
     await placeTitle(shelf, meta.id);
     await writeLibrary(library);
@@ -480,7 +513,7 @@ const RhemaPoetry = (() => {
   const POEM_STATUSES = [
     { v: 'draft', label: () => t('Draft') },
     { v: 'fair', label: () => t('Fair copy') },
-    { v: 'done', label: () => t('Done') }
+    { v: 'done', label: () => t('Finished') }  // not t('Done'): Greek 'Τέλος' reads as a button, not a status
   ];
   const statusLabel = (v) => (POEM_STATUSES.find((s) => s.v === v) || { label: () => v }).label();
 
@@ -550,7 +583,9 @@ const RhemaPoetry = (() => {
       if (lines.length) {
         const fs = document.createElement('div');
         fs.className = 'rhema-card-line';
-        fs.textContent = quoted(lines[0]);
+        fs.textContent = NeoI18n.getLocale() === 'el'
+          ? '«' + (lines[0].length > 220 ? lines[0].slice(0, 220).trim() + '…' : lines[0]) + '»'
+          : quoted(lines[0]); // Greek convention: guillemets (all 28 quoted el.json values agree)
         text.appendChild(fs);
       }
     }
@@ -595,7 +630,20 @@ const RhemaPoetry = (() => {
     const done = poems.filter((c) => poemStatus(c) === 'done').length;
     const chip = document.createElement('div');
     chip.className = 'rhema-progress';
-    chip.textContent = t('{done} of {total} poems finished', { done, total: poems.length });
+    // n: drives the {one,other} choice (i18n picks plurals on vars.n); the
+    // Greek agrees with the total: '1 από 1 ποίημα ολοκληρωμένο'
+    chip.textContent = t('{done} of {total} poems finished', { done, total: poems.length, n: poems.length });
+    // the dots are not color alone: a one-line legend names them (UX review)
+    const legend = document.createElement('div');
+    legend.className = 'rhema-legend';
+    for (const s of POEM_STATUSES) {
+      const d = document.createElement('span');
+      d.className = 'rhema-dot st-' + s.v;
+      const w = document.createElement('span');
+      w.textContent = s.label();
+      legend.append(d, w);
+    }
+    board.prepend(legend);
     board.prepend(chip);
   }
 
@@ -615,6 +663,22 @@ const RhemaPoetry = (() => {
     // stanza DOM helpers for the other Rhema files (scraps.js, compare.js)
     dom: { stanzaParts, setParts, caretLine, setCaretLine, commit, lineText }
   });
+  // poem chrome: terms arm with the book, disarm on the shelf; the poet
+  // also gets the Enter-rhythm hint once, on first entry into a poem book
+  // (the library-wide toast fires on the shelf, where it is easy to miss)
+  NeoHooks.on('bookOpened', (meta) => {
+    const poem = !!(meta && NeoHooks.format(meta.format) && NeoHooks.format(meta.format).poem);
+    armTerms(poem);
+    if (poem && library.rhema && library.rhema.enterHintShown) return;
+    if (poem) {
+      if (!library.rhema) library.rhema = {};
+      library.rhema.enterHintShown = true;
+      writeLibrary(library);
+      setTimeout(() => toast(t('Enter once = a new line · twice = a new stanza · three times = a new poem'), 7000), 800);
+    }
+  });
+  NeoHooks.on('shelfShown', () => armTerms(false));
+
   NeoHooks.on('poemKey', poemKey);
   NeoHooks.on('poemLineBreak', insertLineBreakDom);
   NeoHooks.on('chapterSynced', chapterSynced);

@@ -5,6 +5,7 @@
 const { app, BrowserWindow, ipcMain, dialog, Menu, MenuItem, utilityProcess, screen } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { randomUUID } = require('node:crypto');
 const os = require('os');
 const { Buffer } = require('buffer');
 
@@ -1044,6 +1045,12 @@ function assetGlob(key) {
   if (!ASSET_KEY.test(k)) return null;
   return k === 'collection' ? /^rhema-drawing\.(png|jpg|webp)$/ : new RegExp('^rhema-drawing-' + k + '\\.(png|jpg|webp)$');
 }
+// Security review (2026-10-17): the renderer never names a source path.
+// pick hands back a one-time token bound to the dialog's result; set only
+// accepts tokens this handler issued — a compromised renderer cannot stage
+// an arbitrary image-extension file from disk (the upstream cover:set
+// pattern allowed it; the fork surface does not).
+const assetPicks = new Map(); // token -> path (single use)
 ipcMain.handle('rhema:asset:pick', async () => {
   const win = BrowserWindow.getFocusedWindow();
   const { canceled, filePaths } = await dialog.showOpenDialog(win, {
@@ -1051,21 +1058,30 @@ ipcMain.handle('rhema:asset:pick', async () => {
     properties: ['openFile'],
     filters: [{ name: t('Images'), extensions: COVER_EXTS }]
   });
-  return canceled || !filePaths.length ? null : filePaths[0];
+  if (canceled || !filePaths.length) return null;
+  if (assetPicks.size > 20) assetPicks.clear(); // stale picks don't pile up
+  const token = randomUUID();
+  assetPicks.set(token, filePaths[0]);
+  return token;
 });
-ipcMain.handle('rhema:asset:set', (_e, bookId, srcPath, key) => {
-  const re = assetGlob(key);
-  const ext = path.extname(srcPath).toLowerCase().replace('.', '');
-  if (!re || !COVER_EXTS.includes(ext)) return null;
-  const dir = bookDir(bookId);
-  if (!fs.existsSync(dir) || !fs.existsSync(srcPath)) return null;
-  const stem = key && key !== 'collection' ? 'rhema-drawing-' + key + '.' : 'rhema-drawing.';
-  const fname = stem + (ext === 'jpeg' ? 'jpg' : ext);
-  fs.copyFileSync(srcPath, path.join(dir, fname));
-  for (const f of fs.readdirSync(dir)) {
-    if (re.test(f) && f !== fname) fs.unlinkSync(path.join(dir, f));
-  }
-  return fname;
+ipcMain.handle('rhema:asset:set', (_e, bookId, token, key) => {
+  try {
+    const srcPath = assetPicks.get(String(token));
+    if (!srcPath) return null;
+    assetPicks.delete(String(token)); // single use
+    const re = assetGlob(key);
+    const ext = path.extname(srcPath).toLowerCase().replace('.', '');
+    if (!re || !COVER_EXTS.includes(ext)) return null;
+    const dir = bookDir(bookId);
+    if (!fs.existsSync(dir) || !fs.existsSync(srcPath)) return null;
+    const stem = key && key !== 'collection' ? 'rhema-drawing-' + key + '.' : 'rhema-drawing.';
+    const fname = stem + (ext === 'jpeg' ? 'jpg' : ext);
+    fs.copyFileSync(srcPath, path.join(dir, fname));
+    for (const f of fs.readdirSync(dir)) {
+      if (re.test(f) && f !== fname) fs.unlinkSync(path.join(dir, f));
+    }
+    return fname;
+  } catch (err) { logError('rhema-asset', err); return null; }
 });
 ipcMain.handle('rhema:asset:read', (_e, bookId, key) => {
   try {

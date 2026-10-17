@@ -22,13 +22,15 @@ carry anchors. Target: <300 changed lines across core files.
 | beforeinput: `if (poemBook()) { e.preventDefault(); NeoHooks.emit('poemLineBreak', …); return; }` | an IME's line break becomes a real `<br>` via poetry.js | 2 |
 | `syncChapter()`: `NeoHooks.emit('chapterSynced', body, chId)` | poetry.js marks every paragraph verse before capture | 2 |
 | `openBook()`: `NeoHooks.emit('bookOpened', book)` | fork features re-arm per book (scraps.js tab visibility + sidecar reset, poetry.js) | 2c |
-| `chapterMenuItems()` / `chapterMenuChoice()`: `emitList('chapterMenuItems', …)` + `emitTrue('chapterMenuChoice', …)` | poem status items (draft/fair copy/done, 2b) and per-poem Poem QR…/Poem drawing… submenus (2e) grow on the card + nav chapter menus; choices answer themselves | 2b+2e |
-| `deleteChapter()`: `NeoHooks.emit('chapterDeleted', chId)` | per-chapter fork metadata (poem status) is pruned with the chapter | 2b |
+| inside `chapterMenu()` (host names in doc were wrong — anchors sit in `chapterMenu()`, not `chapterMenuItems/Choice`): `emitList('chapterMenuItems', …)` + `emitTrue('chapterMenuChoice', …)` | poem status items (draft/fair copy/done, 2b) and per-poem Poem QR…/Poem drawing… submenus (2e) grow on the card + nav chapter menus; choices answer themselves | 2b+2e |
+| `deleteChapterQuiet()`: `NeoHooks.emit('chapterDeleted', chId)` (anchor host is deleteChapterQuiet, not deleteChapter) | per-chapter fork metadata (poem status) is pruned with the chapter | 2b |
 | `renderNav()` item: `NeoHooks.emit('navItem', item, chId)` | status dots in the chapter nav | 2b |
-| `renderOutline()` board + card: `NeoHooks.emit('boardRendered', board)` / `emit('poemCard', cell, chId)` | collection progress chip; rich poem cards (title, first line, line count, status dot) | 2b |
+| `renderBoard()` board + `chapterCard()` card: `NeoHooks.emit('boardRendered', board)` / `emit('poemCard', cell, chId)` (anchor hosts are renderBoard/chapterCard, not renderOutline) | collection progress chip; rich poem cards (title, first line, line count, status dot) | 2b |
 | `switchTab()`: scraps-drawer hide + `name === 'scraps'` branch (`emit('scrapsTabShown')`) | the scraps drawer belongs to its tab alone (class selector, never `$('#…')` — Pocket id-parity); Scraps tab wiring | 2c |
 | `renderFootnoteList()`: `if (!chapter) return;` guard | defensive fix for a LATENT UPSTREAM bug: snapshot views leave `.chapter-body` nodes outside any `.chapter`, and `openBook → renderChapters → renderAllFootnoteLists` crashes on them (repro in plain NEO: open a snapshot, back to shelf, open a book). Exposed by the compare e2e. Candidate to report upstream via Panos. | 2d |
 | `showSnapshot()`: `NeoHooks.emit('snapshotShown', v)` | compare.js turns a poem snapshot side-by-side (Then/Now + added-word marks) | 2d |
+| `backToShelf()`: `NeoHooks.emit('shelfShown')` | fork features disarm on the shelf (poetry.js clears the poem-terms map) | 2h-fix |
+| `emitList()` separator cleanup | several listeners each prepend '-': runs collapse, trailing '-' drops (chapter menu double-separator fix) | 2h-fix |
 | `renderChapters()` loop end: `NeoHooks.emit('chapterRendered', sec, chId)` | the poem mark (QR + watermarked drawing) is appended to the section, outside `.chapter-body` — never captured into the chapter file (qrmark.js) | 2e |
 | `buildHtml()` chapter branch + `buildPrintHtml()` chapter loop: `NeoHooks.emit('exportSectionEnd', sec, d)` | the same mark prints in PDF/HTML exports and the chapbook; listener checks `poemBook()` (shelf exports borrow `book` first) | 2e |
 | shelf card menu (both paths): `emitList('shelfCardMenu', meta)` + `emitTrue('shelfCardChoice', meta, choice)` | poem books grow Set/Remove collection-drawing items (qrmark.js) | 2e |
@@ -47,6 +49,7 @@ carry anchors. Target: <300 changed lines across core files.
 
 | Anchor | What | Phase |
 |--------|------|-------|
+| poem-terms map inside `t()` (`setTerms`) | Display-only poem chrome: while a poem book is open, chapter words in the TRANSLATED template become poem words (en + el maps ride together; before variable fill, so writer's words untouched). poetry.js arms on `bookOpened`, clears on `shelfShown`. Covers header, footer counter, nav, add card, snapshot labels, exports — zero new core anchors. Locale files stay byte-identical. | 2h-fix |
 | brand replace inside `t()` | Display-only rebrand: `\bNEO\b` → `Rhema` applied to the translated/English template BEFORE variable fill (writer's own words in `{vars}` are never touched; strings containing `hughhowey` skipped). Shared by main process and window, so every visible string — dialogs, menus, toasts, all locales — rebrands through this one line. Upstream keys and all `locales/*.json` stay byte-identical: zero merge friction. | 0 |
 
 ## Rebrand strategy (Panos, 2026-10-17)
@@ -70,7 +73,7 @@ name are the only literal renames (both listed above).
 | `dailyBackup()` `keep:` + `rhemaBackupKeep()` | Stone 6: backup retention from library.rhema.retention.backups (default 14, `'unlimited'` → keep all) | 1 |
 | File menu `Rhema AI…` item | opens the Rhema settings pane (behind Show More Features, like Cover Art…) | 1 |
 | `initLanguage()`: `loadLanguage(saved || 'el')` | Stone 11: first launch is Greek regardless of the system language (the poet's default; View → Language switches). The saved choice always wins. Spellcheck follows the interface, so first launch also gets dictionary-el. | 2f |
-| `rhema:asset:pick/set/read/clear` handlers | Stone 1a: poem-mark drawings — `rhema-drawing.(png|jpg|webp)` (collection) and `rhema-drawing-<chId>.*` (one poem); slug-validated key, fixed names, no user input in the path; reuses COVER_EXTS + readCover | 2e |
+| `rhema:asset:pick/set/read/clear` handlers | Stone 1a: poem-mark drawings — `rhema-drawing.(png|jpg|webp)` (collection) and `rhema-drawing-<chId>.*` (one poem); slug-validated key, fixed names; reuses COVER_EXTS + readCover. **2h-fix (security review): `set` takes a one-time token issued by `pick`, never a renderer path** — a compromised renderer cannot stage an arbitrary image-extension file from disk; handler wrapped in try/catch | 2e+2h-fix |
 | (future) import formats | | 3 |
 | (deferred, before any auto-update re-enable) `latestReleaseFromGitHub()` | still fetches hughhowey/neo with UA 'NEO-App'; must be pointed at dark5un/rhema when RHEMA_AUTO_UPDATE flips to true, so the fallback link matches the publish feed | 15-re |
 
@@ -85,11 +88,12 @@ name are the only literal renames (both listed above).
 | Anchor | What | Phase |
 |--------|------|-------|
 | `<title>Rhema</title>`, `<h1>Rhema</h1>` | product name | 0 |
+| `<link rel="stylesheet" href="rhema-poetry.css" />` | the poetry format styles (fork CSS file; styles.css stays upstream-clean) | 2b |
 | `<script src="rhema-settings.js">` | the Rhema settings pane module (before app.js) | 1 |
 | `<script src="poetry.js">` (after app.js) | the poetry format — registers into the hook bus at load; app.js init is async so it lands before any book opens | 2 |
 | `<script src="scraps.js">` (after poetry.js) | the scraps drawer (Stone 5) | 2c |
 | `<script src="compare.js">` (after scraps.js) | the compare view (Stone 6) | 2d |
-| `<script src="qrcode-generator.js">` + `<script src="qrmark.js">` | vendored MIT QR encoder (Kazuhiko Arase, qrcode-generator@1.4.4, unmodified) + the poem mark (Stone 1a) | 2e |
+| `<script src="qrcode-generator.js">` + `<script src="qrmark.js">` | vendored MIT QR encoder (Kazuhiko Arase, qrcode-generator@1.4.4, unmodified — sha256 18ae399f81182bc9de916e9c77b195df20cc58d6f2d55a62b085a299f1bf1780, byte-identical to the npm tarball's qrcode.js, verified 2026-10-17) + the poem mark (Stone 1a) | 2e |
 | (future) more Rhema `<script>` tags | new fork files | 2+ |
 
 ## package.json (no comments possible — listed here instead)

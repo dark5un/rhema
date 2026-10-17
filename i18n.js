@@ -53,6 +53,19 @@
     });
   }
 
+  /* RHEMA — poem terminology: while a poem book is open, the display seam
+     renames chapter chrome to poem chrome in the TRANSLATED template, before
+     variable fill (a writer's own words are never touched). Locale files and
+     upstream literals stay byte-identical — same posture as the brand seam.
+     poetry.js sets the map on bookOpened and clears it on shelfShown. */
+  let terms = null;
+  function setTerms(map) { terms = Array.isArray(map) && map.length ? map : null; }
+  function applyTerms(str) {
+    if (!terms) return str;
+    for (const [from, to] of terms) str = str.replace(from, to);
+    return str;
+  }
+
   function t(key, vars) {
     let str = pick(dict[key], vars);
     if (str == null) {
@@ -70,6 +83,7 @@
        "NEO" in it — are never touched; strings crediting upstream (hughhowey)
        are skipped. */
     if (str && !str.includes('hughhowey')) str = str.replace(/\bNEO\b/g, 'Rhema');
+    if (str) str = applyTerms(str);
     return fill(str, vars);
   }
 
@@ -77,5 +91,5 @@
   const fmtDate = (d, opts) => new Date(d).toLocaleDateString(locale, opts);
   const getLocale = () => locale;
 
-  return { setLocale, t, fmtNum, fmtDate, getLocale };
+  return { setLocale, setTerms, t, fmtNum, fmtDate, getLocale };
 });

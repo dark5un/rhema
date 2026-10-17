@@ -45,6 +45,17 @@ const NeoHooks = {
       }
       catch (err) { console.error('[rhema hook]', name, err); }
     }
+    // separators: several listeners each prepend '-', so collapse runs and
+    // drop a trailing one (the host menus add their own afterwards)
+    if (out) {
+      const clean = [];
+      for (const item of out) {
+        if (item === '-' && clean.length && clean[clean.length - 1] === '-') continue;
+        clean.push(item);
+      }
+      while (clean.length && clean[clean.length - 1] === '-') clean.pop();
+      out = clean.length ? clean : undefined;
+    }
     return out;
   },
   // veto emit (Phase 2): first listener that returns true wins and stops the
@@ -13296,6 +13307,8 @@ async function backToShelf() {
   flushAllSaves();
   tabPlaces = {};
   book = null;
+  /* RHEMA — fork features disarm on the shelf (poetry.js clears poem terms) */
+  NeoHooks.emit('shelfShown');
   showWindowTitle();
   snapShown = null;
   snapCache = null;
@@ -16428,6 +16441,8 @@ function buildHtml(data, opts = {}) {
     </section>`;
     }
     const back = kind === 'acknowledgments' || kind === 'about';
+    /* RHEMA — exportSectionEnd anchor: the poem mark (qrmark.js) closes each
+       exported chapter section; the listener checks poemBook() itself. */
     return `
     <section class="chapter${back ? ' backpage' : ''}" id="${id}">
       ${ch.heading ? `<${h} class="hd">${escHtml(ch.heading)}</${h}>` : ''}

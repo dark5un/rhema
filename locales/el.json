@@ -115,7 +115,10 @@
  "Bind into one book": "Δέσιμο σε ένα βιβλίο",
  "Its titles become one book, with a cover, front and back pages, and one table of contents.": "Οι τίτλοι του γίνονται ένα βιβλίο, με εξώφυλλο, αρχικές και τελικές σελίδες και έναν πίνακα περιεχομένων.",
  "Export shelf as anthology…": "Εξαγωγή ραφιού ως ανθολογία…",
- "Collect its {n} works, in shelf order, into a single book with a table of contents.": "Συγκέντρωση των {n} έργων του, με τη σειρά του ραφιού, σε ένα βιβλίο με πίνακα περιεχομένων.",
+ "Collect its {n} works, in shelf order, into a single book with a table of contents.": {
+  "one": "Συγκέντρωση του {n} έργου του, με τη σειρά του ραφιού, σε ένα βιβλίο με πίνακα περιεχομένων.",
+  "other": "Συγκέντρωση των {n} έργων του, με τη σειρά του ραφιού, σε ένα βιβλίο με πίνακα περιεχομένων."
+ },
  "Collect the works, in shelf order, into a single book with a table of contents.": "Συγκέντρωση των έργων, με τη σειρά του ραφιού, σε ένα βιβλίο με πίνακα περιεχομένων.",
  "Delete shelf": "Διαγραφή ραφιού",
  "Books move to another shelf. Nothing is deleted from disk.": "Τα βιβλία μετακινούνται σε άλλο ράφι. Τίποτα δεν διαγράφεται από τον δίσκο.",
@@ -249,7 +252,10 @@
  "Drag to reorder chapters": "Σύρετε για αναδιάταξη των κεφαλαίων",
  "Unresolved placeholder": "Ανεπίλυτη υπενθύμιση",
  "Outline note": "Σημείωση διάρθρωσης",
- "{n} words": "{n} λέξεις",
+ "{n} words": {
+  "one": "{n} λέξη",
+  "other": "{n} λέξεις"
+ },
  "Rename tab": "Μετονομασία καρτέλας",
  "New tab name": "Νέο όνομα καρτέλας",
  "Manuscript": "Χειρόγραφο",
@@ -264,17 +270,32 @@
  "Removes the outline line and its gray ghost from the manuscript. Written prose is never touched.": "Αφαιρεί τη γραμμή της διάρθρωσης και το γκρι ίχνος της από το χειρόγραφο. Το γραμμένο κείμενο δεν αλλάζει ποτέ.",
  "When a beautiful paragraph is gumming up the works, select it and drag it onto the Darlings tab below.": "Όταν μια όμορφη παράγραφος σας εμποδίζει, επιλέξτε την και σύρετέ την στην καρτέλα Darlings παρακάτω.",
  "It leaves your manuscript but it is never lost.": "Φεύγει από το χειρόγραφό σας αλλά δεν χάνεται ποτέ.",
- "from {label} · {date} · {n} words": "από {label} · {date} · {n} λέξεις",
+ "from {label} · {date} · {n} words": {
+  "one": "από {label} · {date} · {n} λέξη",
+  "other": "από {label} · {date} · {n} λέξεις"
+ },
  "Restore": "Επαναφορά",
  "Delete forever": "Οριστική διαγραφή",
  "Darling restored to its original spot": "Το Darling επανήλθε στην αρχική του θέση",
  "Original spot is gone — restored to the end of {label}": "Η αρχική θέση δεν υπάρχει πια — επαναφέρθηκε στο τέλος του {label}",
  "the manuscript": "το χειρόγραφο",
- "{name}: {n} words": "{name}: {n} λέξεις",
- "ch. {ch}: {n} words": "κεφ. {ch}: {n} λέξεις",
- "{n} chapters": "{n} κεφάλαια",
+ "{name}: {n} words": {
+  "one": "{name}: {n} λέξη",
+  "other": "{name}: {n} λέξεις"
+ },
+ "ch. {ch}: {n} words": {
+  "one": "κεφ. {ch}: {n} λέξη",
+  "other": "κεφ. {ch}: {n} λέξεις"
+ },
+ "{n} chapters": {
+  "one": "{n} κεφάλαιο",
+  "other": "{n} κεφάλαια"
+ },
  "chapter {ch} of {total}": "κεφάλαιο {ch} από {total}",
- "Sprint complete — {n} words. Well earned.": "Το sprint ολοκληρώθηκε — {n} λέξεις. Το αξίζατε.",
+ "Sprint complete — {n} words. Well earned.": {
+  "one": "Το sprint ολοκληρώθηκε — {n} λέξη. Το αξίζατε.",
+  "other": "Το sprint ολοκληρώθηκε — {n} λέξεις. Το αξίζατε."
+ },
  "{n} / {goal} today": "{n} / {goal} σήμερα",
  "{n} today": "{n} σήμερα",
  "{n} selected": "{n} επιλεγμένες",
@@ -288,7 +309,10 @@
  "{n} replaced across the whole book — {key} to undo": "Έγιναν {n} αντικαταστάσεις σε όλο το βιβλίο — {key} για αναίρεση",
  "0 replaced": "0 αντικαταστάσεις",
  "Couldn’t import {name}: {error}": "Δεν ήταν δυνατή η εισαγωγή του {name}: {error}",
- "{n} books imported onto “{shelf}” — chapters and scene breaks detected": "Εισήχθησαν {n} βιβλία στο «{shelf}» — εντοπίστηκαν κεφάλαια και αλλαγές ενότητας",
+ "{n} books imported onto “{shelf}” — chapters and scene breaks detected": {
+  "one": "Εισήχθη {n} βιβλίο στο «{shelf}» — εντοπίστηκε κεφάλαιο και αλλαγή ενότητας",
+  "other": "Εισήχθησαν {n} βιβλία στο «{shelf}» — εντοπίστηκαν κεφάλαια και αλλαγές ενότητας"
+ },
  "Spellcheck on": "Ορθογραφικός έλεγχος ενεργός",
  "Spellcheck off": "Ορθογραφικός έλεγχος ανενεργός",
  "US English": "Αγγλικά ΗΠΑ",
@@ -354,7 +378,10 @@
  "words": "λέξεις",
  "End sprint": "Τέλος sprint",
  "Start sprint": "Έναρξη sprint",
- "Sprint ended — {n} words in {min} min": "Το sprint τελείωσε — {n} λέξεις σε {min} λεπτά",
+ "Sprint ended — {n} words in {min} min": {
+  "one": "Το sprint τελείωσε — {n} λέξη σε {min} λεπτό",
+  "other": "Το sprint τελείωσε — {n} λέξεις σε {min} λεπτά"
+ },
  "Sprint started — {n} words. Go.": "Το sprint ξεκίνησε — {n} λέξεις. Πάμε.",
  "NEO couldn’t read the fonts on this computer": "Το NEO δεν μπόρεσε να διαβάσει τις γραμματοσειρές αυτού του υπολογιστή",
  "Other font": "Άλλη γραμματοσειρά",
@@ -428,7 +455,10 @@
  "Option": "Option",
  "Control": "Control",
  "or": "ή",
- "{n} words · exported from NEO on {date}": "{n} λέξεις · εξαγωγή από το NEO στις {date}",
+ "{n} words · exported from NEO on {date}": {
+  "one": "{n} λέξη · εξαγωγή από το NEO στις {date}",
+  "other": "{n} λέξεις · εξαγωγή από το NEO στις {date}"
+ },
  "Table of Contents": "Πίνακας περιεχομένων",
  "Beginning": "Αρχή",
  "For ebook stores — the TOC lists every story.": "Για καταστήματα ebook — ο πίνακας περιεχομένων εμφανίζει κάθε ιστορία.",
@@ -440,7 +470,10 @@
  "Export the anthology as…": "Εξαγωγή της ανθολογίας ως…",
  "Collecting the shelf…": "Συγκέντρωση του ραφιού…",
  "No words found on this shelf yet": "Δεν βρέθηκαν ακόμη λέξεις σε αυτό το ράφι",
- "Anthology of {n} works exported: {file}": "Εξήχθη ανθολογία {n} έργων: {file}",
+ "Anthology of {n} works exported: {file}": {
+  "one": "Εξήχθη ανθολογία {n} έργου: {file}",
+  "other": "Εξήχθη ανθολογία {n} έργων: {file}"
+ },
  "Couldn’t export the anthology: {error}": "Δεν ήταν δυνατή η εξαγωγή της ανθολογίας: {error}",
  "Exported: {file}": "Εξήχθη: {file}",
  "Couldn’t export: {error}": "Δεν ήταν δυνατή η εξαγωγή: {error}",
@@ -451,8 +484,14 @@
  "Written by": "Γραμμένο από",
  "you@example.com": "you@example.com",
  "Email settings saved": "Οι ρυθμίσεις email αποθηκεύτηκαν",
- "NEO draft — {title} — {n} words — {date}": "Προσχέδιο NEO — {title} — {n} λέξεις — {date}",
- "Draft snapshot of “{title}” — {n} words.": "Στιγμιότυπο προσχεδίου του «{title}» — {n} λέξεις.",
+ "NEO draft — {title} — {n} words — {date}": {
+  "one": "Προσχέδιο NEO — {title} — {n} λέξη — {date}",
+  "other": "Προσχέδιο NEO — {title} — {n} λέξεις — {date}"
+ },
+ "Draft snapshot of “{title}” — {n} words.": {
+  "one": "Στιγμιότυπο προσχεδίου του «{title}» — {n} λέξη.",
+  "other": "Στιγμιότυπο προσχεδίου του «{title}» — {n} λέξεις."
+ },
  "Sent from NEO on {date}.": "Εστάλη από το NEO στις {date}.",
  "SHA-256 fingerprint of the manuscript text:": "Αποτύπωμα SHA-256 του κειμένου του χειρογράφου:",
  "The PDF snapshot is in the Finder window NEO just opened — drag it into this email before sending.": "Το στιγμιότυπο PDF βρίσκεται στο παράθυρο Finder που μόλις άνοιξε το NEO — σύρετέ το σε αυτό το email πριν από την αποστολή.",
@@ -624,7 +663,10 @@
  "“END” after the last line": "«ΤΕΛΟΣ» μετά την τελευταία γραμμή",
  "(CONT'D) for a Returning Speaker": "(ΣΥΝ.) για Επαναλαμβανόμενο Ομιλητή",
  "(no words yet)": "(καμία λέξη ακόμη)",
- "{done} of {total} poems finished": "{done} από {total} ποιήματα ολοκληρωμένα",
+ "{done} of {total} poems finished": {
+  "one": "{done} από {total} ποίημα ολοκληρωμένο",
+  "other": "{done} από {total} ποιήματα ολοκληρωμένα"
+ },
  "{n} cards removed — their writing is in Darlings, or {key} to undo": {
   "one": "Αφαιρέθηκε {n} κάρτα — το κείμενό της είναι στα Darlings, ή {key} για αναίρεση",
   "other": "Αφαιρέθηκαν {n} κάρτες — το κείμενό τους είναι στα Darlings, ή {key} για αναίρεση"
@@ -833,7 +875,7 @@
  "Poem status…": "Κατάσταση ποιήματος…",
  "Press ⌘S to take a snapshot of your book. It costs only the chapters that changed.": "Πατήστε ⌘S για στιγμιότυπο του βιβλίου σας. Κοστίζει μόνο τα κεφάλαια που άλλαξαν.",
  "Press Ctrl+S to take a snapshot of your book. It costs only the chapters that changed.": "Πατήστε Ctrl+S για στιγμιότυπο του βιβλίου σας. Κοστίζει μόνο τα κεφάλαια που άλλαξαν.",
- "Put in": "Επαναφορά",
+ "Put in": "Τοποθέτηση",
  "Regular": "Κανονικό",
  "Remove it (use the collection’s)": "Αφαίρεση (χρήση του σχεδίου της συλλογής)",
  "Remove it (use the default)": "Αφαίρεση (χρήση της προεπιλογής)",
@@ -950,5 +992,7 @@
  "Your legal name": "Το επίσημο όνομά σας",
  "Your mail program": "Το πρόγραμμα αλληλογραφίας σας",
  "Your mail program opened — attach the PDF NEO revealed, then send": "Άνοιξε το πρόγραμμα αλληλογραφίας — επισυνάψτε το PDF που έδειξε το NEO και στείλτε",
- "Zoom out until two pages fit side by side": "Σμικρύνετε ώσπου δύο σελίδες να χωρέσουν δίπλα-δίπλα"
+ "Zoom out until two pages fit side by side": "Σμικρύνετε ώσπου δύο σελίδες να χωρέσουν δίπλα-δίπλα",
+ "Finished": "Ολοκληρωμένο",
+ "QR code": "Κωδικός QR"
 }

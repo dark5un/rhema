@@ -90,6 +90,8 @@ const RhemaScraps = (() => {
   // Alt+Shift+X in a poem book (poetry.js's poemKey already passed on it)
   function scrapKey(e, body, chId) {
     if (!isPoem()) return false;
+    // macOS: Option+Shift+X types Ξ — the chord is off on darwin (poetry.js IS_MAC)
+    if (/Mac|iPhone|iPad/i.test(navigator.userAgent || '')) return false;
     if (e.altKey && e.shiftKey && !e.metaKey && !e.ctrlKey && e.code === 'KeyX') {
       e.preventDefault();
       cut(body, chId);
@@ -163,7 +165,7 @@ const RhemaScraps = (() => {
       text.innerHTML = s.lines.map((l) => escHtml(l)).join('<br>');
       const meta = document.createElement('div');
       meta.className = 'rhema-scrap-meta';
-      meta.textContent = t('from {poem} · {date}', { poem: s.originTitle || t('Untitled'), date: (s.date || '').slice(0, 10) });
+      meta.textContent = t('from {poem} · {date}', { poem: s.originTitle || t('Untitled'), date: s.date ? fmtDate(s.date) : '' });
       const btns = document.createElement('div');
       btns.className = 'rhema-scrap-btns';
       const put = document.createElement('button');
@@ -188,16 +190,31 @@ const RhemaScraps = (() => {
     }
   }
 
-  // a scrap card dropped on a poem lands at the drop point
+  // a scrap card dropped on a poem lands at the drop point; the target
+  // poem shows it is a drop zone (UX review: a drag with no cue is a dead end)
+  let dropTarget = null;
+  const markDrop = (body) => {
+    if (dropTarget === body) return;
+    if (dropTarget) dropTarget.classList.remove('rhema-drop-target');
+    dropTarget = body || null;
+    if (dropTarget) dropTarget.classList.add('rhema-drop-target');
+  };
   document.addEventListener('dragover', (e) => {
-    if (!isPoem() || !e.target.closest || !e.target.closest('.chapter-body')) return;
+    const body = e.target.closest && e.target.closest('.chapter-body');
+    if (!isPoem() || !body) return;
     if (!Array.from(e.dataTransfer.types || []).includes('application/x-rhema-scrap')) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
+    markDrop(body);
+  });
+  document.addEventListener('dragleave', (e) => {
+    const body = e.target.closest && e.target.closest('.chapter-body');
+    if (body && body === dropTarget && !body.contains(e.relatedTarget)) markDrop(null);
   });
   document.addEventListener('drop', (e) => {
     if (!isPoem() || !e.target.closest || !e.target.closest('.chapter-body')) return;
     const id = e.dataTransfer.getData('application/x-rhema-scrap');
+    markDrop(null);
     if (!id) return;
     e.preventDefault();
     e.stopPropagation();
@@ -224,8 +241,11 @@ const RhemaScraps = (() => {
     const tab = document.querySelector('.tab[data-tab="scraps"]');
     if (tab) tab.hidden = !poem;
     const i = TAB_ORDER.indexOf('scraps');
-    if (poem && i < 0) TAB_ORDER.splice(3, 0, 'scraps');
-    else if (!poem && i >= 0) TAB_ORDER.splice(i, 1);
+    // sit beside Darlings, wherever upstream puts it (not a fixed index)
+    if (poem && i < 0) {
+      const d = TAB_ORDER.indexOf('darlings');
+      TAB_ORDER.splice(d >= 0 ? d + 1 : TAB_ORDER.length, 0, 'scraps');
+    } else if (!poem && i >= 0) TAB_ORDER.splice(i, 1);
     scrapsFor = null; // the next look reads this book's sidecar
     if (!poem && currentTab === 'scraps') switchTab('manuscript');
   }

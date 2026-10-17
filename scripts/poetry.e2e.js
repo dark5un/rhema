@@ -185,7 +185,8 @@ test('Alt+up/down moves the line, across stanzas too', async () => {
   await key({ key: 'ArrowUp', code: 'ArrowUp', altKey: true });
   await tick();
   st = await stanzas();
-  assert.deepEqual(st.map((s) => s.lines), [['x', 'y', 'z'], ['']], 'the line crossed into the stanza before');
+  // the emptied stanza goes away (review 2026-10-17: no orphan empty stanza)
+  assert.deepEqual(st.map((s) => s.lines), [['x', 'y', 'z']], 'the line crossed into the stanza before, which stays; the emptied stanza goes');
 });
 
 test('Alt+D duplicates the line; Alt+J merges it upward', async () => {
@@ -395,12 +396,15 @@ test('qr mark: QR and drawing are declared per poem, and can each be off', async
 
 test('qr mark: the collection drawing sits watermarked, a poem can override it', async () => {
   const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
-  const src = path.join(LIB, 'drawing-test.png');
-  fs.writeFileSync(src, png);
   const bookId = await js('book.id');
   const ch0 = await js('book.chapterOrder[0]');
-  const fname = await js(`window.neo.rhema.assetSet(${JSON.stringify(bookId)}, ${JSON.stringify(src)}, 'collection')`);
-  assert.equal(fname, 'rhema-drawing.png', 'the collection drawing lands in the book folder');
+  const dir = path.join(LIB, fs.readdirSync(LIB).find((d) => d.startsWith('book-')));
+  // security review (2026-10-17): asset:set takes a one-time pick token,
+  // never a renderer-supplied path — a raw path is refused outright
+  const refused = await js(`window.neo.rhema.assetSet(${JSON.stringify(bookId)}, '/etc/hostname', 'collection')`);
+  assert.equal(refused, null, 'a raw path is no longer trusted');
+  // stage the asset the way the pick dialog leaves it: in the book folder
+  fs.writeFileSync(path.join(dir, 'rhema-drawing.png'), png);
   await js(`RhemaQr.loadDrawing(${JSON.stringify(bookId)}, 'collection')`);
   await js('renderChapters()');
   await tick(250);
@@ -411,8 +415,8 @@ test('qr mark: the collection drawing sits watermarked, a poem can override it',
   })()`);
   assert.ok(art.has && art.faded && art.data, 'the drawing shows watermarked next to the QR');
   // a poem's own drawing, declared independently (and its own file)
-  const own = await js(`window.neo.rhema.assetSet(${JSON.stringify(bookId)}, ${JSON.stringify(src)}, ${JSON.stringify(ch0)})`);
-  assert.equal(own, 'rhema-drawing-' + ch0 + '.png', 'the poem drawing is its own asset');
+  fs.writeFileSync(path.join(dir, 'rhema-drawing-' + ch0 + '.png'), png);
+  const own = 'rhema-drawing-' + ch0 + '.png';
   await js(`(() => { book.rhema.poems[${JSON.stringify(ch0)}] = Object.assign({}, book.rhema.poems[${JSON.stringify(ch0)}], { drawing: ${JSON.stringify(own)} }); saveMeta(); })()`);
   await js(`RhemaQr.loadDrawing(${JSON.stringify(bookId)}, ${JSON.stringify(ch0)})`);
   await js('renderChapters()');
@@ -431,6 +435,80 @@ test('qr mark: the collection drawing sits watermarked, a poem can override it',
   assert.equal(await js(`window.neo.rhema.assetRead(${JSON.stringify(bookId)}, 'collection')`), null, 'and clears');
 });
 
+test('scraps: drag a card, the poem body marks itself, the drop lands the line', async () => {
+  const ok = await js(`(() => {
+    const card = document.querySelector('#rhema-scraps .rhema-scrap');
+    if (!card) return { err: 'no card' };
+    const body = document.querySelector('.chapter[data-id="' + book.chapterOrder[1] + '"] .chapter-body');
+    const dt = new DataTransfer();
+    card.dispatchEvent(new DragEvent('dragstart', { dataTransfer: dt, bubbles: true }));
+    if (!dt.getData('application/x-rhema-scrap')) return { err: 'dragstart set nothing' };
+    const p = body.querySelector('p'); // a fresh poem may still hold a plain <p> until synced
+    const r = p.getBoundingClientRect();
+    const x = Math.max(r.left + 5, 1), y = Math.max(r.top + 2, 1);
+    body.dispatchEvent(new DragEvent('dragover', { dataTransfer: dt, bubbles: true, clientX: x, clientY: y }));
+    const marked = body.classList.contains('rhema-drop-target');
+    body.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, clientX: x, clientY: y }));
+    return { marked };
+  })()`);
+  assert.ok(!ok.err, ok.err || 'drag ran');
+  assert.ok(ok.marked, 'dragover marks the poem body as a drop target');
+  await tick(150);
+  const st = await stanzasOf(1);
+  const flat = st.map((s) => s.lines).flat();
+  assert.ok(flat.includes(L2), 'the dropped scrap line landed in the other poem');
+  assert.equal(await js(`document.querySelector('.chapter[data-id="' + book.chapterOrder[1] + '"] .chapter-body').classList.contains('rhema-drop-target')`), false, 'the marker clears on drop');
+});
+
+test('⌘Z undoes a line move and a scrap cut (structural undo coverage)', async () => {
+  await js(`(() => { chapterHTML[book.chapterOrder[0]] = '<p class="poetry">a<br>b<br>c</p>'; currentChapterId = book.chapterOrder[0]; renderChapters(); })()`);
+  await tick(150);
+  await caretInLine(0, 2, 1);
+  await key({ key: 'ArrowUp', code: 'ArrowUp', altKey: true });
+  await tick(120);
+  let st = await stanzasOf(0);
+  assert.deepEqual(st[0].lines, ['a', 'c', 'b'], 'the move happened');
+  await key({ key: 'z', code: 'KeyZ', ctrlKey: true });
+  await tick(150);
+  st = await stanzasOf(0);
+  assert.deepEqual(st[0].lines, ['a', 'b', 'c'], '⌘Z undid the line move');
+  await caretInLine(0, 1, 0);
+  await key({ key: 'x', code: 'KeyX', altKey: true, shiftKey: true });
+  await tick(150);
+  st = await stanzasOf(0);
+  assert.deepEqual(st[0].lines, ['a', 'c'], 'the cut took the line');
+  await key({ key: 'z', code: 'KeyZ', ctrlKey: true });
+  await tick(150);
+  st = await stanzasOf(0);
+  assert.deepEqual(st[0].lines, ['a', 'b', 'c'], '⌘Z undid the scrap cut');
+});
+
+test('status: clearing a poem\'s status removes its record', async () => {
+  const ch = await js('book.chapterOrder[0]');
+  await js(`NeoHooks.format('poetry').setStatus(${JSON.stringify(ch)}, 'fair')`);
+  assert.equal(await js(`NeoHooks.format('poetry').getStatus(${JSON.stringify(ch)})`), 'fair');
+  await js(`NeoHooks.format('poetry').setStatus(${JSON.stringify(ch)}, '')`);
+  assert.equal(await js(`NeoHooks.format('poetry').getStatus(${JSON.stringify(ch)})`), '');
+  // the record loses the status key; other per-poem keys (drawing) stay
+  assert.equal(await js(`!book.rhema.poems[${JSON.stringify(ch)}] || !('status' in book.rhema.poems[${JSON.stringify(ch)}])`), true, 'the status key is gone, not blanked');
+});
+
+test('the drawing is there on first open — no explicit load (bookOpened race fix)', async () => {
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  const bookId = await js('book.id');
+  const dir = path.join(LIB, fs.readdirSync(LIB).find((d) => d.startsWith('book-')));
+  fs.writeFileSync(path.join(dir, 'rhema-drawing.png'), png);
+  await js('backToShelf()');
+  await tick(300);
+  await js(`openBook(${JSON.stringify(bookId)})`);
+  await tick(700); // the async asset load + the re-render it triggers
+  const art = await js(`(() => {
+    const m = document.querySelector('.chapter[data-id="' + book.chapterOrder[0] + '"] > .rhema-poem-mark');
+    return !!(m && m.querySelector('img.rhema-mark-drawing'));
+  })()`);
+  assert.ok(art, 'the mark carries the drawing after a plain reopen');
+});
+
 test('a novel still gets NEO\'s Enter rhythm (anchors change nothing)', async () => {
   await js(`(async () => {
     await addImportedBooks([{ name: 'A Novel', chapters: [{ title: 'One', paras: [{ text: 'Prose here.' }, { text: 'More prose.' }] }] }], library.shelves[0]);
@@ -446,6 +524,22 @@ test('a novel still gets NEO\'s Enter rhythm (anchors change nothing)', async ()
   await enter(); await tick();
   const cls = await js(`Array.from(document.querySelector('.chapter[data-id="' + (${CHID}) + '"] .chapter-body').children).map((p) => p.className)`);
   assert.ok(cls.includes('scene-break'), 'double Enter still makes a section break in prose');
+});
+
+test('poem chrome: chapter words become poem words in the open book, and back on the shelf', async () => {
+  const poemId = await js(`(async () => { const id = library.shelves[0].bookIds[0]; await openBook(id); return id; })()`);
+  await tick(600);
+  assert.equal(await js('poemBook()'), true);
+  assert.equal(await js(`chapterName(book.chapterOrder[0])`), 'Poem 1', 'the unit is a poem');
+  assert.equal(await js(`t('Chapters')`), 'Poems', 'the nav header follows');
+  assert.equal(await js(`t('+ Chapter')`), '+ Poem', 'the add card follows');
+  assert.equal(await js(`t('chapter {ch} of {total}', { ch: 1, total: 2 })`), 'poem 1 of 2', 'the footer follows');
+  assert.equal(await js(`document.querySelector('#nav-add [data-i18n]').textContent`), 'Poem');
+  assert.ok(!(await js(`buildHtml()`)).includes('Chapter 1'), 'exports say Poem too');
+  await js('backToShelf()');
+  await tick(300);
+  assert.equal(await js(`t('Chapters')`), 'Chapters', 'the shelf keeps NEO\'s words');
+  assert.equal(await js(`t('Chapter {n}', { n: 3 })`), 'Chapter 3');
 });
 
 async function main() {

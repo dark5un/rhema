@@ -63,7 +63,7 @@ const RhemaQr = (() => {
         }
       }
       // a quiet margin, or scanners refuse the print
-      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-2 -2 ${n + 4} ${n + 4}" width="${px}" height="${px}" shape-rendering="crispEdges" role="img" aria-label="QR"><rect x="-2" y="-2" width="${n + 4}" height="${n + 4}" fill="#fff"/><g fill="#000">${cells}</g></svg>`;
+      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-2 -2 ${n + 4} ${n + 4}" width="${px}" height="${px}" shape-rendering="crispEdges" role="img" aria-label="${escHtml(t('QR code'))}"><rect x="-2" y="-2" width="${n + 4}" height="${n + 4}" fill="#fff"/><g fill="#000">${cells}</g></svg>`;
     } catch (err) {
       if (window.neo && neo.logError) neo.logError('rhema-qr: ' + ((err && err.message) || err));
       return '';
@@ -82,7 +82,9 @@ const RhemaQr = (() => {
       ? `<img class="rhema-mark-drawing" src="${art}" alt="" style="max-height:84px;max-width:120px;opacity:.35;object-fit:contain">`
       : '';
     // inline styles only: the export CSS stays untouched (merge posture)
-    return `<div class="rhema-poem-mark" contenteditable="false" style="display:flex;align-items:flex-end;gap:14px;margin-top:1.6em">${artImg}${svg ? `<span class="rhema-mark-qr" style="display:inline-block">${svg}</span>` : ''}</div>`;
+    // centered under the heading: a deliberate colophon, not stray squares
+    // (full mark restyle — vector drawings, monoline — is Stone 17 / 2h)
+    return `<div class="rhema-poem-mark" contenteditable="false" style="display:flex;align-items:flex-end;justify-content:center;gap:14px;margin-top:1.6em">${artImg}${svg ? `<span class="rhema-mark-qr" style="display:inline-block">${svg}</span>` : ''}</div>`;
   }
 
   // ---- editor: the mark sits at the end of the chapter section ----
@@ -177,9 +179,9 @@ const RhemaQr = (() => {
     ]);
     if (!choice) return;
     if (choice === 'set') {
-      const src = await window.neo.rhema.assetPick();
-      if (!src) return;
-      const fname = await window.neo.rhema.assetSet(book.id, src, chId);
+      const token = await window.neo.rhema.assetPick(); // one-time token, not a path
+      if (!token) return;
+      const fname = await window.neo.rhema.assetSet(book.id, token, chId);
       if (!fname) { toast(t('That image could not be added.')); return; }
       setPoemField(chId, 'drawing', fname);
       await loadDrawing(book.id, chId);
@@ -200,9 +202,9 @@ const RhemaQr = (() => {
     await writeBookMeta(meta.id, meta).catch(() => {});
   }
   async function pickDrawing(meta) {
-    const src = await window.neo.rhema.assetPick();
-    if (!src) return false;
-    const fname = await window.neo.rhema.assetSet(meta.id, src, 'collection');
+    const token = await window.neo.rhema.assetPick(); // one-time token, not a path
+    if (!token) return false;
+    const fname = await window.neo.rhema.assetSet(meta.id, token, 'collection');
     if (!fname) { toast(t('That image could not be added.')); return false; }
     await rememberDrawing(meta, fname);
     await loadDrawing(meta.id, 'collection');
@@ -231,7 +233,14 @@ const RhemaQr = (() => {
 
   NeoHooks.on('chapterRendered', chapterRendered);
   NeoHooks.on('exportSectionEnd', exportSectionEnd);
-  NeoHooks.on('bookOpened', (meta) => { loadAllDrawings(meta); });
+  // the drawings load over IPC; when they land, re-render so the mark is
+  // complete on first open (bookOpened fires before renderChapters, and the
+  // async load would otherwise lose the race — review 2026-10-17)
+  NeoHooks.on('bookOpened', async (meta) => {
+    const id = meta.id;
+    await loadAllDrawings(meta);
+    if (book && book.id === id && poemBook()) renderChapters();
+  });
   NeoHooks.on('chapterMenuItems', chapterMenuItems);
   NeoHooks.on('chapterMenuChoice', chapterMenuChoice);
   NeoHooks.on('shelfCardMenu', shelfCardMenu);
