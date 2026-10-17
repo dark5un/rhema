@@ -562,6 +562,32 @@ test('generated drawings (Stone 17): inline vectors from kind declarations', asy
 });
 
 
+test('outline board (Stone 17): the poem card group centers on wide windows, tracks capped', async () => {
+  await js(`document.querySelector('.tab[data-tab="outline"]').click()`);
+  await tick(600);
+  const geo = await js(`(() => {
+    const board = document.querySelector('#outline-board');
+    const cards = Array.from(board.querySelectorAll('.ob-cell'));
+    if (cards.length < 2) return { err: 'need two poems' };
+    const b = board.getBoundingClientRect();
+    // the group runs first grid child -> last grid child: upstream's
+    // ob-add tile is part of the centered group, not empty space
+    const first = board.firstElementChild.getBoundingClientRect();
+    const last = board.lastElementChild.getBoundingClientRect();
+    return { cls: board.classList.contains('rhema-board'),
+      leftGap: first.left - b.left, rightGap: b.right - last.right,
+      cardW: first.width, boardW: b.width,
+      cols: getComputedStyle(board).gridTemplateColumns };
+  })()`);
+  assert.ok(!geo.err, 'the board had cards to measure: ' + (geo.err || ''));
+  assert.ok(geo.cls, 'the poem board carries the fork class (novels never get it)');
+  assert.ok(geo.cardW <= 244, 'card tracks are capped at 240px, not stretched across the window');
+  assert.ok(geo.leftGap > 100, 'the group is not left-anchored at 1280 with two poems');
+  assert.ok(Math.abs(geo.leftGap - geo.rightGap) < 24, 'the group sits centered');
+  await js(`document.querySelector('.tab[data-tab="manuscript"]').click()`);
+  await tick(200);
+});
+
 test('scraps: drag a card, the poem body marks itself, the drop lands the line', async () => {
   const ok = await js(`(() => {
     const card = document.querySelector('#rhema-scraps .rhema-scrap');

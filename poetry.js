@@ -633,6 +633,16 @@ const RhemaPoetry = (() => {
 
   function boardProgress(board) {
     if (!isPoemBook()) return;
+    // Stone 17 UX NICE: with few cards, upstream's auto-fill grid leaves the
+    // extra tracks empty — the cards sit left-anchored with ~80% of a wide
+    // window blank. The poem board caps its track width and centers the
+    // group (auto-fit collapses the empty tracks); novels keep NEO's board.
+    // The chip and legend sit OUTSIDE the grid for that reason: a
+    // grid-column:1/-1 item marks every track occupied and defeats the
+    // collapse (measured 2026-10-17: five 240px tracks, none collapsed).
+    board.classList.add('rhema-board');
+    const host = board.parentElement || board;
+    host.querySelectorAll('.rhema-progress, .rhema-legend').forEach((n) => n.remove());
     const poems = book.chapterOrder.filter((c) => isStory(c));
     const done = poems.filter((c) => poemStatus(c) === 'done').length;
     const chip = document.createElement('div');
@@ -650,8 +660,8 @@ const RhemaPoetry = (() => {
       w.textContent = s.label();
       legend.append(d, w);
     }
-    board.prepend(legend);
-    board.prepend(chip);
+    host.insertBefore(chip, board);
+    host.insertBefore(legend, chip.nextSibling);
   }
 
   function chapterDeleted(chId) {

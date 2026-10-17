@@ -18,10 +18,9 @@
 .ob-card .rhema-card-title { font-weight: 600; margin-bottom: 2px; }
 .ob-card .rhema-card-line { opacity: 0.75; font-style: italic; }
 
-/* collection progress chip, above the outline board */
+/* collection progress chip, above the outline board (outside the grid —
+   Stone 17: a 1/-1 grid item would defeat auto-fit's track collapse) */
 .rhema-progress {
-  grid-column: 1 / -1;
-  align-self: start;
   padding: 6px 10px;
   font-size: 12px;
   opacity: 0.8;
@@ -29,7 +28,6 @@
 }
 /* status legend: the dots are not color alone */
 .rhema-legend {
-  grid-column: 1 / -1;
   display: flex;
   gap: 6px;
   align-items: center;
@@ -42,7 +40,9 @@
 
 /* the scraps drawer (Scraps tab) */
 #rhema-scraps { padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
-.rhema-scrap { border: 1px solid rgba(127, 127, 127, 0.35); border-radius: 8px; padding: 10px 12px; cursor: grab; }
+/* Stone 17 UX NICE: the old gray border read faint on the dark panel —
+   the fork's gold cue family, at a real contrast */
+.rhema-scrap { border: 1px solid rgba(201, 168, 106, 0.45); border-radius: 8px; padding: 10px 12px; cursor: grab; }
 .rhema-scrap-text { font-style: italic; white-space: pre-line; }
 .rhema-scrap-meta { font-size: 11px; opacity: 0.65; margin-top: 6px; }
 .rhema-scrap-btns { margin-top: 8px; display: flex; gap: 8px; }
@@ -80,6 +80,23 @@
 .chapter-body.rhema-drop-target {
   outline: 2px dashed rgba(201, 168, 106, 0.65);
   outline-offset: 6px;
+}
+
+/* Stone 17 UX NICEs:
+   • the poem board caps its card tracks and centers the group — with few
+     poems, upstream's auto-fill left the cards left-anchored and a wide
+     window ~80% empty (novels' board untouched);
+   • in the compare view each poem's header sticks under the snapshot
+     band (band z-2 paints over it as it parks), so ΤΟΤΕ/ΤΩΡΑ columns
+     stay named while scrolling a long poem. */
+#outline-board.rhema-board {
+  grid-template-columns: repeat(auto-fit, minmax(calc(176px * var(--cz)), calc(240px * var(--cz))));
+  justify-content: center;
+}
+.rhema-compare .snap-head {
+  position: sticky; top: 0; z-index: 1;
+  background: var(--paper);
+  padding-top: 8px;
 }
 
 /* light theme (UI/UX review 2026-10-17): blanket opacity reads faint on
