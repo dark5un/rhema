@@ -1,3 +1,4 @@
+// /* RHEMA */ expectations renamed NEO Library -> Rhema Library (fork product rename)
 'use strict';
 
 // A first library that Documents can't hold (a OneDrive folder on a computer
@@ -27,7 +28,7 @@ function computer({ documents = true, chosen = false } = {}) {
   if (documents) fs.mkdirSync(path.join(home, 'Documents'));
   const gone = path.join(base, 'OneDrive');
   fs.writeFileSync(gone, 'not a folder');
-  const broken = path.join(gone, 'Documents', 'NEO Library');
+  const broken = path.join(gone, 'Documents', 'Rhema Library');
   if (chosen) fs.writeFileSync(path.join(userData, 'settings.json'), JSON.stringify({ libraryDir: broken }));
 
   const shown = { sync: [], async: [] };
@@ -75,7 +76,7 @@ describe('a library folder that can\'t be written', { concurrency: 1 }, () => {
     const pc = computer();
     try {
       pc.run('checkLibraryWritable()');
-      const want = path.join(pc.home, 'Documents', 'NEO Library');
+      const want = path.join(pc.home, 'Documents', 'Rhema Library');
       assert.equal(pc.dir(), want);
       assert.equal(pc.settings().libraryDir, want); // the next launch finds it too
       assert.equal(pc.shown.sync.length, 0);        // no question with no answer
@@ -98,7 +99,7 @@ describe('a library folder that can\'t be written', { concurrency: 1 }, () => {
     const pc = computer({ documents: false });
     try {
       pc.run('checkLibraryWritable()');
-      assert.equal(pc.dir(), path.join(pc.home, 'NEO Library'));
+      assert.equal(pc.dir(), path.join(pc.home, 'Rhema Library'));
       assert.equal(fs.existsSync(path.join(pc.home, 'Documents')), false);
     } finally {
       pc.done();
@@ -113,7 +114,7 @@ describe('a library folder that can\'t be written', { concurrency: 1 }, () => {
       assert.equal(pc.dir(), chosen);
       assert.equal(pc.shown.sync.length, 1);
       assert.equal(pc.settings().libraryDir, chosen);
-      assert.equal(fs.existsSync(path.join(pc.home, 'Documents', 'NEO Library')), false);
+      assert.equal(fs.existsSync(path.join(pc.home, 'Documents', 'Rhema Library')), false);
     } finally {
       pc.done();
     }
