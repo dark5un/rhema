@@ -50,9 +50,15 @@
 
 /* the compare view: snapshot poem beside the poem as it is.
    BLOCKER fix (UX review 2026-10-17): verse must not wrap — while a
-   snapshot is open, the sheet widens so each column gets real measure.
-   Pure CSS :has(): no JS, no anchor, cleans up when the view closes. */
-#editor-view:has(#snap-view:not([hidden])) #aux-paper { width: min(1150px, 96%); }
+   snapshot is open, the scroll container AND the sheet widen so each
+   column gets real measure (the paper-scroll cap, not aux-paper's
+   max-width, was the binding constraint — probe 2026-10-17).
+/* Pure CSS :has(): no JS, no anchor, cleans up when the view closes.
+   Scoped to .rhema-compare (compare.js adds it only for poem books) —
+   a novel's snapshot view keeps NEO's layout untouched. */
+#editor-view:has(#snap-view.rhema-compare:not([hidden])) #paper-scroll { left: 0; right: 250px; width: auto; }
+#editor-view:has(#snap-view.rhema-compare:not([hidden]).nav-pinned) #paper-scroll { left: 248px; }
+#editor-view:has(#snap-view.rhema-compare:not([hidden])) #aux-paper { width: min(1150px, 94%); padding-left: 40px; padding-right: 40px; }
 .rhema-compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
 .rhema-compare-col { min-width: 0; }
 .rhema-compare-label { font-size: 11px; opacity: 0.6; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.06em; }
