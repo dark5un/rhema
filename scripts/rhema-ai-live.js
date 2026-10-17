@@ -43,4 +43,13 @@ the dark between them all sea.`;
   console.log('BRIEF:', out.brief);
   console.log('text model:', out.textModel, '| image:', out.imageModel);
   console.log('WROTE', file, out.buffer.length, 'bytes');
+  // Stone 17: the AI monoline path — the local LLM emits the SVG directly
+  console.log('drawing a monoline (Stone 17, LLM-SVG)…');
+  const svg = await ai.drawMonolineSvg({
+    base: settings.text.base, apiKey: process.env.STRATA_API_KEY || '',
+    model: settings.text.model, motif: '', text: poems
+  });
+  const svgFile = require('node:path').join(process.env.TMPDIR || '.', 'rhema-live-drawing.svg');
+  require('node:fs').writeFileSync(svgFile, svg);
+  console.log('WROTE', svgFile, svg.length, 'chars |', svg.slice(0, 120).replace(/\n/g, ' '));
 })().catch((err) => { console.error('FAILED:', err && err.message || err); process.exit(1); });

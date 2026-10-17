@@ -210,14 +210,14 @@ function buildWorkflow(workflow, { positive, negative, checkpoint, width, height
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function comfyuiPaint({ url, workflow, brief, checkpoint, width, height, steps, cfg, seed, timeoutMs = 5 * 60 * 1000 }) {
+async function comfyuiPaint({ url, workflow, brief, checkpoint, width, height, steps, cfg, seed, suffix = PAINT_SUFFIX, negative = DEFAULT_NEGATIVE, timeoutMs = 5 * 60 * 1000 }) {
   if (!url) throw new Error('No ComfyUI URL set — add one under File → Rhema Settings…');
   url = assertHttpUrl(url, 'the ComfyUI URL');
   let graph;
   try {
     graph = buildWorkflow(workflow ? JSON.parse(workflow) : DEFAULT_WORKFLOW, {
-      positive: String(brief) + PAINT_SUFFIX,
-      negative: DEFAULT_NEGATIVE,
+      positive: String(brief) + suffix,
+      negative: negative,
       checkpoint: checkpoint || 'juggernautXL_v9.safetensors',
       width: width || 832, height: height || 1216,
       steps: steps || 30, cfg: cfg || 6,
@@ -290,6 +290,102 @@ async function paintCover({ settings, apiKey, text }) {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Stone 17 — poem drawings. Two engines offered by availability:
+//   monoline line art: the local LLM emits SVG directly when a text
+//     endpoint is configured; otherwise ComfyUI paints line art and the
+//     renderer vectorizes it (the slot accepts either — the poet's choice).
+//   illustration: the existing ComfyUI SDXL chain, per poem.
+// The AI never touches the poem text — it only ever draws the mark.
+// ---------------------------------------------------------------------------
+
+const MONOLINE_SYSTEM = `You are an engraver of monoline line art for the colophon of a poem.
+Reply with ONE complete SVG document and nothing else — no prose, no code fences.
+
+The SVG must be exactly this shape:
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="72" height="72">…</svg>
+
+Inside: one to four <path> elements of smooth continuous curves. Every path:
+fill="none" stroke="currentColor" stroke-width between 1.2 and 2.5 (the SAME
+width for all paths — monoline), stroke-linecap="round". No text, no letters,
+no numbers, no rectangles, no circles-as-background, no gradients, no images,
+no external references, nothing outside the 80x80 box. The drawing should
+evoke the poem's central image as an abstract mark — metaphor, not a literal
+scene report.`;
+
+// Models wrap their answer in prose or ```xml fences; take the svg element.
+function extractSvg(reply) {
+  const m = String(reply || '').match(/<svg[\s\S]*<\/svg>/i);
+  return m ? m[0] : '';
+}
+
+// LLM-SVG: motif first ("draw what the poet asked for"), else derive from
+// the poem itself. Returns the SVG text, already gate-checked.
+async function drawMonolineSvg({ base, apiKey, model, tokenParam, motif, text }) {
+  const user = (motif && motif.trim())
+    ? 'MOTIF (draw this): ' + motif.trim()
+    : 'POEM (derive one central image from it):\n\n' + excerpt(text);
+  const payload = {
+    model: model || undefined,
+    messages: [
+      { role: 'system', content: MONOLINE_SYSTEM },
+      { role: 'user', content: user }
+    ],
+    [tokenParam || 'max_tokens']: 3000
+  };
+  const defaults = [payload.model];
+  try { defaults.push(...(await listModels(base, apiKey))); } catch { /* the configured name will have to do */ }
+  const got = await withModels(payload.model, defaults, async (m) => {
+    payload.model = m;
+    const body = await post(base + '/chat/completions', authHeaders(apiKey), payload);
+    let msg = body.choices && body.choices[0] && body.choices[0].message;
+    let svg = extractSvg(msg && msg.content);
+    // a reasoning model can spend the whole budget thinking (live check
+    // 2026-10-17: finish_reason 'length', content null); give it more room once
+    if (!svg && msg && msg.reasoning_content) {
+      payload[tokenParam || 'max_tokens'] = 8000;
+      const again = await post(base + '/chat/completions', authHeaders(apiKey), payload);
+      msg = again.choices && again.choices[0] && again.choices[0].message;
+      svg = extractSvg(msg && msg.content);
+    }
+    if (!svg) { const err = new Error('The model answered without an SVG'); err.modelProblem = true; throw err; }
+    return svg;
+  });
+  const why = require('./rhema-assets.js').sanitizeSvg(got.result);
+  if (why) { const err = new Error('The drawing the model returned is not a plain vector picture (' + why + ')'); err.kind = 'bad_svg'; throw err; }
+  return got.result;
+}
+
+// ComfyUI line art: the SDXL chain with an ink-on-paper prompt; the
+// renderer vectorizes the picture (the wasm tracers stay out of the main
+// process — the canvas-prune contract holds).
+const LINEART_SUFFIX = ' Minimal single-weight black ink line drawing on a plain white background, continuous contour lines, engraving style, no shading, no color, no fill, no text, no letters, no watermark, no border.';
+const LINEART_NEGATIVE = 'shading, gradient, color, fill, photograph, realistic, text, letters, words, watermark, signature, border, frame, low quality';
+
+async function paintLineart({ url, workflow, motif, text, checkpoint, steps, cfg, seed }) {
+  const subject = (motif && motif.trim()) || excerpt(text);
+  return comfyuiPaint({
+    url, workflow, brief: subject,
+    suffix: LINEART_SUFFIX, negative: LINEART_NEGATIVE,
+    checkpoint, width: 1024, height: 1024, steps, cfg, seed
+  });
+}
+
+// AI illustration for a poem: the full-bleed SDXL chain, motif or poem.
+async function drawIllustration({ settings, apiKey, motif, text }) {
+  const s = settings || {};
+  const img = s.image || {};
+  const subject = (motif && motif.trim()) || String(text || '');
+  if (img.provider === 'comfyui') {
+    return comfyuiPaint({
+      url: img.url, workflow: img.workflow, brief: subject,
+      checkpoint: img.checkpoint, width: img.width, height: img.height,
+      steps: img.steps, cfg: img.cfg, seed: img.seed
+    });
+  }
+  return paintOpenaiCompat({ url: img.url, apiKey, model: img.model, prompt: subject, width: img.width, height: img.height });
+}
+
 // The settings pane's Test button: what answers, what doesn't. Errors come
 // back with a `kind` the pane turns into plain language for the writer.
 // echoText/echoImage: response CONTENT (model names, versions, checkpoint
@@ -354,5 +450,7 @@ function keepValue(v, dflt) {
 module.exports = {
   paintCover, testEndpoints, writeBrief, comfyuiPaint, paintOpenaiCompat,
   buildWorkflow, DEFAULT_WORKFLOW, keepValue, excerpt,
+  MONOLINE_SYSTEM, extractSvg, drawMonolineSvg, paintLineart, drawIllustration,
+  LINEART_SUFFIX, LINEART_NEGATIVE, errKind, // the renderer speaks errKind's kinds in plain language
   BRIEF_SYSTEM, PAINT_SUFFIX, DEFAULT_NEGATIVE
 };

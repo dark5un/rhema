@@ -247,3 +247,110 @@ test('testEndpoints calls a missing checkpoint out instead of a false all-clear'
   assert.equal(out.image.kind, 'no_checkpoint');
   assert.deepEqual(out.image.checkpoints, ['other.safetensors']);
 });
+
+// ---------------------------------------------------------------------------
+// Stone 17 — AI poem drawings (hermetic: fake fetch, no network)
+// ---------------------------------------------------------------------------
+
+test('extractSvg digs the SVG out of prose and code fences', () => {
+  assert.equal(ai.extractSvg('Sure! ```xml\n<svg xmlns="x"><path/></svg>\n``` hope it helps'), '<svg xmlns="x"><path/></svg>');
+  assert.equal(ai.extractSvg('<svg><path/></svg>'), '<svg><path/></svg>');
+  assert.equal(ai.extractSvg('I cannot draw.'), '');
+});
+
+test('drawMonolineSvg: a motif request goes to the text endpoint and the SVG comes back', async () => {
+  const calls = [];
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="72" height="72"><path d="M10 40C30 10 50 70 70 40" fill="none" stroke="currentColor" stroke-width="2"/></svg>';
+  await withFetch(async (url, init) => {
+    const body = JSON.parse(init.body);
+    calls.push(body);
+    if (String(url).endsWith('/models')) return jsonResponse({ data: [{ id: 'm1' }] });
+    return jsonResponse({ choices: [{ message: { content: '```xml\n' + svg + '\n```' } }] });
+  }, async () => {
+    const got = await ai.drawMonolineSvg({ base: 'http://x/v1', apiKey: '', model: 'm1', motif: 'a lighthouse in fog', text: 'Του μέλλοντος…' });
+    assert.equal(got, svg, 'the fenced SVG is extracted whole');
+  });
+  const chat = calls.find((b) => b.messages);
+  assert.match(chat.messages[0].content, /monoline/i, 'the system prompt demands monoline line art');
+  assert.match(chat.messages[1].content, /MOTIF \(draw this\): a lighthouse in fog/, 'the poet\u2019s motif leads');
+});
+
+test('drawMonolineSvg: with no motif the poem itself is the brief', async () => {
+  await withFetch(async (url, init) => {
+    if (String(url).endsWith('/models')) return jsonResponse({ data: [] });
+    const body = JSON.parse(init.body);
+    assert.match(body.messages[1].content, /POEM \(derive one central image/, 'no motif: the poem is the request');
+    return jsonResponse({ choices: [{ message: { content: '<svg xmlns="x"><path/></svg>' } }] });
+  }, () => ai.drawMonolineSvg({ base: 'http://x/v1', apiKey: '', model: 'm1', motif: '', text: 'σα μια σειρά κεράκια αναμμένα' }));
+});
+
+test('drawMonolineSvg: a reasoning model gets one bigger-budget retry (live 2026-10-17 pitfall)', async () => {
+  const svg = '<svg xmlns="x"><path/></svg>';
+  const budgets = [];
+  await withFetch(async (url, init) => {
+    if (String(url).endsWith('/models')) return jsonResponse({ data: [] });
+    const body = JSON.parse(init.body);
+    budgets.push(body.max_tokens);
+    if (budgets.length === 1) return jsonResponse({ choices: [{ message: { content: null, reasoning_content: 'thinking, thinking, thinking…' }, finish_reason: 'length' }] });
+    return jsonResponse({ choices: [{ message: { content: svg }, finish_reason: 'stop' }] });
+  }, async () => {
+    const got = await ai.drawMonolineSvg({ base: 'http://x/v1', apiKey: '', model: 'm1', motif: 'x', text: 'y' });
+    assert.equal(got, svg, 'the second try, with room to think, produced the SVG');
+  });
+  assert.deepEqual(budgets, [3000, 8000], 'exactly one bigger retry');
+});
+
+test('drawMonolineSvg: a model that answers without an SVG is retried, then refused honestly', async () => {
+  let n = 0;
+  await withFetch(async (url, init) => {
+    if (String(url).endsWith('/models')) return jsonResponse({ data: [{ id: 'm1' }, { id: 'm2' }] });
+    n++;
+    return jsonResponse({ choices: [{ message: { content: 'I am a language model, not a drawing tool.' } }] });
+  }, () => ai.drawMonolineSvg({ base: 'http://x/v1', apiKey: '', model: 'm1', motif: 'x', text: 'y' }).then(
+    () => assert.fail('should have thrown'),
+    (err) => assert.match(err.message, /without an SVG/)
+  ));
+  assert.equal(n, 2, 'each candidate model got one honest try');
+});
+
+test('drawMonolineSvg: a scripting SVG from the model never reaches the book', async () => {
+  await withFetch(async (url) => {
+    if (String(url).endsWith('/models')) return jsonResponse({ data: [] });
+    return jsonResponse({ choices: [{ message: { content: '<svg xmlns="x"><script>alert(1)</script></svg>' } }] });
+  }, () => ai.drawMonolineSvg({ base: 'http://x/v1', apiKey: '', model: 'm1', motif: 'x', text: 'y' }).then(
+    () => assert.fail('should have thrown'),
+    (err) => { assert.equal(err.kind, 'bad_svg'); assert.match(err.message, /plain vector picture/); }
+  ));
+});
+
+test('paintLineart: the ComfyUI fallback asks for ink line art at square size', async () => {
+  let graph = null;
+  await withFetch(async (url, init) => {
+    if (String(url).includes('/prompt')) { graph = JSON.parse(init.body).prompt; return jsonResponse({ prompt_id: 'p1' }); }
+    if (String(url).includes('/history')) return jsonResponse({ p1: { status: { status_str: 'success' }, outputs: { '7': { images: [{ filename: 'o.png', subfolder: '', type: 'output' }] } } } });
+    return { ok: true, status: 200, arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer };
+  }, async () => {
+    const out = await ai.paintLineart({ url: 'http://y', motif: 'an open door', text: 'poem', checkpoint: 'c.safetensors', steps: 25, cfg: 5, seed: 7 });
+    assert.equal(out.ext, 'png');
+  });
+  assert.match(graph['2'].inputs.text, /black ink line drawing/);
+  assert.match(graph['2'].inputs.text, /an open door/);
+  assert.match(graph['3'].inputs.text, /shading, gradient/);
+  assert.equal(graph['4'].inputs.width, 1024);
+  assert.equal(graph['4'].inputs.height, 1024);
+});
+
+test('drawIllustration: the poem book chain rides the existing SDXL settings', async () => {
+  let graph = null;
+  await withFetch(async (url, init) => {
+    if (String(url).includes('/prompt')) { graph = JSON.parse(init.body).prompt; return jsonResponse({ prompt_id: 'p1' }); }
+    if (String(url).includes('/history')) return jsonResponse({ p1: { status: { status_str: 'success' }, outputs: { '7': { images: [{ filename: 'o.png', subfolder: '', type: 'output' }] } } } });
+    return { ok: true, status: 200, arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer };
+  }, async () => {
+    const out = await ai.drawIllustration({ settings: { image: { provider: 'comfyui', url: 'http://y', checkpoint: 'c.safetensors', width: 832, height: 1216 } }, apiKey: '', motif: 'two harbours', text: 'ignored when motif is set' });
+    assert.ok(out.buffer.length === 3);
+  });
+  assert.match(graph['2'].inputs.text, /two harbours/);
+  assert.match(graph['2'].inputs.text, /book cover illustration/);
+  assert.equal(graph['4'].inputs.width, 832);
+});

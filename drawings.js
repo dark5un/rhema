@@ -124,6 +124,102 @@ const RhemaDraw = (() => {
       `<text x="40" y="51" text-anchor="middle" font-family="Didot, 'Bodoni 72', Georgia, serif" font-size="26" letter-spacing="1" fill="currentColor">${escHtml(initials)}</text>`);
   }
 
+  // ---- AI kinds (Stone 17): offered by availability, generated in the
+  // main process (the cover:paint trust boundary), saved as assets. The
+  // ComfyUI line-art fallback arrives as a picture and is vectorized
+  // HERE — the canvas lives in the renderer, so the main process never
+  // grows one (the canvas-prune contract from the Phase 3 security gate).
+  // The poet may name a motif; empty means "derive it from the poem". ----
+
+  function hexLum(hex) {
+    const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+    if (!m) return 0;
+    const n = parseInt(m[1], 16);
+    return (0.2126 * ((n >> 16) & 255) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255;
+  }
+  // keep the ink, drop the paper, recolor to theme ink
+  function recolorTraced(svgText) {
+    const doc = new DOMParser().parseFromString(String(svgText || ''), 'image/svg+xml');
+    const svg = doc.documentElement;
+    if (!svg || svg.nodeName.toLowerCase() !== 'svg') return '';
+    let kept = 0;
+    for (const p of Array.from(svg.querySelectorAll('path'))) {
+      if (hexLum(p.getAttribute('fill')) > 0.72) { p.remove(); continue; }
+      p.setAttribute('fill', 'currentColor');
+      p.removeAttribute('stroke');
+      kept++;
+    }
+    if (!kept) return '';
+    if (!svg.getAttribute('viewBox')) {
+      svg.setAttribute('viewBox', '0 0 ' + (svg.getAttribute('width') || 1024) + ' ' + (svg.getAttribute('height') || 1024));
+    }
+    svg.setAttribute('width', '72');
+    svg.setAttribute('height', '72');
+    return new XMLSerializer().serializeToString(svg);
+  }
+  function vectorize(raster) {
+    return new Promise((resolve) => {
+      if (typeof ImageTracer === 'undefined') return resolve('');
+      const img = new Image();
+      img.onload = () => {
+        // trace at a sane working size: imagetracer is O(pixels)
+        const scale = Math.min(1, 512 / Math.max(img.naturalWidth, img.naturalHeight));
+        const w = Math.max(1, Math.round(img.naturalWidth * scale));
+        const h = Math.max(1, Math.round(img.naturalHeight * scale));
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        const ctx = c.getContext('2d', { willReadFrequently: true });
+        ctx.drawImage(img, 0, 0, w, h);
+        try { resolve(recolorTraced(ImageTracer.imagedataToSVG(ctx.getImageData(0, 0, w, h), { roundcoords: 1, desc: false, blurradius: 1 }))); }
+        catch (err) { resolve(''); }
+      };
+      img.onerror = () => resolve('');
+      img.src = 'data:' + raster.mime + ';base64,' + raster.base64;
+    });
+  }
+
+  function aiError(got) {
+    const k = got && got.kind;
+    if (k === 'unreachable') return t('The AI endpoint did not answer — is it running?');
+    if (k === 'auth') return t('The endpoint refused the saved key.');
+    if (k === 'unset') return t('No AI endpoint is configured — set one under File → Rhema Settings…');
+    return t('The AI could not draw: {error}', { error: escHtml((got && got.error) || '?') });
+  }
+
+  async function aiDrawing(chId, kind) {
+    const rec = (book.rhema && book.rhema.poems && book.rhema.poems[chId]) || {};
+    const ask = await askInput(
+      t('The drawing of “{title}”', { title: escHtml(shownTitle(chapterName(chId))) }),
+      t('What should the AI draw? Leave it empty to derive it from the poem.'),
+      typeof rec.motif === 'string' ? rec.motif : '');
+    if (ask === null) return false;
+    RhemaQr.setPoemField(chId, 'motif', ask.trim() || undefined); // remembered for the next draw
+    toast(t('The AI is drawing…'), 2500);
+    const got = await window.neo.rhema.draw(book.id, chId, kind, ask.trim(), poemText(chId));
+    if (got && got.busy) return false;
+    if (got && got.fname) {
+      await RhemaQr.loadDrawing(book.id, chId);
+      RhemaQr.setPoemField(chId, 'drawing', got.fname);
+      renderChapters();
+      return true;
+    }
+    if (got && got.raster) {
+      const svg = await vectorize(got.raster);
+      if (!svg) toast(t('The line drawing could not be turned into vectors — it stays a picture.'), 4000);
+      const wrote = await window.neo.rhema.assetWrite(book.id, chId, svg || '');
+      if (typeof wrote === 'string') {
+        await RhemaQr.loadDrawing(book.id, chId);
+        RhemaQr.setPoemField(chId, 'drawing', wrote);
+        renderChapters();
+        return true;
+      }
+      toast(t('The drawing could not be saved.'));
+      return false;
+    }
+    toast(aiError(got), 5000);
+    return false;
+  }
+
   // ---- the kinds menu (per poem; the collection keeps imported art) ----
 
   const KINDS = [

@@ -93,13 +93,14 @@ name are the only literal renames (both listed above).
 | File menu `Import Poems…` item | `sendToWindow({ type: 'importPoems' })` — each file becomes a poem collection | 3a |
 | `pdfimport.js` (new fork file, main-process only — no `<script>` tag) | PDF → paragraph stream: text items sharing a baseline join into lines; the 25th-percentile pitch separates stanza gaps (×1.6) from poem gaps (×2.4); pushed-in lines get the indent flag | 3a |
 | `rhema-assets.js` (new fork file, main-process only — no `<script>` tag) | Stone 17: the drawing-asset rules — fixed names, ASSET_EXTS (svg added, split from COVER_EXTS), `sanitizeSvg` gate, `saveAsset`/`findAsset`/`clearAsset`; required by main.js, unit-tested in `scripts/rhema-assets.test.js` | 2h |
+| `rhema:draw` handler | Stone 17: AI poem drawings — settings from the library file + key from the secret store (the cover:paint trust boundary; the renderer names only book/poem/kind/motif/text); 'monoline' = LLM-SVG when a text endpoint is set (sanitized before it can be saved), else ComfyUI line art returned as a picture for the renderer to vectorize; 'illustration' = the SDXL chain saved as raster; per-poem job lock; errors carry ai.js errKind for plain-language toasts | 2h |
 | (deferred, before any auto-update re-enable) `latestReleaseFromGitHub()` | still fetches hughhowey/neo with UA 'NEO-App'; must be pointed at dark5un/rhema when RHEMA_AUTO_UPDATE flips to true, so the fallback link matches the publish feed | 15-re |
 
 ## preload.js
 
 | Anchor | What | Phase |
 |--------|------|-------|
-| `window.neo.rhema` bridge | namespaced IPC (`test` → `ai:test`; `assetPick/assetSet/assetWrite/assetRead/assetClear` → `rhema:asset:*`) | 1+ |
+| `window.neo.rhema` bridge | namespaced IPC (`test` → `ai:test`; `assetPick/assetSet/assetWrite/assetRead/assetClear` → `rhema:asset:*`; `draw` → `rhema:draw`) | 1+ |
 | `importFiles: (paths, opts)` | opts carries the poetry mode through `import:files` | 3a |
 
 ## index.html
@@ -113,6 +114,8 @@ name are the only literal renames (both listed above).
 | `<script src="scraps.js">` (after poetry.js) | the scraps drawer (Stone 5) | 2c |
 | `<script src="compare.js">` (after scraps.js) | the compare view (Stone 6) | 2d |
 | `<script src="qrcode-generator.js">` + `<script src="qrmark.js">` | vendored MIT QR encoder (Kazuhiko Arase, qrcode-generator@1.4.4, unmodified — sha256 18ae399f81182bc9de916e9c77b195df20cc58d6f2d55a62b085a299f1bf1780, byte-identical to the npm tarball's qrcode.js, verified 2026-10-17) + the poem mark (Stone 1a) | 2e |
+| `<script src="imagetracer.js">` (before qrmark.js) | vendored raster→vector tracer for the ComfyUI line-art fallback (imagetracerjs@1.2.6, The Unlicense, unmodified — sha256 1f7e21062196c53f2565120fc0708eac197c8403ec1bea28b381056ea0c3fdb9, byte-identical to the npm tarball's imagetracer_v1.2.6.js, verified 2026-10-17; LICENSE kept as imagetracer-LICENSE.txt). Chosen over @visioncortex/vtracer, whose npm line is alpha-only (1.0.0-alpha.4) — revisit when vtracer ships stable | 2h |
+| `<script src="drawings.js">` (after qrmark.js) | Stone 17 generated drawings: ornaments (fleuron/asterism/meander/drop-cap), poem fingerprint (FNV-1a + mulberry32 harmonograph), monogram seal; the AI drawing flow + renderer-side vectorize (canvas lives here, never in main — canvas-prune contract) | 2h |
 | (future) more Rhema `<script>` tags | new fork files | 2+ |
 
 ## package.json (no comments possible — listed here instead)
@@ -144,8 +147,8 @@ name are the only literal renames (both listed above).
 | `scripts/library-folder.test.js` | expectations follow the 'Rhema Library' rename (marked) |
 | `scripts/filesystem.test.js` | catalog header expectation follows the i18n brand seam (marked) |
 | `scripts/*.e2e.js` (9) + `scripts/try.js` | seed 'Rhema Library' to match main.js default; verified at upstream baseline parity (words 22/0, tabs 9/0, notes 14/0, footnotes 24/0, caret 14/0, cover-text 2/0, manuscript 5/0, simple 14/0, pages 9/4 = 4 pre-existing env failures) |
-| `scripts/rhema-ai.test.js` | Phase 1: ComfyUI workflow builder, retention knobs (keepValue + snapsToThin unlimited), settings gate, brief plumbing — hermetic |
-| `scripts/rhema-ai-live.js` | NOT in npm test: live chain check (Strata brief → ComfyUI render) against this machine's endpoints |
+| `scripts/rhema-ai.test.js` | Phase 1: ComfyUI workflow builder, retention knobs (keepValue + snapsToThin unlimited), settings gate, brief plumbing — hermetic. Stone 17 adds: extractSvg from fences, drawMonolineSvg (motif leads / poem derives, reasoning-budget retry 3000→8000 pinned from the live pitfall, hostile-SVG refusal), paintLineart (ink-on-paper prompt, square size), drawIllustration (rides the SDXL settings) |
+| `scripts/rhema-ai-live.js` | NOT in npm test: live chain check (Strata brief → ComfyUI render) against this machine's endpoints; Stone 17 adds the live LLM-SVG monoline draw. Key from STRATA_API_KEY env (on this machine: the strata quadlet's service.env API_KEY) — never hardcoded |
 | `scripts/poetry.test.js` | Phase 2: the pure poetry rules sliced from poetry.js (Enter rhythm, stanza/poem split, line ops) — vm harness, hermetic |
 | `scripts/poetry.e2e.js` (`test:poetry`) | Phase 2: real Electron — new poem collection, Enter rhythm, line ops, structural undo, disk format, poem mark (QR/drawing per poem), and the novel's Enter rhythm unchanged. Visible fixtures are real public-domain Kavafis verse («Κεριά», «Η πόλις»), not placeholder words (Panos 2026-10-17). 3a adds: .txt import → poem collection (lines/stanzas/titles/mark kept), md/txt/EPUB export keeps verse + XHTML-safe mark, chapbook dialog opens at 5×8, shelf-card Import poems… joins the collection |
 | `scripts/import-poetry.test.js` | Phase 3a: main.js in a vm — poemize split knob (auto/headings/whole), Kavafis txt/md/docx fixtures, PDF line/pitch grouping (pdfimport pure functions), novels untouched (no opts = old chapterize) — hermetic |

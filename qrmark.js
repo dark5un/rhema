@@ -224,12 +224,17 @@ const RhemaQr = (() => {
     } else if (choice === 'kind') {
       // Stone 17: ornaments, the poem fingerprint, the monogram seal —
       // deterministic vectors, no AI, declared as 'kind:<name>' and
-      // rendered inline (theme ink, live drop-cap and fingerprint)
+      // rendered inline (theme ink, live drop-cap and fingerprint) —
+      // plus the AI kinds, offered by endpoint availability
       const kinds = (typeof RhemaDraw !== 'undefined') ? RhemaDraw.KINDS : [];
-      if (!kinds.length) return;
-      const pick = await optionModal(t('A generated drawing'), t('Drawn from the poem itself — no AI, always vector.'),
-        kinds.map((k) => ({ label: k.label(), value: k.v })));
+      const ai = [];
+      if (RhemaSettings.hasText() || RhemaSettings.hasComfyui()) ai.push({ label: t('AI line drawing'), value: 'ai:monoline' });
+      if (RhemaSettings.hasImage()) ai.push({ label: t('AI illustration'), value: 'ai:illustration' });
+      const options = kinds.map((k) => ({ label: k.label(), value: k.v })).concat(ai);
+      if (!options.length) return;
+      const pick = await optionModal(t('A generated drawing'), t('Pick a kind — the generated ones take their cue from the poem.'), options);
       if (!pick) return;
+      if (pick.indexOf('ai:') === 0) { await RhemaDraw.aiDrawing(chId, pick.slice(3)); return; }
       setPoemField(chId, 'drawing', 'kind:' + pick);
     } else if (choice === 'clear') {
       await window.neo.rhema.assetClear(book.id, chId);
@@ -296,6 +301,6 @@ const RhemaQr = (() => {
   NeoHooks.on('shelfCardMenu', shelfCardMenu);
   NeoHooks.on('shelfCardChoice', shelfCardChoice);
 
-  return { payload, qrSvg, markHtml, pickDrawing, clearDrawing, loadDrawing,
+  return { payload, qrSvg, markHtml, pickDrawing, clearDrawing, loadDrawing, setPoemField,
     hasDrawing: (key) => !!drawings.get(key || 'collection') };
 })();

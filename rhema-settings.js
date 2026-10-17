@@ -30,6 +30,13 @@ const RhemaSettings = (() => {
     const ai = aiSettings();
     return !!(ai.text && ai.text.base && ai.image && ai.image.provider && ai.image.url);
   };
+  /* RHEMA — Stone 17: the drawing kinds are offered by availability, not
+     by the all-or-nothing cover gate: monoline line art needs the text
+     endpoint (LLM-SVG) or ComfyUI (line-art + vectorize); an AI
+     illustration needs the image endpoint. */
+  const hasText = () => { const a = aiSettings(); return !!(a.text && a.text.base); };
+  const hasImage = () => { const a = aiSettings(); return !!(a.image && a.image.url); };
+  const hasComfyui = () => { const a = aiSettings(); return !!(a.image && a.image.provider === 'comfyui' && a.image.url); };
 
   // Snapshot thinning days for snapsToThin (app.js); Infinity = keep everything.
   const snapKeepDays = () => keepValue(retention().snapshots, 30);
@@ -204,6 +211,6 @@ const RhemaSettings = (() => {
   }
 
   return {
-    configured, aiSettings, retention, keepValue, snapKeepDays, open
+    configured, hasText, hasImage, hasComfyui, aiSettings, retention, keepValue, snapKeepDays, open
   };
 })();

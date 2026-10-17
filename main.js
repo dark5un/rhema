@@ -1092,6 +1092,64 @@ ipcMain.handle('rhema:asset:clear', (_e, bookId, key) => {
     return RhemaAssets.clearAsset(bookDir(bookId), key);
   } catch { return false; }
 });
+/* RHEMA — Stone 17: AI poem drawings. The trust boundary is the cover:paint
+   one: settings are read from the user's own library file and the key from
+   the encrypted secret store — the renderer names only the book, the poem,
+   the kind, an optional motif, and the poem text (content, not config).
+   kind 'monoline': the local LLM emits SVG when a text endpoint is set
+   (saved through the same sanitize gate); otherwise ComfyUI paints line
+   art and hands the picture back for the renderer to vectorize (the
+   canvas-prune contract keeps tracers out of the main process).
+   kind 'illustration': the existing SDXL chain, saved as a raster asset. */
+const drawJobs = new Set(); // one drawing job per poem at a time
+ipcMain.handle('rhema:draw', async (_e, bookId, chId, kind, motif, text) => {
+  const jobKey = bookId + '/' + chId;
+  if (drawJobs.has(jobKey)) return { busy: true };
+  drawJobs.add(jobKey);
+  try {
+    const settings = rhemaAiSettings();
+    const apiKey = readSecret('rhema-ai');
+    const dir = bookDir(bookId);
+    if (!fs.existsSync(dir)) return { error: t('Book folder is missing') };
+    const ai = require('./ai.js');
+    const cleanText = String(text || '').slice(0, 20000); // a poem, not a novel
+    if (kind === 'monoline') {
+      const tcfg = settings.text || {};
+      if (tcfg.base) {
+        const svg = await ai.drawMonolineSvg({
+          base: tcfg.base, apiKey, model: tcfg.model, tokenParam: tcfg.tokenParam,
+          motif: String(motif || ''), text: cleanText
+        });
+        const got = RhemaAssets.saveAsset(dir, chId, 'svg', svg);
+        if (got && got.rejected) return { error: 'The drawing the model returned is not a plain vector picture.', kind: 'bad_svg' };
+        if (!got) return { error: 'The drawing could not be saved.', kind: 'save' };
+        return { fname: got };
+      }
+      const img = settings.image || {};
+      if (img.provider === 'comfyui') {
+        const out = await ai.paintLineart({
+          url: img.url, workflow: img.workflow, motif: String(motif || ''), text: cleanText,
+          checkpoint: img.checkpoint, steps: img.steps, cfg: img.cfg, seed: img.seed
+        });
+        return { raster: { base64: out.buffer.toString('base64'), mime: out.ext === 'png' ? 'image/png' : 'image/jpeg' } };
+      }
+      return { error: 'No AI endpoint is configured.', kind: 'unset' };
+    }
+    if (kind === 'illustration') {
+      if (!settings.image || !settings.image.url) return { error: 'No image endpoint is configured.', kind: 'unset' };
+      const out = await ai.drawIllustration({ settings, apiKey, motif: String(motif || ''), text: cleanText });
+      const got = RhemaAssets.saveAsset(dir, chId, out.ext || 'jpg', out.buffer);
+      if (!got) return { error: 'The drawing could not be saved.', kind: 'save' };
+      return { fname: got };
+    }
+    return { error: 'Unknown drawing kind.', kind: 'bad_kind' };
+  } catch (err) {
+    const ai = require('./ai.js');
+    return { error: String(err && err.message || err), kind: err.kind || ai.errKind(err, err.status) };
+  } finally {
+    drawJobs.delete(jobKey);
+  }
+});
 
 // ---------------------------------------------------------------------------
 // Painted covers: once a story passes a thousand words, NEO reads it and
