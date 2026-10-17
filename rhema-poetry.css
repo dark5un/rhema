@@ -34,3 +34,11 @@
 .rhema-scrap-meta { font-size: 11px; opacity: 0.65; margin-top: 6px; }
 .rhema-scrap-btns { margin-top: 8px; display: flex; gap: 8px; }
 .rhema-scrap-empty { opacity: 0.7; padding: 8px 4px; }
+
+/* the compare view: snapshot poem beside the poem as it is */
+.rhema-compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.rhema-compare-col { min-width: 0; }
+.rhema-compare-label { font-size: 11px; opacity: 0.6; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.06em; }
+.rhema-added-all { background: rgba(87, 176, 106, 0.18); }
+::highlight(rhema-snap-added) { background-color: rgba(87, 176, 106, 0.30); }
+@media (max-width: 900px) { .rhema-compare-grid { grid-template-columns: 1fr; } }

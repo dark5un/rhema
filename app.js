@@ -7350,6 +7350,7 @@ function queueFootnoteList(body) {
 function renderFootnoteList(body) {
   if (!body || !body.isConnected) return;
   const chapter = body.closest('.chapter');
+  if (!chapter) return; /* RHEMA — snapshot views keep .chapter-body nodes outside any .chapter; NEO's shelf-then-open path crashes here without this */
   const marks = [...body.querySelectorAll('.fn')];
   let list = chapter.querySelector(':scope > .fn-list');
   if (!marks.length) { if (list) list.remove(); return; }
@@ -12890,6 +12891,7 @@ async function showSnapshot(name) {
     });
   }
   if (ranges.length && window.CSS && CSS.highlights && window.Highlight) CSS.highlights.set('neo-snap-gone', new Highlight(...ranges));
+  NeoHooks.emit('snapshotShown', v); /* RHEMA — compare.js turns a poem snapshot side-by-side */
   renderSnapList();
   // to the first chapter that differs
   const first = diff.length && v.querySelector(`.snap-chapter[data-id="${diff[0].chId}"]`);

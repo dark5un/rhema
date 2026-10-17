@@ -21,6 +21,14 @@ carry anchors. Target: <300 changed lines across core files.
 | keydown: `if (poemBook()) { ... }` branch after the `isScript()` branch | poem books: `NeoHooks.emitTrue('poemKey', …)` then the delete guards + smartKeys; prose poetry/flush/section-break rules never run | 2 |
 | beforeinput: `if (poemBook()) { e.preventDefault(); NeoHooks.emit('poemLineBreak', …); return; }` | an IME's line break becomes a real `<br>` via poetry.js | 2 |
 | `syncChapter()`: `NeoHooks.emit('chapterSynced', body, chId)` | poetry.js marks every paragraph verse before capture | 2 |
+| `openBook()`: `NeoHooks.emit('bookOpened', book)` | fork features re-arm per book (scraps.js tab visibility + sidecar reset, poetry.js) | 2c |
+| `chapterMenuItems()` / `chapterMenuChoice()`: `NeoHooks.emit('chapterMenuItems', …)` + `emitTrue('chapterMenuChoice', …)` | poem status items (draft/fair copy/done) grow on the card + nav chapter menus; choices answer themselves | 2b |
+| `deleteChapter()`: `NeoHooks.emit('chapterDeleted', chId)` | per-chapter fork metadata (poem status) is pruned with the chapter | 2b |
+| `renderNav()` item: `NeoHooks.emit('navItem', item, chId)` | status dots in the chapter nav | 2b |
+| `renderOutline()` board + card: `NeoHooks.emit('boardRendered', board)` / `emit('poemCard', cell, chId)` | collection progress chip; rich poem cards (title, first line, line count, status dot) | 2b |
+| `switchTab()`: scraps-drawer hide + `name === 'scraps'` branch (`emit('scrapsTabShown')`) | the scraps drawer belongs to its tab alone (class selector, never `$('#…')` — Pocket id-parity); Scraps tab wiring | 2c |
+| `renderFootnoteList()`: `if (!chapter) return;` guard | defensive fix for a LATENT UPSTREAM bug: snapshot views leave `.chapter-body` nodes outside any `.chapter`, and `openBook → renderChapters → renderAllFootnoteLists` crashes on them (repro in plain NEO: open a snapshot, back to shelf, open a book). Exposed by the compare e2e. Candidate to report upstream via Panos. | 2d |
+| `showSnapshot()`: `NeoHooks.emit('snapshotShown', v)` | compare.js turns a poem snapshot side-by-side (Then/Now + added-word marks) | 2d |
 | `document.title = ... 'Rhema' /* RHEMA */` in `showWindowTitle()` | window title says Rhema | 0 |
 | `checkForUpdate()` `state === 'off'` branch | honest "Updates arrive by hand" notice instead of a fake "up to date" (Stone 15) | 0 |
 | `showAbout()` `<h2>Rhema</h2>` | About modal heading (hardcoded, bypasses t()) | 0 |
@@ -74,6 +82,8 @@ name are the only literal renames (both listed above).
 | `<title>Rhema</title>`, `<h1>Rhema</h1>` | product name | 0 |
 | `<script src="rhema-settings.js">` | the Rhema settings pane module (before app.js) | 1 |
 | `<script src="poetry.js">` (after app.js) | the poetry format — registers into the hook bus at load; app.js init is async so it lands before any book opens | 2 |
+| `<script src="scraps.js">` (after poetry.js) | the scraps drawer (Stone 5) | 2c |
+| `<script src="compare.js">` (after scraps.js) | the compare view (Stone 6) | 2d |
 | (future) more Rhema `<script>` tags | new fork files | 2+ |
 
 ## package.json (no comments possible — listed here instead)

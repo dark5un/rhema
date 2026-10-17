@@ -306,6 +306,37 @@ test('scraps: Alt+Shift+X cuts the line, the drawer holds it tagged, Put in retu
   assert.equal(JSON.parse(fs.readFileSync(sidecar, 'utf8')).length, 1);
 });
 
+test('compare: a poem snapshot shows then/now columns and marks added words', async () => {
+  await js('currentChapterId = book.chapterOrder[0]');
+  const snapName = await js(`(async () => { const r = await takeSnapshot(SNAP_KEPT); return r && r.snap && r.snap.name; })()`);
+  assert.ok(snapName, 'a snapshot was taken');
+  await caretInLine(0, 0, 10); // end of 'First line'
+  await type(' heron');
+  await tick(150);
+  await js(`document.querySelector('.tab[data-tab="darlings"]').click()`);
+  await tick(250);
+  await js(`showSnapshot(${JSON.stringify(snapName)})`);
+  await tick(400);
+  const cmp = await js(`(() => {
+    const grid = document.querySelector('.rhema-compare-grid');
+    if (!grid) return null;
+    const now = grid.querySelector('.rhema-now');
+    return {
+      cols: grid.querySelectorAll('.rhema-compare-col').length,
+      thenHasHeron: grid.querySelector('.rhema-compare-col .snap-body:not(.rhema-now)').textContent.includes('heron'),
+      nowHasHeron: now && now.textContent.includes('heron'),
+      added: CSS.highlights.has('rhema-snap-added') ? CSS.highlights.get('rhema-snap-added').size : 0
+    };
+  })()`);
+  assert.ok(cmp, 'the poem snapshot went side-by-side');
+  assert.equal(cmp.cols, 2, 'then and now columns');
+  assert.equal(cmp.thenHasHeron, false);
+  assert.equal(cmp.nowHasHeron, true);
+  assert.ok(cmp.added >= 1, 'the added word is marked');
+  await js(`document.querySelector('.tab[data-tab="manuscript"]').click()`);
+  await tick(200);
+});
+
 test('a novel still gets NEO\'s Enter rhythm (anchors change nothing)', async () => {
   await js(`(async () => {
     await addImportedBooks([{ name: 'A Novel', chapters: [{ title: 'One', paras: [{ text: 'Prose here.' }, { text: 'More prose.' }] }] }], library.shelves[0]);
