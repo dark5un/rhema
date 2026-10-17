@@ -2049,8 +2049,11 @@ async function importFile(fp, opts = {}) {
   })();
   const poemize = () => {
     if (splitMode === 'whole') {
-      const body = paras.filter((p) => p.text).map((p) => ({ text: p.text, line: true, indent: !!p.indent }));
-      return body.length ? [{ title: '', paras: body, role: null }] : [];
+      // gaps ride along: 'whole' never splits POEMS, but stanza breaks stay
+      const body = paras.filter((p) => p.text || p.gap)
+        .map((p) => (p.text ? { text: p.text, line: true, indent: !!p.indent } : { text: '', gap: true }));
+      while (body.length && body[body.length - 1].gap) body.pop();
+      return body.some((p) => p.text) ? [{ title: '', paras: body, role: null }] : [];
     }
     const poems = [];
     let cur = [];
@@ -2219,7 +2222,10 @@ async function importFile(fp, opts = {}) {
 ipcMain.handle('import:files', async (_e, paths, opts) => { /* RHEMA — opts carries the poetry mode */
   const out = [];
   for (const fp of paths || []) {
-    if (!/\.(docx|txt|md|fountain|fdx|pdf)$/i.test(fp)) continue; /* RHEMA — .pdf joins for poem import */
+    // RHEMA — .pdf joins, but ONLY for poem imports: the shelf drop path calls
+    // this with no filter of its own, and an ungated pdf would chapterize a
+    // PDF into a novel (review 2026-10-17)
+    if (!(opts && opts.poetry ? /\.(docx|txt|md|fountain|fdx|pdf)$/i : /\.(docx|txt|md|fountain|fdx)$/i).test(fp)) continue;
     try {
       out.push(await importFile(fp, opts || {}));
     } catch (err) {

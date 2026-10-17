@@ -114,7 +114,7 @@ const RhemaQr = (() => {
     if (!html) return undefined;
     return html
       .replace(/ contenteditable="false"/g, '')
-      .replace(/<img([^>]*[^/])>/g, '<img$1/>');
+      .replace(/<img\b([^>]*?)(?<!\/)>/g, '<img$1/>'); // (?<!/) also catches a bare <img>
   }
 
   // ---- the drawings (rhema-drawing.* / rhema-drawing-<chId>.* in the book folder) ----

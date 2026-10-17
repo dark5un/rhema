@@ -73,6 +73,7 @@ app.whenReady().then(async () => {
     set('ra-imgurl', 'http://localhost:3101');
     set('ra-retbackups', 'unlimited');
     set('ra-retsnaps', 90);
+    set('ra-split', 'whole'); /* RHEMA — Stone 12 split knob round-trip */
     document.querySelector('.m-ok').click();
   })()`);
   await tick(300);
@@ -84,6 +85,9 @@ app.whenReady().then(async () => {
   check('retention saved with unlimited backups and 90-day snapshots',
     !!(rhema && rhema.retention && rhema.retention.backups === 'unlimited' && rhema.retention.snapshots === 90),
     JSON.stringify(rhema && rhema.retention));
+  check('the import split knob saved beside its siblings (merge, not replace)',
+    !!(rhema && rhema.import && rhema.import.split === 'whole'),
+    JSON.stringify(rhema && rhema.import));
   check('the configured app now counts as paintable without any OpenAI key',
     await js('RhemaSettings.configured() === true && RhemaSettings.snapKeepDays() === 90'));
 

@@ -148,7 +148,8 @@
       "!dictionaries/**",
       "!locales/_template.json",
       "!node_modules/koffi/build/koffi/{freebsd,linux,musl,openbsd,win32}_*/**",
-      "!node_modules/koffi/{src,vendor,doc}/**"
+      "!node_modules/koffi/{src,vendor,doc}/**",
+      "!node_modules/@napi-rs/canvas-*/**"
     ],
     "toolsets": {
       "appimage": "1.0.3"
@@ -181,7 +182,7 @@
     "electron-updater": "^6.3.9",
     "jszip": "^3.10.1",
     "koffi": "2.16.3",
-    "pdfjs-dist": "^6.4.299"
+    "pdfjs-dist": "6.4.299"
   },
   "allowScripts": {
     "electron@33.4.11": true

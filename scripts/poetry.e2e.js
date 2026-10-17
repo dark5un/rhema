@@ -673,6 +673,21 @@ test('import into an open collection: the shelf card menu path', async () => {
   assert.equal(joined, 3, 'the poem joined the collection');
 });
 
+test('import: the in-book Import… keeps verse for a poem book (the app.js seam)', async () => {
+  // importChaptersIntoBook's poemBook() branch: the file's poems join the
+  // OPEN book as stanzas + soft breaks, not as prose paragraphs
+  const fp = path.join(tmp, 'inbook.txt');
+  fs.writeFileSync(fp, '# Σέσαμο\n' + L1 + '\n' + L2 + '\n');
+  pickedFiles = [fp];
+  const before = await js('book.chapterOrder.length');
+  await js(`(() => { importChapters(); return true; })()`);
+  await tick(900);
+  assert.equal(await js('book.chapterOrder.length'), before + 1, 'the poem joined the open book');
+  const st = await stanzasOf(before);
+  assert.equal(st[0].cls, 'poetry', 'verse, not prose paragraphs');
+  assert.deepEqual(st[0].lines, [L1, L2], 'the lines survived as one stanza');
+});
+
 test('chapbook: a real 5x8 PDF renders with the verse, the mark, and 5x8 pages', async () => {
   // the footnotes.e2e paperback pattern: answer the save dialog from main,
   // click Make PDFs, wait for the file (Paged.js lays it out in the print window)
@@ -692,6 +707,9 @@ test('chapbook: a real 5x8 PDF renders with the verse, the mark, and 5x8 pages',
   assert.match(info, /Page size:\s+360 x 576 pts/, '5 x 8 in: 360x576 pt pages');
   const text = require('node:child_process').execFileSync('pdftotext', [to, '-']).toString();
   assert.ok(text.includes(L1), 'the Kavafis verse is in the printed book');
+  // the cover template rides along (coding review coverage note)
+  const cover = to.replace(/\.pdf$/i, '') + ' - cover template.pdf';
+  assert.ok(fs.existsSync(cover) && fs.statSync(cover).size > 0, 'the cover template was written');
   // the poem mark: the QR renders as vector paths; the mark div carries the class
   const html = await js(`buildPrintHtml(bookExportData(), { trim: '5x8', paper: 'white', links: {}, alsoByText: '', reviewText: '', reviewWords: '' })`);
   assert.ok(html.includes('rhema-poem-mark'), 'the print HTML carries the poem mark');

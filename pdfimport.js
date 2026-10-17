@@ -81,15 +81,21 @@ function pdfParasFromPages(pages) {
 async function pdfParas(fp) {
   const { getDocument } = await import('pdfjs-dist/legacy/build/pdf.mjs');
   const fs = require('node:fs');
+  const path = require('node:path');
   const data = new Uint8Array(fs.readFileSync(fp));
-  const doc = await getDocument({ data, isEvalSupported: false }).promise;
+  // standardFontDataUrl: without it pdfjs warns and Type1/Symbol glyph
+  // metrics degrade silently (review 2026-10-17); the fonts ship in the package
+  const doc = await getDocument({
+    data, isEvalSupported: false,
+    standardFontDataUrl: path.join(__dirname, 'node_modules/pdfjs-dist/standard_fonts/') + '/'
+  }).promise;
   const pages = [];
   for (let n = 1; n <= doc.numPages; n++) {
     const page = await doc.getPage(n);
     const content = await page.getTextContent();
     pages.push(pdfLines(content.items));
   }
-  await doc.destroy();
+  await doc.cleanup(); // v6: the proxy has cleanup(); destroy() is the loading task's (review BLOCKER)
   return pdfParasFromPages(pages);
 }
 

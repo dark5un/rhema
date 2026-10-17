@@ -84,6 +84,7 @@ describe('poem import', () => {
     setSplit('whole');
     let r = await importOne('whole.txt', L1 + '\n\n' + P1 + '\n');
     assert.equal(r.chapters.length, 1, 'whole: the file is one poem');
+    assert.equal(stanzaCount(r.chapters[0]), 2, 'whole keeps stanza gaps (review 2026-10-17)');
     setSplit('headings');
     r = await importOne('heads.txt', L1 + '\n\n\n\n' + P1 + '\n');
     assert.equal(r.chapters.length, 1, 'headings: no gap splits');
@@ -157,6 +158,36 @@ describe('pdf text for poems', () => {
     assert.equal(gaps.length, 2);
     assert.ok(gaps[1].wide, 'the 80pt gap is a poem boundary');
     assert.ok(paras.find((p) => p.text === 'D1').indent, 'the pushed-in line is flagged');
+  });
+
+
+  // the BLOCKER guard (security review 2026-10-17): the real pdfjs-dist path —
+  // getDocument/getTextContent/cleanup — was never exercised; only the pure
+  // helpers were. A hand-built one-page PDF runs importFile end to end.
+  test('a real PDF imports end to end (the pdfjs path itself)', async () => {
+    // one page, Helvetica, four lines: 20pt pitch, a 40pt stanza gap, a 60pt poem gap
+    const stream = 'BT /F1 12 Tf 50 700 Td (alpha one) Tj 0 -20 Td (beta two) Tj 0 -40 Td (gamma three) Tj 0 -60 Td (delta four) Tj ET';
+    const objs = [
+      '<</Type/Catalog/Pages 2 0 R>>',
+      '<</Type/Pages/Kids[3 0 R]/Count 1>>',
+      '<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]/Contents 4 0 R/Resources<</Font<</F1 5 0 R>>>>>>',
+      `<</Length ${stream.length}>>\nstream\n${stream}\nendstream`,
+      '<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>'
+    ];
+    let pdf = '%PDF-1.4\n';
+    const offs = [];
+    objs.forEach((o, i) => { offs.push(pdf.length); pdf += `${i + 1} 0 obj\n${o}\nendobj\n`; });
+    const xref = pdf.length;
+    pdf += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n` +
+      offs.map((o) => `${String(o).padStart(10, '0')} 00000 n \n`).join('') +
+      `trailer\n<</Size ${objs.length + 1}/Root 1 0 R>>\nstartxref\n${xref}\n%%EOF`;
+    const r = await importOne('verse.pdf', Buffer.from(pdf, 'latin1'));
+    assert.equal(r.error, undefined, 'the PDF parsed: ' + r.error);
+    assert.equal(r.poetry, true);
+    assert.equal(r.chapters.length, 2, 'the 60pt gap opened the second poem');
+    assert.deepEqual(linesOf(r.chapters[0]), ['alpha one', 'beta two', 'gamma three']);
+    assert.ok(r.chapters[0].paras.some((p) => p.gap && !p.wide), 'the 40pt gap stayed a stanza break');
+    assert.deepEqual(linesOf(r.chapters[1]), ['delta four']);
   });
 
   test('pages end with a pageEnd boundary', () => {
