@@ -17645,6 +17645,8 @@ async function checkForUpdate() {
   // the answer comes in a window, like an update does: a line at the foot
   // of the screen was too easy to miss
   if (res.error) { updateNotice(t('Couldn’t check for updates — try again later')); return; }
+  /* RHEMA — Stone 15: updates are hand-delivered; say so honestly instead of claiming "up to date" for a check that never ran */
+  if (res.state === 'off') { updateNotice(t('Updates arrive by hand'), t('You have {version}. A new version comes to you directly.', { version: res.currentVersion })); return; }
   if (!res.hasUpdate) { updateNotice(t('NEO is up to date'), t('You have {version}.', { version: res.currentVersion })); return; }
   // NEO has been fetching it in the background since it was found: show
   // where that download is — usually done, with "Restart to update"
@@ -17691,7 +17693,7 @@ async function showAbout() {
   bd.className = 'modal-backdrop';
   bd.innerHTML = `
     <div class="modal" style="width:340px;text-align:center">
-      <h2 style="font-size:22px;letter-spacing:6px">NEO</h2>
+      <h2 style="font-size:22px;letter-spacing:6px">Rhema</h2> <!-- RHEMA: was NEO; attribution stays in LICENSE and the plan's About posture -->
       <p class="about-version">${t('Version {version}', { version: v })}</p>
       <p class="about-line">${t('A word processor for authors.')}</p>
       <div style="margin-top:16px">

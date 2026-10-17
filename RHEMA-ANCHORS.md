@@ -2,8 +2,9 @@
 
 Every place this fork touches an upstream file. All fork edits in core files
 are marked `/* RHEMA */` (or a `RHEMA` block comment) and listed here. At
-each upstream merge, `grep -n "RHEMA" <core files>` must match this list —
+each upstream merge, `grep -in rhema <core files>` must match this list —
 renamed or moved wrapped functions show up at merge time, not at runtime.
+(The check is case-INsensitive: rename sites read 'Rhema', guards read 'RHEMA'.)
 
 Fork posture: new features live in NEW files (`poetry.js`, `scraps.js`,
 `compare.js`, `ai.js`, `rhema-settings.js`, `qrmark.js`, …); core files only
@@ -15,6 +16,8 @@ carry anchors. Target: <300 changed lines across core files.
 |--------|------|-------|
 | `RHEMA — hook bus` block after the i18n preamble | `NeoHooks` — `on`/`emit`/`has` + `registerFormat`/`format` registry (~25 lines). Additive: no listeners = no-op. | 0 |
 | `document.title = ... 'Rhema' /* RHEMA */` in `showWindowTitle()` | window title says Rhema | 0 |
+| `checkForUpdate()` `state === 'off'` branch | honest "Updates arrive by hand" notice instead of a fake "up to date" (Stone 15) | 0 |
+| `showAbout()` `<h2>Rhema</h2>` | About modal heading (hardcoded, bypasses t()) | 0 |
 | (future) enter-key call-site, menu call-sites, cards, export formats, settings panes | one `NeoHooks.emit(...)` per hook surface | 2+ |
 
 ## i18n.js
@@ -36,9 +39,11 @@ name are the only literal renames (both listed above).
 | Anchor | What | Phase |
 |--------|------|-------|
 | `const RHEMA_AUTO_UPDATE = false` (updater section) | Stone 15: auto-update disabled. Flip to `true` to re-enable the whole path; `publish` in package.json already points at our repo. Guards: `getUpdater()` early-return, `checkForUpdates()` early-return, `update:check` handler early-return. | 0 |
-| `Rhema Library` (5 sites, was `NEO Library`) | library folder name | 0 |
+| `Rhema Library` (6 sites, was `NEO Library`) | library folder name | 0 |
 | `applicationName: 'Rhema'` (about panel) | product name | 0 |
+| startup migration block after `LIBRARY_FILE` | first-run adoption: if Rhema Library is empty but a NEO Library exists, ask once to open it (books from NEO never look "gone") | 0 |
 | (future) `ai:*` IPC handlers, import formats, snapshot retention setting | | 1–3 |
+| (deferred, before any auto-update re-enable) `latestReleaseFromGitHub()` | still fetches hughhowey/neo with UA 'NEO-App'; must be pointed at dark5un/rhema when RHEMA_AUTO_UPDATE flips to true, so the fallback link matches the publish feed | 15-re |
 
 ## preload.js
 
@@ -59,6 +64,26 @@ name are the only literal renames (both listed above).
 - `appId: io.onlyascii.rhema` (Stone 16 placeholder; final name at ship time)
 - `publish: github dark5un/rhema` — kept on purpose (Stone 15 clean
   auto-update re-enable path); never removed.
+- `linux.executableName/desktopName: rhema` + `syncDesktopName: true` —
+  runtime WM_CLASS is lowercase "rhema" (verified via xprop); without this
+  the .desktop entry's StartupWMClass (Rhema) never matches and windows
+  don't associate with the desktop icon (Phase 5 depends on it).
+- `homepage` and `linux.maintainer` (Hugh Howey) KEPT as attribution —
+  explicit decision (review 2026-10-17); revisit only at public release.
+
+## scripts/
+
+| File | What |
+|------|------|
+| `scripts/library-folder.test.js` | expectations follow the 'Rhema Library' rename (marked) |
+| `scripts/filesystem.test.js` | catalog header expectation follows the i18n brand seam (marked) |
+| `scripts/*.e2e.js` (9) + `scripts/try.js` | seed 'Rhema Library' to match main.js default; verified at upstream baseline parity (words 22/0, tabs 9/0, notes 14/0, footnotes 24/0, caret 14/0, cover-text 2/0, manuscript 5/0, simple 14/0, pages 9/4 = 4 pre-existing env failures) |
+
+## Hook bus semantics (note for Phase 2)
+
+`NeoHooks.emit` returns the LAST non-undefined listener result
+(last-wins). If Phase 2 enter-key/line-op hooks need veto or first-wins
+semantics, extend emit then — don't special-case call-sites.
 
 ## Deliberately NOT touched
 

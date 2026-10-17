@@ -79,6 +79,9 @@
       ]
     },
     "linux": {
+      "executableName": "rhema",
+      "desktopName": "rhema",
+      "syncDesktopName": true,
       "target": [
         {
           "target": "AppImage",

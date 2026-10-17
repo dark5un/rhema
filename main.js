@@ -3315,6 +3315,25 @@ app.whenReady().then(() => {
       const chosen = readSettings().libraryDir;
       if (chosen) LIBRARY_DIR = awaitChosenLibrary(chosen);
       LIBRARY_FILE = path.join(LIBRARY_DIR, 'library.json');
+      /* RHEMA — migration: a writer arriving from NEO. If the Rhema Library
+         isn't there yet but a NEO Library with books is, ask once whether to
+         open it — otherwise her books look gone. The format is identical, so
+         adoption is just pointing at the folder (remembered via settings). */
+      try {
+        if (!readSettings().libraryDir && !fs.existsSync(LIBRARY_FILE)) {
+          const neoDir = path.join(path.dirname(LIBRARY_DIR), 'NEO Library');
+          if (fs.existsSync(path.join(neoDir, 'library.json'))) {
+            const adopt = dialog.showMessageBoxSync({
+              type: 'question',
+              message: t('We found a NEO Library'),
+              detail: t('Your books from NEO are in {dir}. Open them in Rhema, or start a new empty Rhema Library?', { dir: neoDir }),
+              buttons: [t('Open my NEO Library'), t('Start a new Rhema Library')],
+              defaultId: 0, cancelId: 1
+            });
+            if (adopt === 0) useLibraryDir(neoDir);
+          }
+        }
+      } catch (err) { logError('rhema migration', err); }
     } catch (err) {
       logError('paths', err);
     }
