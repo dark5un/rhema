@@ -14,7 +14,13 @@ carry anchors. Target: <300 changed lines across core files.
 
 | Anchor | What | Phase |
 |--------|------|-------|
-| `RHEMA — hook bus` block after the i18n preamble | `NeoHooks` — `on`/`emit`/`has` + `registerFormat`/`format` registry (~25 lines). Additive: no listeners = no-op. | 0 |
+| `RHEMA — hook bus` block after the i18n preamble | `NeoHooks` — `on`/`emit`/`emitTrue`/`has` + `registerFormat`/`format` registry. `emitTrue` (Phase 2) = veto: first listener returning true stops the host's handling. Additive: no listeners = no-op. | 0–2 |
+| `const poemBook = ...` right after the bus block | true when the open book's format is a registered poem format | 2 |
+| shelf `+` contextmenu: `New Poem Collection` + `NeoHooks.format('poetry').createOnShelf` | the poet's new-book flow, beside New Book / New Script (behind Show More Features like Script — revisit at UI review) | 2 |
+| Enter-hint toast: `NeoHooks.emit('enterHint') ?? t(...)` | poets get the poem rhythm wording | 2 |
+| keydown: `if (poemBook()) { ... }` branch after the `isScript()` branch | poem books: `NeoHooks.emitTrue('poemKey', …)` then the delete guards + smartKeys; prose poetry/flush/section-break rules never run | 2 |
+| beforeinput: `if (poemBook()) { e.preventDefault(); NeoHooks.emit('poemLineBreak', …); return; }` | an IME's line break becomes a real `<br>` via poetry.js | 2 |
+| `syncChapter()`: `NeoHooks.emit('chapterSynced', body, chId)` | poetry.js marks every paragraph verse before capture | 2 |
 | `document.title = ... 'Rhema' /* RHEMA */` in `showWindowTitle()` | window title says Rhema | 0 |
 | `checkForUpdate()` `state === 'off'` branch | honest "Updates arrive by hand" notice instead of a fake "up to date" (Stone 15) | 0 |
 | `showAbout()` `<h2>Rhema</h2>` | About modal heading (hardcoded, bypasses t()) | 0 |
@@ -67,6 +73,7 @@ name are the only literal renames (both listed above).
 |--------|------|-------|
 | `<title>Rhema</title>`, `<h1>Rhema</h1>` | product name | 0 |
 | `<script src="rhema-settings.js">` | the Rhema settings pane module (before app.js) | 1 |
+| `<script src="poetry.js">` (after app.js) | the poetry format — registers into the hook bus at load; app.js init is async so it lands before any book opens | 2 |
 | (future) more Rhema `<script>` tags | new fork files | 2+ |
 
 ## package.json (no comments possible — listed here instead)
@@ -92,6 +99,8 @@ name are the only literal renames (both listed above).
 | `scripts/*.e2e.js` (9) + `scripts/try.js` | seed 'Rhema Library' to match main.js default; verified at upstream baseline parity (words 22/0, tabs 9/0, notes 14/0, footnotes 24/0, caret 14/0, cover-text 2/0, manuscript 5/0, simple 14/0, pages 9/4 = 4 pre-existing env failures) |
 | `scripts/rhema-ai.test.js` | Phase 1: ComfyUI workflow builder, retention knobs (keepValue + snapsToThin unlimited), settings gate, brief plumbing — hermetic |
 | `scripts/rhema-ai-live.js` | NOT in npm test: live chain check (Strata brief → ComfyUI render) against this machine's endpoints |
+| `scripts/poetry.test.js` | Phase 2: the pure poetry rules sliced from poetry.js (Enter rhythm, stanza/poem split, line ops) — vm harness, hermetic |
+| `scripts/poetry.e2e.js` (`test:poetry`) | Phase 2: real Electron — new poem collection, Enter rhythm, line ops, structural undo, disk format, and the novel's Enter rhythm unchanged |
 
 ## Hook bus semantics (note for Phase 2)
 

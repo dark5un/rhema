@@ -32,12 +32,27 @@ const NeoHooks = {
     return last;
   },
   has(name) { return !!(this._hooks[name] && this._hooks[name].length); },
+  // veto emit (Phase 2): first listener that returns true wins and stops the
+  // host's own handling; anything else falls through
+  emitTrue(name, ...args) {
+    const list = this._hooks[name];
+    if (!list || !list.length) return false;
+    for (const fn of list) {
+      try { if (fn(...args) === true) return true; }
+      catch (err) { console.error('[rhema hook]', name, err); }
+    }
+    return false;
+  },
   // format registry (Phase 2): NeoHooks.registerFormat('poetry', {…})
   _formats: Object.create(null),
   registerFormat(name, impl) { this._formats[name] = impl; this.emit('formatRegistered', name, impl); },
   format(name) { return this._formats[name]; }
 };
 /* ================= END RHEMA hook bus ================= */
+
+/* RHEMA — true when the open book is a poem collection (poetry.js registers
+   the 'poetry' format; novels and scripts never match) */
+const poemBook = (meta = book) => !!(meta && NeoHooks.format(meta.format) && NeoHooks.format(meta.format).poem);
 
 // index.html marks its words with data-i18n (text), data-i18n-title,
 // data-i18n-placeholder and data-i18n-ph (the empty-field hints)
@@ -1167,10 +1182,12 @@ async function renderShelves() {
         if (!moreOn()) return; // scripts are behind Show More Features
         const pick = await popMenu(e.clientX, e.clientY, [
           { label: t('New Book'), value: 'book' },
-          { label: t('New Script'), value: 'script' }
+          { label: t('New Script'), value: 'script' },
+          { label: t('New Poem Collection'), value: 'poem' } /* RHEMA */
         ], { from: blank });
         if (pick === 'book') createBookOnShelf(shelf);
         else if (pick === 'script') createScriptOnShelf(shelf);
+        else if (pick === 'poem') NeoHooks.format('poetry').createOnShelf(shelf); /* RHEMA */
       });
     }
 
@@ -2616,7 +2633,9 @@ async function openBook(bookId) {
   if (!library.hintShown && !isScript()) {
     library.hintShown = true;
     writeLibrary(library);
-    setTimeout(() => toast(t('Enter twice = section break · three times = new chapter · {key} shows everything else', { key: KHELP }), 7000), 800);
+    /* RHEMA — poets get the poem rhythm (poetry.js answers enterHint) */
+    const hint = NeoHooks.emit('enterHint') ?? t('Enter twice = section break · three times = new chapter · {key} shows everything else', { key: KHELP });
+    setTimeout(() => toast(hint, 7000), 800);
   }
   spReportState();
 }
@@ -3022,6 +3041,17 @@ function wireChapterBody(body, chId) {
       smartKeys(e, body);
       return;
     }
+    /* RHEMA — a poem book: its own Enter rhythm and line operations
+       (poetry.js); the delete guards and smart keys still run underneath */
+    if (poemBook()) {
+      if (NeoHooks.emitTrue('poemKey', e, body, chId)) return;
+      if (spaceSafeDelete(e, body, chId)) return;
+      if (emptyChapterBackspace(e, body, chId)) return;
+      if (chapterStartBackspace(e, body, chId)) return;
+      if (guardMarkerDelete(e, body, chId)) return;
+      smartKeys(e, body);
+      return;
+    }
     if (handlePoetry(e, body, chId)) return;
     if (handleFlush(e, body, chId)) return;
     if (poetryBackspace(e, body, chId)) return;
@@ -3062,6 +3092,8 @@ function wireChapterBody(body, chId) {
   body.addEventListener('beforeinput', (e) => {
     if (e.inputType !== 'insertLineBreak' || e.defaultPrevented) return;
     if (isScript()) { e.preventDefault(); return; } // a script's lines are its elements
+    /* RHEMA — in a poem the soft break is a real <br>, placed by poetry.js */
+    if (poemBook()) { e.preventDefault(); NeoHooks.emit('poemLineBreak', body, chId); return; }
     const key = { key: 'Enter', shiftKey: true, metaKey: false, ctrlKey: false, altKey: false, preventDefault: () => e.preventDefault() };
     if (!handlePoetry(key, body, chId)) handleFlush(key, body, chId);
   });
@@ -4239,6 +4271,7 @@ function markDialogueOpening(body) {
 
 function syncChapter(body, chId) {
   markDialogueOpening(body);
+  NeoHooks.emit('chapterSynced', body, chId); /* RHEMA — poem books: every paragraph is verse */
   chapterHTML[chId] = captureBody(body);
   wordCache[chId] = null;
   scheduleChapterSave(chId);
