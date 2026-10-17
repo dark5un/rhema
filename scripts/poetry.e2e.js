@@ -714,6 +714,7 @@ test('chapbook: a real 5x8 PDF renders with the verse, the mark, and 5x8 pages',
   const html = await js(`buildPrintHtml(bookExportData(), { trim: '5x8', paper: 'white', links: {}, alsoByText: '', reviewText: '', reviewWords: '' })`);
   assert.ok(html.includes('rhema-poem-mark'), 'the print HTML carries the poem mark');
   assert.ok(!html.includes('class="ch-num"'), 'a titled poem prints its title alone — no POEM n label (UX gate)');
+  assert.ok(html.includes('class="poetry" style="margin-top:0.9em"'), 'the second stanza of a poem carries the widened stanza gap inline (UX round 2)');
   await js(`(async () => { try { await window.__pb; } catch {} })()`); // settle the job
 });
 
