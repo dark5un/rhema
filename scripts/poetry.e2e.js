@@ -115,9 +115,18 @@ test('a new poem collection opens as verse', async () => {
   assert.equal(st[0].cls, 'poetry');
 });
 
-// Real verse for the visible fixtures: K. P. Cavafy, "Κεριά" (1893/1899)
-// and "Η πόλις" (1910) — public domain, text per the Ίκαρος/Κέντρο
-// Ελληνικής Γλώσσας editions. The poet's UX deserves real poems.
+// Real verse for the visible fixtures: K. P. Cavafy, "Κεριά" (broadside
+// 1893/1899) and "Η πόλις" (1910 collection) — chosen because Kavafis is
+// the family's favourite poet and an inspiration for this project.
+// Copyright, settled: the poems are public domain everywhere. The poet
+// died 1933 — EU/Greece (life+70) left copyright 1 Jan 2004; in the US
+// both poems were published decades before the 1929 cutoff, and Greek
+// law's then-term (life+50) had already lapsed in 1983, so no URAA
+// restoration applies. We use the plain poem text only — no modern
+// critical-edition apparatus, no translations (those ARE copyrighted).
+// The Onassis Foundation Cavafy Archive (cavafy.onassis.org) puts its
+// digitised objects under CC BY-SA 4.0; attribution: Cavafy Archive,
+// Onassis Foundation. The poet's UX deserves real poems.
 const L1 = "Του μέλλοντος οι μέρες στέκοντ' εμπροστά μας";
 const L2 = "σα μια σειρά κεράκια αναμμένα —";
 const L3 = "χρυσά, ζεστά, και ζωηρά κεράκια.";
