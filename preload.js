@@ -43,7 +43,14 @@ contextBridge.exposeInMainWorld('neo', {
   setSecret: (name, value) => ipcRenderer.invoke('secret:set', name, value),
   hasSecret: (name) => ipcRenderer.invoke('secret:has', name),
   /* RHEMA — namespaced bridge for Rhema features */
-  rhema: { test: (settings) => ipcRenderer.invoke('ai:test', settings) },
+  rhema: {
+    test: (settings) => ipcRenderer.invoke('ai:test', settings),
+    /* RHEMA — Stone 1a: the collection's drawing asset */
+    assetPick: () => ipcRenderer.invoke('rhema:asset:pick'),
+    assetSet: (bookId, srcPath) => ipcRenderer.invoke('rhema:asset:set', bookId, srcPath),
+    assetRead: (bookId) => ipcRenderer.invoke('rhema:asset:read', bookId),
+    assetClear: (bookId) => ipcRenderer.invoke('rhema:asset:clear', bookId)
+  },
   importFiles: (paths) => ipcRenderer.invoke('import:files', paths),
   pathForFile: (file) => webUtils.getPathForFile(file),
   fullscreenEscape: () => ipcRenderer.invoke('fullscreen:escape'),

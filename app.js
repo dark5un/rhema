@@ -2030,6 +2030,7 @@ function bookTile(meta, opts = {}) {
         if (meta.coverImage) options.push({ label: t('Remove cover art'), desc: t('Deletes the image from the book folder. (To just hide it, use the ↻ on the book.)'), danger: true, value: 'uncover' });
       }
       options.push(
+        ...(NeoHooks.emit('shelfCardMenu', meta) || []), /* RHEMA — poem books grow a Drawing item (qrmark.js) */
         { label: t('Remove from bookshelf'), desc: t('Takes it off your shelves. The files stay safe in your NEO Library folder on disk.'), value: 'remove' },
         { label: trashLabel, desc: window.Capacitor ? t('Moves the book folder to Deleted Books in your NEO Library, where you can recover it.') : t('Sends the book folder to your system trash, where you can recover it.'), danger: true, value: 'trash' }
       );
@@ -2042,12 +2043,14 @@ function bookTile(meta, opts = {}) {
       items.push({ label: t('Export…'), value: 'export' });
       if (canCopy) items.push({ label: t('Duplicate'), value: 'duplicate' });
       if (coverItems.length) items.push({ label: t('Cover') + '  ›', value: 'coverMenu' });
-      items.push('-', { label: t('Remove from bookshelf'), value: 'remove' }, { label: trashLabel, value: 'trash', danger: true });
+      items.push(...(NeoHooks.emit('shelfCardMenu', meta) || []), '-'); /* RHEMA — poem books grow a Drawing item (qrmark.js) */
+      items.push({ label: t('Remove from bookshelf'), value: 'remove' }, { label: trashLabel, value: 'trash', danger: true });
       const x = e.clientX;
       const y = e.clientY;
       choice = await popMenu(x, y, items, { title: shownTitle(meta.title), from: el });
       if (choice === 'coverMenu') choice = await popMenu(x, y, coverItems, { title: t('Cover'), from: el });
     }
+    if (NeoHooks.emitTrue('shelfCardChoice', meta, choice)) return null; /* RHEMA — the Drawing items answer themselves (qrmark.js) */
     if (choice === 'part') {
       await addPage(home, 'part', meta.id);
     } else if (choice === 'duplicate') {
@@ -2764,6 +2767,7 @@ function renderChapters() {
     // writer's own, Dr. Müller and 5 km, stay)
     healStrayNbsp(body);
     wireChapterBody(body, chId);
+    NeoHooks.emit('chapterRendered', sec, chId); /* RHEMA — the poem mark at the poem's end (qrmark.js) */
   });
   if (nbspMarksEnabled) paintNonBreakingMarks();
   if (isScript()) {
@@ -15945,7 +15949,7 @@ function buildPrintHtml(d, o) {
     if (head) head = `<header class="ch-head">${head}</header>`;
     const pg1 = !back && !numbered;
     if (pg1) numbered = true;
-    body += `<section class="${back ? 'backpage' : 'chapter'}${pg1 ? ' pg1' : ''}" id="${id}">${head}${prose(s.paras, !back && !!head)}</section>`;
+    body += `<section class="${back ? 'backpage' : 'chapter'}${pg1 ? ' pg1' : ''}" id="${id}">${head}${prose(s.paras, !back && !!head)}${NeoHooks.emit('exportSectionEnd', s, d) || ''}</section>`; /* RHEMA — the poem mark prints too (qrmark.js) */
   }
   const back = [];
   // a note to the reader: a review, and where to find the writer
@@ -16414,6 +16418,7 @@ function buildHtml(data, opts = {}) {
       ${ch.heading ? `<${h} class="hd">${escHtml(ch.heading)}</${h}>` : ''}
       ${ch.byline ? `<p class="byline">${escHtml(ch.byline)}</p>` : ''}
       ${prose(ch.paras, !back)}
+      ${NeoHooks.emit('exportSectionEnd', ch, d) || ''}
     </section>`;
   };
   // Contents: the parts, the titles and the pages at the back. The page

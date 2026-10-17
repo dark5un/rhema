@@ -337,6 +337,50 @@ test('compare: a poem snapshot shows then/now columns and marks added words', as
   await tick(200);
 });
 
+test('qr mark: every poem ends with a QR in the editor, and exports carry it', async () => {
+  const mark = await js(`(() => {
+    const sec = document.querySelector('.chapter[data-id="' + book.chapterOrder[0] + '"]');
+    const m = sec.querySelector(':scope > .rhema-poem-mark');
+    return { has: !!m, svg: !!(m && m.querySelector('svg rect')), inBody: !!sec.querySelector('.chapter-body .rhema-poem-mark') };
+  })()`);
+  assert.ok(mark.has, 'the poem section ends with the mark');
+  assert.ok(mark.svg, 'the mark carries a real QR');
+  assert.equal(mark.inBody, false, 'and it never enters the editable text');
+  // payload: the plain-text default, then the URL template knob
+  assert.equal(await js('RhemaQr.payload("Sea", "Col", "Panos")'), 'Sea — Panos');
+  await js(`library.rhema = Object.assign(library.rhema || {}, { qr: { template: 'https://onlyascii.io/{collection}/{title}' } })`);
+  assert.equal(await js('RhemaQr.payload("Sea", "Col", "Panos")'), 'https://onlyascii.io/Col/Sea');
+  // both export builders carry the mark for a poem book
+  const html = await js('buildHtml()');
+  assert.ok(html.includes('rhema-poem-mark') && html.includes('<svg'), 'the PDF/HTML export carries the mark');
+  const print = await js(`buildPrintHtml(bookExportData(), { trim: '5x8', fonts: '' })`);
+  assert.ok(print.includes('rhema-poem-mark'), 'the chapbook print carries the mark');
+});
+
+test('qr mark: the collection drawing sits watermarked beside the QR', async () => {
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  const src = path.join(LIB, 'drawing-test.png');
+  fs.writeFileSync(src, png);
+  const bookId = await js('book.id');
+  const fname = await js(`window.neo.rhema.assetSet(${JSON.stringify(bookId)}, ${JSON.stringify(src)})`);
+  assert.equal(fname, 'rhema-drawing.png', 'the drawing lands in the book folder');
+  await js(`RhemaQr.loadDrawing(${JSON.stringify(bookId)})`);
+  await js('renderChapters()');
+  await tick(250);
+  const art = await js(`(() => {
+    const m = document.querySelector('.chapter[data-id="' + book.chapterOrder[0] + '"] > .rhema-poem-mark');
+    const img = m && m.querySelector('img.rhema-mark-drawing');
+    return { has: !!img, faded: !!(img && /opacity:\\s*\\.35/.test(img.getAttribute('style') || '')), data: !!(img && img.src.startsWith('data:image/png')) };
+  })()`);
+  assert.ok(art.has && art.faded && art.data, 'the drawing shows watermarked next to the QR');
+  // and it survives a reopen (read straight from the book folder)
+  const got = await js(`window.neo.rhema.assetRead(${JSON.stringify(bookId)})`);
+  assert.ok(got && got.base64.length > 0, 'rhema-drawing.png reads back');
+  const cleared = await js(`window.neo.rhema.assetClear(${JSON.stringify(bookId)})`);
+  assert.ok(cleared);
+  assert.equal(await js(`window.neo.rhema.assetRead(${JSON.stringify(bookId)})`), null, 'and clears');
+});
+
 test('a novel still gets NEO\'s Enter rhythm (anchors change nothing)', async () => {
   await js(`(async () => {
     await addImportedBooks([{ name: 'A Novel', chapters: [{ title: 'One', paras: [{ text: 'Prose here.' }, { text: 'More prose.' }] }] }], library.shelves[0]);
@@ -345,6 +389,8 @@ test('a novel still gets NEO\'s Enter rhythm (anchors change nothing)', async ()
   })()`);
   await tick(500);
   assert.equal(await js('poemBook()'), false);
+  assert.equal(await js('document.querySelectorAll(".rhema-poem-mark").length'), 0, 'a novel gets no poem mark');
+  assert.ok(!(await js('buildHtml()')).includes('rhema-poem-mark'), 'and no poem mark in a novel export');
   await caretToEnd();
   await enter(); await tick();
   await enter(); await tick();

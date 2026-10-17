@@ -1031,6 +1031,49 @@ function readCover(fp, fname) {
   }
 }
 
+/* RHEMA — Stone 1a: the collection's drawing (rhema-drawing.* in the book
+   folder), shown watermarked at the end of every poem. Fixed filename, so
+   no user input ever reaches the path. */
+ipcMain.handle('rhema:asset:pick', async () => {
+  const win = BrowserWindow.getFocusedWindow();
+  const { canceled, filePaths } = await dialog.showOpenDialog(win, {
+    title: t('Choose the collection drawing'),
+    properties: ['openFile'],
+    filters: [{ name: t('Images'), extensions: COVER_EXTS }]
+  });
+  return canceled || !filePaths.length ? null : filePaths[0];
+});
+ipcMain.handle('rhema:asset:set', (_e, bookId, srcPath) => {
+  const ext = path.extname(srcPath).toLowerCase().replace('.', '');
+  if (!COVER_EXTS.includes(ext)) return null;
+  const dir = bookDir(bookId);
+  if (!fs.existsSync(dir) || !fs.existsSync(srcPath)) return null;
+  const fname = 'rhema-drawing.' + (ext === 'jpeg' ? 'jpg' : ext);
+  fs.copyFileSync(srcPath, path.join(dir, fname));
+  for (const f of fs.readdirSync(dir)) {
+    if (/^rhema-drawing\./.test(f) && f !== fname) fs.unlinkSync(path.join(dir, f));
+  }
+  return fname;
+});
+ipcMain.handle('rhema:asset:read', (_e, bookId) => {
+  try {
+    const dir = bookDir(bookId);
+    const fname = fs.readdirSync(dir).find((f) => /^rhema-drawing\.(png|jpg|webp)$/.test(f));
+    if (!fname) return null;
+    return readCover(path.join(dir, fname), fname);
+  } catch { return null; }
+});
+ipcMain.handle('rhema:asset:clear', (_e, bookId) => {
+  try {
+    const dir = bookDir(bookId);
+    if (!fs.existsSync(dir)) return true;
+    for (const f of fs.readdirSync(dir)) {
+      if (/^rhema-drawing\./.test(f)) fs.unlinkSync(path.join(dir, f));
+    }
+    return true;
+  } catch { return false; }
+});
+
 // ---------------------------------------------------------------------------
 // Painted covers: once a story passes a thousand words, NEO reads it and
 // paints an abstract cover (art.js). The API key lives encrypted in the

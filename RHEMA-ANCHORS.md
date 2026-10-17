@@ -29,6 +29,9 @@ carry anchors. Target: <300 changed lines across core files.
 | `switchTab()`: scraps-drawer hide + `name === 'scraps'` branch (`emit('scrapsTabShown')`) | the scraps drawer belongs to its tab alone (class selector, never `$('#…')` — Pocket id-parity); Scraps tab wiring | 2c |
 | `renderFootnoteList()`: `if (!chapter) return;` guard | defensive fix for a LATENT UPSTREAM bug: snapshot views leave `.chapter-body` nodes outside any `.chapter`, and `openBook → renderChapters → renderAllFootnoteLists` crashes on them (repro in plain NEO: open a snapshot, back to shelf, open a book). Exposed by the compare e2e. Candidate to report upstream via Panos. | 2d |
 | `showSnapshot()`: `NeoHooks.emit('snapshotShown', v)` | compare.js turns a poem snapshot side-by-side (Then/Now + added-word marks) | 2d |
+| `renderChapters()` loop end: `NeoHooks.emit('chapterRendered', sec, chId)` | the poem mark (QR + watermarked drawing) is appended to the section, outside `.chapter-body` — never captured into the chapter file (qrmark.js) | 2e |
+| `buildHtml()` chapter branch + `buildPrintHtml()` chapter loop: `NeoHooks.emit('exportSectionEnd', sec, d)` | the same mark prints in PDF/HTML exports and the chapbook; listener checks `poemBook()` (shelf exports borrow `book` first) | 2e |
+| shelf card menu (both paths): `emit('shelfCardMenu', meta)` + `emitTrue('shelfCardChoice', meta, choice)` | poem books grow Set/Remove poem drawing items (qrmark.js) | 2e |
 | `document.title = ... 'Rhema' /* RHEMA */` in `showWindowTitle()` | window title says Rhema | 0 |
 | `checkForUpdate()` `state === 'off'` branch | honest "Updates arrive by hand" notice instead of a fake "up to date" (Stone 15) | 0 |
 | `showAbout()` `<h2>Rhema</h2>` | About modal heading (hardcoded, bypasses t()) | 0 |
@@ -66,6 +69,7 @@ name are the only literal renames (both listed above).
 | `rhemaAiSettings()` + `ai:test` handler | library.rhema.ai read (main-side source of truth); the Test button, with the saved key attached only when the tested base equals the saved base | 1 |
 | `dailyBackup()` `keep:` + `rhemaBackupKeep()` | Stone 6: backup retention from library.rhema.retention.backups (default 14, `'unlimited'` → keep all) | 1 |
 | File menu `Rhema AI…` item | opens the Rhema settings pane (behind Show More Features, like Cover Art…) | 1 |
+| `rhema:asset:pick/set/read/clear` handlers | Stone 1a: the collection drawing as `rhema-drawing.(png|jpg|webp)` in the book folder; fixed filename, no user input in the path; reuses COVER_EXTS + readCover | 2e |
 | (future) import formats | | 3 |
 | (deferred, before any auto-update re-enable) `latestReleaseFromGitHub()` | still fetches hughhowey/neo with UA 'NEO-App'; must be pointed at dark5un/rhema when RHEMA_AUTO_UPDATE flips to true, so the fallback link matches the publish feed | 15-re |
 
@@ -73,7 +77,7 @@ name are the only literal renames (both listed above).
 
 | Anchor | What | Phase |
 |--------|------|-------|
-| `window.neo.rhema` bridge | namespaced IPC (`test` → `ai:test`); more Rhema IPC joins this object | 1+ |
+| `window.neo.rhema` bridge | namespaced IPC (`test` → `ai:test`; `assetPick/assetSet/assetRead/assetClear` → `rhema:asset:*`) | 1+ |
 
 ## index.html
 
@@ -84,6 +88,7 @@ name are the only literal renames (both listed above).
 | `<script src="poetry.js">` (after app.js) | the poetry format — registers into the hook bus at load; app.js init is async so it lands before any book opens | 2 |
 | `<script src="scraps.js">` (after poetry.js) | the scraps drawer (Stone 5) | 2c |
 | `<script src="compare.js">` (after scraps.js) | the compare view (Stone 6) | 2d |
+| `<script src="qrcode-generator.js">` + `<script src="qrmark.js">` | vendored MIT QR encoder (Kazuhiko Arase, qrcode-generator@1.4.4, unmodified) + the poem mark (Stone 1a) | 2e |
 | (future) more Rhema `<script>` tags | new fork files | 2+ |
 
 ## package.json (no comments possible — listed here instead)

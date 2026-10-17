@@ -94,6 +94,13 @@ const RhemaSettings = (() => {
           </div>
           <p class="soft" style="font-size:12px;margin:0 0 6px">${t('Snapshots you take yourself ({key}) are always kept. “Unlimited” never deletes — the library folder just grows.', { key: K('⌘S', 'Ctrl+S') })}</p>
         </details>
+        <details class="st-advanced">
+          <summary class="soft">${t('Poem QR')}</summary>
+          <div class="stats-row">
+            <label>${t('Each poem’s QR encodes')} <input id="ra-qr" type="text" spellcheck="false" style="width:340px" placeholder="https://example.com/{collection}/{title}"/></label>
+          </div>
+          <p class="soft" style="font-size:12px;margin:0 0 6px">${t('Leave it empty and the QR carries the poem’s title and author as plain text. A template can use {title}, {collection} and {author}.')}</p>
+        </details>
         <div style="text-align:right;margin-top:14px">
           <button id="ra-test" class="btn-quiet" style="margin-right:10px;border:1px solid rgba(255,255,255,.35);padding:5px 14px">${t('Test')}</button>
           <button class="m-cancel btn-quiet" style="margin-right:10px">${t('Cancel')}</button>
@@ -110,6 +117,7 @@ const RhemaSettings = (() => {
     fill('ra-model', text.model);
     fill('ra-imgurl', img.url || DEFAULT_COMFY);
     fill('ra-ckpt', img.checkpoint);
+    fill('ra-qr', (cfg().qr || {}).template);
     const note = bd.querySelector('#ra-keynote');
     const key = bd.querySelector('#ra-key');
     window.neo.hasSecret('rhema-ai').then((has) => {
@@ -167,9 +175,11 @@ const RhemaSettings = (() => {
       else if (k) await window.neo.setSecret('rhema-ai', k);
       const back = bd.querySelector('#ra-retbackups').value;
       const snaps = bd.querySelector('#ra-retsnaps').value;
+      const qrTemplate = bd.querySelector('#ra-qr').value.trim();
       // merge, never replace: other library.rhema sub-keys (Phase 2+) survive
       library.rhema = Object.assign({}, cfg(), {
         ai: collect(),
+        qr: { ...(cfg().qr || {}), template: qrTemplate || undefined },
         retention: {
           backups: back === 'unlimited' ? 'unlimited' : parseInt(back, 10),
           snapshots: snaps === 'unlimited' ? 'unlimited' : parseInt(snaps, 10)
