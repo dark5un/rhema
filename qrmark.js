@@ -11,6 +11,8 @@
 /*             'off'     = no QR for this poem                           */
 /*    .drawing undefined = the collection's drawing,                    */
 /*             fname     = this poem's own asset (rhema-drawing-<chId>) */
+/*             'kind:X'  = a generated inline drawing (ornament,        */
+/*                         poem fingerprint, monogram — drawings.js)    */
 /*             'off'     = no drawing for this poem                     */
 /*                                                                      */
 /*  The asset is vector (SVG) or raster — the poet's choice; every       */
@@ -80,6 +82,10 @@ const RhemaQr = (() => {
   // read as a "pasted-on gray rectangle" (UX review); the mark is now a
   // deliberate end-of-poem colophon: vector art at full strength, the QR
   // stepped down under it, the whole block kept off page breaks.
+  // Drawings come two ways: an asset FILE (imported or AI — rendered as
+  // a data-URL <img>, the safe posture), or a generated KIND declared as
+  // 'kind:<name>' — rendered INLINE, so currentColor follows the theme's
+  // ink (an <img> SVG would resolve it to black and vanish on night).
   // ALL styling rides inline on the elements: Paged.js page cloning does
   // not apply ancestor-based CSS selectors in the print window (pitfall
   // recorded 2026-10-17 — the qrmark pattern). ----
@@ -87,13 +93,20 @@ const RhemaQr = (() => {
     const rec = poemRec(chId);
     const qrOff = rec && rec.qr === 'off';
     const svg = qrOff ? '' : qrSvg(payload(chId, title, collection, author), 64);
-    const key = rec && typeof rec.drawing === 'string' && rec.drawing !== 'off' ? chId : 'collection';
-    const art = (rec && rec.drawing === 'off') ? null : drawings.get(key);
-    if (!svg && !art) return '';
-    const artImg = art
-      ? `<img class="rhema-mark-drawing" src="${art}" alt="" style="display:block;max-height:72px;max-width:160px;object-fit:contain">`
-      : '';
-    return `<div class="rhema-poem-mark" contenteditable="false" style="display:flex;flex-direction:column;align-items:center;gap:10px;margin-top:2.2em;break-inside:avoid;page-break-inside:avoid">${artImg}${svg ? `<span class="rhema-mark-qr" style="display:inline-block">${svg}</span>` : ''}</div>`;
+    const decl = rec && rec.drawing;
+    let artHtml = '';
+    if (decl !== 'off') {
+      if (typeof decl === 'string' && decl.indexOf('kind:') === 0) {
+        const inline = (typeof RhemaDraw !== 'undefined') ? RhemaDraw.svgFor(decl, chId) : '';
+        if (inline) artHtml = `<span class="rhema-mark-drawing" style="display:flex">${inline}</span>`;
+      } else {
+        const key = typeof decl === 'string' && decl ? chId : 'collection';
+        const art = drawings.get(key);
+        if (art) artHtml = `<img class="rhema-mark-drawing" src="${art}" alt="" style="display:block;max-height:72px;max-width:160px;object-fit:contain">`;
+      }
+    }
+    if (!svg && !artHtml) return '';
+    return `<div class="rhema-poem-mark" contenteditable="false" style="display:flex;flex-direction:column;align-items:center;gap:10px;margin-top:2.2em;break-inside:avoid;page-break-inside:avoid">${artHtml}${svg ? `<span class="rhema-mark-qr" style="display:inline-block">${svg}</span>` : ''}</div>`;
   }
 
   // ---- editor: the mark sits at the end of the chapter section ----
@@ -138,7 +151,9 @@ const RhemaQr = (() => {
     await loadDrawing(meta.id, 'collection');
     const poems = (meta.rhema && meta.rhema.poems) || {};
     for (const chId of Object.keys(poems)) {
-      if (typeof poems[chId].drawing === 'string' && poems[chId].drawing !== 'off') await loadDrawing(meta.id, chId);
+      const d = poems[chId].drawing;
+      // 'kind:…' declarations are generated inline — no file to load
+      if (typeof d === 'string' && d !== 'off' && d.indexOf('kind:') !== 0) await loadDrawing(meta.id, chId);
     }
   }
 
@@ -192,6 +207,7 @@ const RhemaQr = (() => {
     const off = rec && rec.drawing === 'off';
     const choice = await optionModal(t('This poem’s drawing'), null, [
       { label: t('Set this poem’s drawing…'), value: 'set' },
+      { label: t('A generated drawing…'), value: 'kind' },
       ...(own ? [{ label: t('Remove it (use the collection’s)'), value: 'clear' }] : []),
       ...(off ? [{ label: t('Show a drawing here again'), value: 'on' }]
               : [{ label: t('Never show a drawing for this poem'), value: 'off' }])
@@ -205,6 +221,16 @@ const RhemaQr = (() => {
       if (!got) { toast(t('That image could not be added.')); return; }
       setPoemField(chId, 'drawing', got);
       await loadDrawing(book.id, chId);
+    } else if (choice === 'kind') {
+      // Stone 17: ornaments, the poem fingerprint, the monogram seal —
+      // deterministic vectors, no AI, declared as 'kind:<name>' and
+      // rendered inline (theme ink, live drop-cap and fingerprint)
+      const kinds = (typeof RhemaDraw !== 'undefined') ? RhemaDraw.KINDS : [];
+      if (!kinds.length) return;
+      const pick = await optionModal(t('A generated drawing'), t('Drawn from the poem itself — no AI, always vector.'),
+        kinds.map((k) => ({ label: k.label(), value: k.v })));
+      if (!pick) return;
+      setPoemField(chId, 'drawing', 'kind:' + pick);
     } else if (choice === 'clear') {
       await window.neo.rhema.assetClear(book.id, chId);
       drawings.delete(chId);

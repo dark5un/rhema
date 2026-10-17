@@ -501,6 +501,67 @@ test('qr mark: the collection drawing sits in the colophon, a poem can override 
   assert.equal(await js(`window.neo.rhema.assetRead(${JSON.stringify(bookId)}, 'collection')`), null, 'and clears');
 });
 
+test('generated drawings (Stone 17): inline vectors from kind declarations', async () => {
+  const ch0 = await js('book.chapterOrder[0]');
+  const ch1 = await js('book.chapterOrder[1]');
+  const bookId = await js('book.id');
+  const dir = path.join(LIB, fs.readdirSync(LIB).find((d) => d.startsWith('book-')));
+  // the colophon test left a per-poem raster behind — a kind declaration
+  // must not be shadowed by it, and the "no file written" check needs a
+  // clean slate
+  for (const f of fs.readdirSync(dir)) {
+    if (f.startsWith('rhema-drawing-' + ch0)) fs.unlinkSync(path.join(dir, f));
+  }
+  const author0 = await js('book.author');
+  const setKind = (k) => js(`(() => { book.rhema.poems[${JSON.stringify(ch0)}] = Object.assign({}, book.rhema.poems[${JSON.stringify(ch0)}], { drawing: ${JSON.stringify('kind:' + k)} }); saveMeta(); renderChapters(); })()`);
+  // an ornament renders INLINE (not an <img>): currentColor follows the theme
+  await setKind('fleuron');
+  await tick(250);
+  const inline = await js(`(() => {
+    const m = document.querySelector('.chapter[data-id="' + book.chapterOrder[0] + '"] > .rhema-poem-mark');
+    const s = m && m.querySelector('span.rhema-mark-drawing > svg');
+    return { svg: !!s, img: !!(m && m.querySelector('img.rhema-mark-drawing')), stroke: s && (s.querySelector('[stroke]') || {}).getAttribute && s.querySelector('[stroke]').getAttribute('stroke') };
+  })()`);
+  assert.ok(inline.svg && !inline.img, 'the fleuron is an inline SVG in the mark, no img');
+  assert.equal(inline.stroke, 'currentColor', 'monoline art rides currentColor — theme ink, black in print');
+  // the drop-cap initial comes from the poem's own first letter (Κεριά)
+  await setKind('dropcap');
+  await tick(250);
+  const cap = await js(`(() => {
+    const s = document.querySelector('.chapter[data-id="' + book.chapterOrder[0] + '"] > .rhema-poem-mark span.rhema-mark-drawing svg text');
+    return s && s.textContent;
+  })()`);
+  assert.equal(cap, 'Τ', 'the drop-cap takes the poem\u2019s first letter (Του μέλλοντος…)');
+  // the fingerprint is deterministic from the text: same poem, same path
+  await setKind('fingerprint');
+  await tick(250);
+  const fp1 = await js(`document.querySelector('.chapter[data-id="' + book.chapterOrder[0] + '"] > .rhema-poem-mark span.rhema-mark-drawing svg path').getAttribute('d')`);
+  await js('renderChapters()');
+  await tick(150);
+  const fp2 = await js(`document.querySelector('.chapter[data-id="' + book.chapterOrder[0] + '"] > .rhema-poem-mark span.rhema-mark-drawing svg path').getAttribute('d')`);
+  assert.ok(fp1 && fp1.length > 500, 'the fingerprint is a long continuous line');
+  assert.equal(fp1, fp2, 'the same poem always draws the same fingerprint');
+  await js(`(() => { book.rhema.poems[${JSON.stringify(ch1)}] = Object.assign({}, book.rhema.poems[${JSON.stringify(ch1)}], { drawing: 'kind:fingerprint' }); saveMeta(); renderChapters(); })()`);
+  await tick(250);
+  const other = await js(`document.querySelector('.chapter[data-id="' + book.chapterOrder[1] + '"] > .rhema-poem-mark span.rhema-mark-drawing svg path').getAttribute('d')`);
+  assert.ok(other && other !== fp1, 'a different poem draws a different fingerprint');
+  // the monogram seal takes the author's initials
+  await js(`book.author = 'Panos Xynos'; saveMeta(); renderChapters();`);
+  await setKind('monogram');
+  await tick(250);
+  const mono = await js(`(() => {
+    const s = document.querySelector('.chapter[data-id="' + book.chapterOrder[0] + '"] > .rhema-poem-mark span.rhema-mark-drawing svg');
+    return { text: s.querySelector('text').textContent, rings: s.querySelectorAll('circle').length };
+  })()`);
+  assert.equal(mono.text, 'PX', 'the seal carries the poet\u2019s initials');
+  assert.equal(mono.rings, 2, 'a double ring, like a stamp');
+  // no file was written for a kind: the slot stays declaration-only
+  const got = await js(`window.neo.rhema.assetRead(${JSON.stringify(bookId)}, ${JSON.stringify(ch0)})`);
+  assert.equal(got, null, 'a kind declaration writes no asset file');
+  await js(`(() => { book.author = ${JSON.stringify(author0)}; delete book.rhema.poems[${JSON.stringify(ch0)}].drawing; delete book.rhema.poems[${JSON.stringify(ch1)}].drawing; saveMeta(); renderChapters(); })()`);
+});
+
+
 test('scraps: drag a card, the poem body marks itself, the drop lands the line', async () => {
   const ok = await js(`(() => {
     const card = document.querySelector('#rhema-scraps .rhema-scrap');
