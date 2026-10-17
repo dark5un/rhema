@@ -57,7 +57,7 @@
    without it the paper renders off-screen), and zero the manuscript's
    stanza side-margins inside the columns (2.5em each side ate 85px of
    every column). The font steps down 0.95em so Kavafis's longest
-   Η πόλις line (~454px) fits a 1280px window. Scoped to
+   Η πόλις line (406px measured at 0.95em) fits a 1280px window. Scoped to
    #snap-view.rhema-compare — compare.js adds it only for poem books
    and removes it otherwise — so a novel's snapshot view keeps NEO's
    layout. Pure CSS :has(): no anchors, self-cleaning. */

@@ -139,6 +139,6 @@ semantics, extend emit then — don't special-case call-sites.
   product-name strings inside locales are handled with the Greek top-up
   pass (Stone 11), not by renaming keys. el.json topped up 2026-10-17
   (295 new Greek entries incl. every Rhema string; en.json gained the
-  fork's two English plurals). Other locales untouched — they fall back
+  fork's three English plurals). Other locales untouched — they fall back
   to English keys, rebranded by the i18n seam.
 - `upstream` remote is fetch-only (`--push no_push`); never contact upstream.

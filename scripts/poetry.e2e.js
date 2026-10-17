@@ -37,13 +37,18 @@ BrowserWindow.prototype.loadFile = function (file, opts) {
 require('../main.js');
 
 let wc;
+let dbg = null; // webContents.debugger once attached (viewport pin + text input)
 const js = (code) => wc.executeJavaScript(code, true);
 const tick = (ms = 40) => new Promise((resolve) => setTimeout(resolve, ms));
 const key = (opts) => js(`document.activeElement.dispatchEvent(new KeyboardEvent('keydown', Object.assign({ bubbles: true, cancelable: true }, ${JSON.stringify(opts)})))`);
 const enter = () => key({ key: 'Enter', code: 'Enter' });
 const type = async (s) => {
-  await js(`document.execCommand('insertText', false, ${JSON.stringify(s)})`);
-  await js('enterRun = 0'); // real typing resets the Enter rhythm; execCommand does not
+  // CDP Input.insertText needs only DOM focus; execCommand('insertText') also
+  // demands WM focus, which Hyprland does not give the harness window when it
+  // opens on another workspace (2026-10-17: 8 tests failed on silent no-op typing).
+  if (dbg) await dbg.sendCommand('Input.insertText', { text: s });
+  else await js(`document.execCommand('insertText', false, ${JSON.stringify(s)})`);
+  await js('enterRun = 0'); // real typing resets the Enter rhythm; insertText does not
 };
 // the stanzas of the chapter being read, as arrays of lines
 const CHID = `currentChapterId || book.chapterOrder.filter((c) => isStory(c))[0]`;
@@ -353,6 +358,25 @@ test('compare: a poem snapshot shows then/now columns and marks added words', as
   assert.equal(cmp.thenHasHeron, false);
   assert.equal(cmp.nowHasHeron, true);
   assert.ok(cmp.added >= 1, 'the added word is marked');
+  // Geometry guard (gate lesson, 2026-10-17): take 1 probed width only, take 2
+  // left translateX(-50%) unreset and the paper rendered off-screen. Require
+  // the paper on-screen AND every compare paragraph's rendered line-box count
+  // equal to its <br>-split line count — verse keeps its line structure.
+  const geo = await js(`(() => {
+    const ps = document.getElementById('paper-scroll');
+    const paras = document.querySelectorAll('.rhema-compare p.poetry');
+    const wrap = [];
+    for (const p of paras) {
+      const r = document.createRange(); r.selectNodeContents(p);
+      const tops = new Set([...r.getClientRects()].filter((x) => x.width > 0).map((x) => Math.round(x.top)));
+      const textLines = p.innerHTML.split('<br>').length;
+      if (tops.size > textLines) wrap.push({ text: p.textContent.slice(0, 40), tops: tops.size, textLines });
+    }
+    return { paperLeft: Math.round(ps.getBoundingClientRect().left), paras: paras.length, wrap };
+  })()`);
+  assert.ok(geo.paras >= 2, 'the geometry probe saw the compare paragraphs');
+  assert.ok(geo.paperLeft >= 0, 'the compare paper is on-screen (take-2 regression guard)');
+  assert.deepEqual(geo.wrap, [], 'no verse line wraps inside the compare columns');
   await js(`document.querySelector('.tab[data-tab="manuscript"]').click()`);
   await tick(200);
 });
@@ -533,6 +557,17 @@ test('a novel still gets NEO\'s Enter rhythm (anchors change nothing)', async ()
   await enter(); await tick();
   const cls = await js(`Array.from(document.querySelector('.chapter[data-id="' + (${CHID}) + '"] .chapter-body').children).map((p) => p.className)`);
   assert.ok(cls.includes('scene-break'), 'double Enter still makes a section break in prose');
+  // Leak guard: after a poem's compare view has been open, a NOVEL's snapshot
+  // view must get no compare chrome and keep NEO's stacked layout.
+  await js(`document.querySelector('.tab[data-tab="darlings"]').click()`);
+  await tick(250);
+  const nsnap = await js(`(async () => { const r = await takeSnapshot(SNAP_KEPT); return r && r.snap && r.snap.name; })()`);
+  assert.ok(nsnap, 'the novel snapshot was taken');
+  await js(`showSnapshot(${JSON.stringify(nsnap)})`);
+  await tick(400);
+  assert.equal(await js('document.querySelectorAll(".rhema-compare, .rhema-compare-grid").length'), 0, 'a novel snapshot gets no compare chrome');
+  await js(`document.querySelector('.tab[data-tab="manuscript"]').click()`);
+  await tick(200);
 });
 
 test('poem chrome: chapter words become poem words in the open book, and back on the shelf', async () => {
@@ -566,6 +601,15 @@ async function main() {
     while (!(await js(`typeof library !== 'undefined' && !!library && typeof library.moreFeatures === 'boolean'`).catch(() => false))) await tick(50);
     await tick(300);
     win.focus();
+    // Pin the layout viewport: Hyprland tiles the harness window and ignores
+    // setBounds, so the geometry assertions below need a known width. (Gate
+    // lesson 2026-10-17: the compare-view wrap BLOCKER regressed twice because
+    // probes measured at whatever size the WM happened to give.)
+    try {
+      wc.debugger.attach('1.3');
+      dbg = wc.debugger;
+      await wc.debugger.sendCommand('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
+    } catch (err) { console.log('[harness] debugger unavailable, falling back to execCommand:', err.message); }
     for (const t of tests) {
       try {
         await t.fn();
