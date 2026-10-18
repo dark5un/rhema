@@ -8,6 +8,10 @@ Rhema runs locally. WIPs are saved in plain files on your disk. No accounts or s
 
 Rhema is a new project based on [Hugh Howey's NEO](https://github.com/hughhowey/neo) (MIT), which it keeps whole — every novel, screenplay, KDP and export feature works untouched — and grows a first-class poetry format on top.
 
+## Status: alpha
+
+Rhema is **alpha-quality software, shared as-is with no liability** — the MIT license already disclaims all warranty, and we mean it plainly: this is built for one working poet first and tested on her books, not hardened for the world. Expect rough edges. Your words are always recoverable inside Rhema (Darlings, trash, snapshots), but keep your own backups of your library folder regardless. Bug reports are welcome — they're how alpha becomes stable.
+
 ## Download
 
 Binaries are built by CI and posted on the [Releases page](https://github.com/dark5un/rhema/releases): Linux **AppImage** (x64 + arm64), Windows installer + portable, and macOS dmg/zip (arm64 + x64). The macOS builds are unsigned for now — Gatekeeper will warn; open with right-click → Open. On Linux, if the AppImage complains about a sandbox (common on Ubuntu 24.04 and newer), run it as `./Rhema-*.AppImage --no-sandbox`. Your library lives in `~/Documents/Rhema Library`; File → Library Folder… moves it anywhere you like. On first run Rhema notices an existing `NEO Library` and offers to open it — nothing from NEO is ever left behind or moved without asking.
