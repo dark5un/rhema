@@ -33,3 +33,4 @@ docs/sessions/
 .prowl/
 .prowl-setup.lock
 # /prowl-agent: derived state
+.w6-shots/

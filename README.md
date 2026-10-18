@@ -2,6 +2,8 @@
 
 **Site & guides: [rhema.guide](https://rhema.guide)** (English / Ελληνικά)
 
+![Rhema — the poem is a first-class object](docs/rhema-hero.png)
+
 **A distraction-free word processor for authors — novels, screenplays, and poetry.**
 
 Rhema understands from the moment you install it that you are writing *books* and nothing else. No bloat, no distractions, with manuscripts that look like books as you write them. And now poems look like poems: line by line, the way you typed them.
@@ -16,7 +18,7 @@ Rhema is **alpha-quality software, shared as-is with no liability** — the MIT 
 
 ## Download
 
-Binaries are built by CI and posted on the [Releases page](https://github.com/dark5un/rhema/releases): Linux **AppImage** (x64 + arm64), Windows installer + portable, and macOS dmg/zip (arm64 + x64). The macOS builds are unsigned for now — Gatekeeper will warn; open with right-click → Open. On Linux, if the AppImage complains about a sandbox (common on Ubuntu 24.04 and newer), run it as `./Rhema-*.AppImage --no-sandbox`. Your library lives in `~/Documents/Rhema Library`; File → Library Folder… moves it anywhere you like. On first run Rhema notices an existing `NEO Library` and offers to open it — nothing from NEO is ever left behind or moved without asking.
+Binaries are built by CI and posted on the [Releases page](https://github.com/dark5un/rhema/releases): Linux **AppImage** (x64 + arm64), Windows installer + portable, and macOS dmg/zip (arm64 + x64). The macOS builds are unsigned for now — the signing/notarization pipeline works, but Apple's notarization is currently held up on Apple's side; until it clears, Gatekeeper will warn — open with right-click → Open. On Linux, if the AppImage complains about a sandbox (common on Ubuntu 24.04 and newer), run it as `./Rhema-*.AppImage --no-sandbox`. Your library lives in `~/Documents/Rhema Library`; File → Library Folder… moves it anywhere you like. On first run Rhema notices an existing `NEO Library` and offers to open it — nothing from NEO is ever left behind or moved without asking.
 
 ## Poetry, the third format
 
@@ -24,7 +26,7 @@ A **New Poem Collection** sits on the shelf beside novels and scripts. Inside it
 
 - **Enter is the rhythm.** One Enter: a new line. Two: a new stanza. Three: a new poem. Lines are soft breaks inside one file per poem, so the machinery that protects novels protects verses.
 - **Line surgery with full undo:** move a line up/down across stanzas (Alt+↑/↓), duplicate (Alt+D), join/split at the caret (Alt+J), indent (Tab). Every op is ⌘Z-able.
-- **Outline cards** per poem: title, first line, line count, status dot (draft → fair copy → done), with a progress chip for the collection. Drag to sequence.
+- **Outline cards** per poem: title, first line, line count, status dot (draft → fair copy → finished), with a progress chip for the collection. Drag to sequence.
 - **Scraps drawer:** cut a line or stanza you love-but-can't-keep (Alt+Shift+X) and it waits, tagged with its origin poem, for a better home.
 - **Then/Now compare:** daily and manual snapshots side by side with added-word marks.
 - **A colophon at each poem's end:** a QR and a drawing — five kinds per poem (AI monoline line art, AI illustration, public-domain ornaments, a procedural fingerprint drawn from the poem's own text, or your own SVG/PNG and monogram).
