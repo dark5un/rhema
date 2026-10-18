@@ -3482,8 +3482,22 @@ let updater = null;          // electron-updater's autoUpdater, wired once
 /* RHEMA */ // electron-updater wiring, and downloads. Help → Check for
 /* RHEMA */ // Update… (the plain-API fallback) always works, opted in or not.
 /* RHEMA */ function rhemaAutoUpdateOn() {
-  return !!((readJSON(LIBRARY_FILE, {}).rhema || {}).autoUpdate);
+  // fail-closed: a missing/unreadable library file means OFF (gate NICE:
+  // readJSON can throw on iCloud dataless files)
+  try { return !!((readJSON(LIBRARY_FILE, {}).rhema || {}).autoUpdate); }
+  catch { return false; }
 }
+/* RHEMA */ // security gate SHOULD (2026-10-18): opting out must also disarm a
+/* RHEMA */ // wired-up updater — electron-updater registers its own quit handler
+/* RHEMA */ // on download-complete that checks autoInstallOnAppQuit, not our
+/* RHEMA */ // setting. The settings pane calls this right after Save; the
+/* RHEMA */ // background look calls it every tick.
+/* RHEMA */ function rearmUpdater() {
+  const on = rhemaAutoUpdateOn();
+  if (updater) { updater.autoInstallOnAppQuit = on; updater.autoDownload = on; }
+  return on;
+}
+ipcMain.handle('update:rearm', () => rearmUpdater());
 let updaterReady = false;    // an update is downloaded and waiting
 // where the background download stands, so the window can pick it up mid-way
 const upd = { state: 'idle', version: '', percent: 0, transferred: 0, total: 0, message: '' };
@@ -3625,7 +3639,7 @@ const UPDATE_EVERY = 60 * 60 * 1000;
 function checkForUpdates() {
   /* RHEMA */ if (!RHEMA_AUTO_UPDATE) return;
   if (!app.isPackaged) return;
-  const look = () => { if (!rhemaAutoUpdateOn()) return; lookForUpdate().catch(() => { /* logged in lookForUpdate */ }); };
+  const look = () => { if (!rhemaAutoUpdateOn()) { rearmUpdater(); return; } lookForUpdate().catch(() => { /* logged in lookForUpdate */ }); };
   setTimeout(look, 8000);
   const timer = setInterval(look, UPDATE_EVERY);
   if (timer.unref) timer.unref();

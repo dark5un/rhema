@@ -212,6 +212,7 @@ const RhemaSettings = (() => {
         autoUpdate: bd.querySelector('#ra-auto').checked || undefined /* RHEMA — Panos: auto-update is the user's choice, default off */
       });
       await writeLibrary(library);
+      await window.neo.rhema.rearm(); /* RHEMA — security gate: opting out disarms a wired-up updater immediately, not at the next hourly look */
       done();
       toast(t('Saved. Rhema will paint a cover once a book passes {n} words.', { n: PAINT_AT }), 5000);
     };

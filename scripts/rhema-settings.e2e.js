@@ -94,6 +94,17 @@ app.whenReady().then(async () => {
   check('auto-update opt-in saved (library.rhema.autoUpdate)',
     !!(rhema && rhema.autoUpdate === true),
     JSON.stringify(rhema && rhema.autoUpdate));
+  // opt-out round-trip (security gate SHOULD, 2026-10-18): OFF persists
+  // AND disarms a wired-up updater immediately via update:rearm
+  await js('RhemaSettings.open()');
+  await tick(200);
+  await js(`(() => { document.querySelector('#ra-auto').checked = false; document.querySelector('.m-ok').click(); })()`);
+  await tick(300);
+  const rhemaOff = onDisk().rhema;
+  check('auto-update opt-out removes the key from library.rhema',
+    rhemaOff && rhemaOff.autoUpdate === undefined, JSON.stringify(rhemaOff && rhemaOff.autoUpdate));
+  check('update:rearm reports OFF after opt-out (updater disarmed path live)',
+    await js('window.neo.rhema.rearm()') === false);
   check('the configured app now counts as paintable without any OpenAI key',
     await js('RhemaSettings.configured() === true && RhemaSettings.snapKeepDays() === 90'));
 

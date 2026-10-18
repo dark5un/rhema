@@ -52,7 +52,8 @@ contextBridge.exposeInMainWorld('neo', {
     assetRead: (bookId, key) => ipcRenderer.invoke('rhema:asset:read', bookId, key),
     assetClear: (bookId, key) => ipcRenderer.invoke('rhema:asset:clear', bookId, key),
     draw: (bookId, chId, kind, motif, text) => ipcRenderer.invoke('rhema:draw', bookId, chId, kind, motif, text) /* RHEMA — Stone 17: AI drawings; settings never renderer-supplied */,
-    poemAi: (bookId, chId, kind, text, collection) => ipcRenderer.invoke('rhema:poemai', bookId, chId, kind, text, collection) /* RHEMA — Stones 7+8: Reader's Eye + title suggestions; read posture, settings never renderer-supplied */
+    poemAi: (bookId, chId, kind, text, collection) => ipcRenderer.invoke('rhema:poemai', bookId, chId, kind, text, collection) /* RHEMA — Stones 7+8: Reader's Eye + title suggestions; read posture, settings never renderer-supplied */,
+    rearm: () => ipcRenderer.invoke('update:rearm') /* RHEMA — auto-update is the user's choice: disarm/arm the wired updater right after Save */
   },
   importFiles: (paths, opts) => ipcRenderer.invoke('import:files', paths, opts), /* RHEMA — opts carries the poetry mode */
   pathForFile: (file) => webUtils.getPathForFile(file),
