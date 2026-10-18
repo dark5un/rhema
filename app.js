@@ -15430,7 +15430,7 @@ function bookShortcutSections() {
       ...(more ? [[KFN, tk('Add a footnote'), tk('Type the note, then Enter to go back to writing. Click its number to change it.')]] : []),
       [KDA, tk('Move selected text to Darlings')],
       ...(more ? [[K('⌘⇧U', IS_LINUX ? 'Ctrl+Shift+K' : 'Ctrl+Shift+U'), tk('Read aloud from the cursor'), tk('Again, Esc or any key stops it. Uses your computer’s own voice.')]] : []),
-      ...(more && poemBook() ? [[K('⌘⇧E', 'Ctrl+Shift+E'), tk("Reader's Eye"), tk('The AI reads the open poem and files observations in the Notes tab. It never touches the poem.')]] : [])
+      ...(poemBook() ? [[K('⌘⇧E', 'Ctrl+Shift+E'), tk("Reader's Eye"), tk('The AI reads the open poem and files observations in the Notes tab. It never touches the poem.')]] : []) /* RHEMA — Phase 4 shortcut row (c6b9e8f, marker added at the Phase 5 gate); Phase 5: ungated for poem books — the guide teaches the chord on first run */
     ] },
     { title: tk('Formatting'), rows: [
       ...(more ? [[['*…*', '**…**', '***…***'], tk('Italic, bold, the Markdown way'), tk('Typed around a word (or pasted). Undo right after keeps the asterisks. Format → Markdown Emphasis turns it off.')]] : []),

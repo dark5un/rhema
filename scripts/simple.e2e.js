@@ -63,7 +63,10 @@ const caretInFirst = () => js(`(() => {
   getSelection().addRange(r);
   currentChapterId = id;
 })()`);
-const MORE_MENU = ['Vim Keys', 'Focus Mode', 'Language', 'Spellcheck Language', 'Manuscript Format…', 'Import Chapters…', 'Poetry Paragraph'];
+// RHEMA Phase 5 gate: 'Language' and 'Spellcheck Language' are no longer
+// behind the switch (Stone 11 "one switch away" + poet-core posture) —
+// pinned present below, mirroring simple-neo.test.js.
+const MORE_MENU = ['Vim Keys', 'Focus Mode', 'Manuscript Format…', 'Import Chapters…', 'Poetry Paragraph'];
 
 const tests = [];
 const test = (name, fn) => tests.push({ name, fn });
@@ -76,7 +79,7 @@ test('a library that uses nothing behind the switch is decided simple, on disk',
 test('the menu bar is simple, with Show More Features unticked', async () => {
   const labels = menuLabels();
   for (const l of MORE_MENU) assert.ok(!labels.includes(l), l + ' is hidden');
-  for (const l of ['Show More Features', 'Typewriter Scrolling', 'Paperback for KDP…', 'Goals…']) assert.ok(labels.includes(l), l + ' is there');
+  for (const l of ['Show More Features', 'Typewriter Scrolling', 'Paperback for KDP…', 'Goals…', 'Language', 'Spellcheck Language', 'Rhema Settings…']) assert.ok(labels.includes(l), l + ' is there');
 });
 
 test('the Outline is the list, with no cards or loose cards', async () => {
