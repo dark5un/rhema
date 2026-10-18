@@ -150,8 +150,12 @@ test('union-acceptance: Greek and English pass, French is still flagged', async 
 });
 
 test('the Edit menu really carries the picker entry', () => {
+  // locale-aware: the label is t(key), so accept the English key or the
+  // Greek translation (the shot harness runs the picker in el UI too)
+  const el = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'locales', 'el.json'), 'utf8'));
+  const want = new Set(["This book's languages…", el["This book's languages…"]]);
   const menu = Menu.getApplicationMenu();
-  const edit = menu.items.find((i) => i.submenu && i.submenu.items.some((s) => s.label === "This book's languages…"));
+  const edit = menu.items.find((i) => i.submenu && i.submenu.items.some((s) => want.has(s.label)));
   assert.ok(edit, 'an Edit submenu holds "This book\'s languages…" (the guide\'s path exists)');
 });
 

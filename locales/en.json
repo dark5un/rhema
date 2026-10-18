@@ -89,8 +89,8 @@
     "one": "Snapshot taken, {time}: {n} chapter changed. It’s on the Darlings tab.",
     "other": "Snapshot taken, {time}: {n} chapters changed. It’s on the Darlings tab."
   },
-  "{n} languages for this book": {
-    "one": "{n} language for this book.",
-    "other": "{n} languages for this book."
+  "{n} more": {
+    "one": "+{n} more",
+    "other": "+{n} more"
   }
 }

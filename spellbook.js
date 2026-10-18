@@ -59,8 +59,20 @@ async function bookSpellPicker() {
   if (!book) { toast(t('Open a book first, then choose its languages.')); return; }
   const langs = await rhemaSpellLanguages();
   if (!langs.length) { toast(t('The dictionary list could not be read.')); return; }
+  // Gate round-2 (UI): rows and toast speak with one voice — the
+  // t()-translated names app.js already uses, endonym label as fallback.
+  const nameOf = (l) => (window.SPELL_LANGUAGE_NAMES && SPELL_LANGUAGE_NAMES[l.code]) || l.label;
   const declared = rhemaValidSet(book.spellLanguages);
-  const primary = declared[0] || (library && library.spellLanguage) || 'en-US';
+  let primary = declared[0] || (library && library.spellLanguage) || 'en-US';
+  // Gate round-2 (UX): a Greek poet opening the picker on a book that
+  // declares nothing must not meet "English (US)" as her primary. This
+  // pre-fills the dropdown ONLY — the interface still never drives the
+  // dictionary (Stone 20); it takes effect only if she saves.
+  if (!declared.length && !library.spellLanguage) {
+    const ui = (NeoI18n.getLocale() || 'en').split('-')[0];
+    const hit = langs.find((l) => l.code === ui || l.code.split('-')[0] === ui);
+    if (hit) primary = hit.code;
+  }
   const also = new Set(declared.slice(1));
 
   const bd = document.createElement('div');
@@ -68,18 +80,19 @@ async function bookSpellPicker() {
   const rows = langs.map((l) => `
     <label style="display:flex;gap:8px;align-items:center;padding:3px 0">
       <input type="checkbox" data-code="${l.code}" ${also.has(l.code) ? 'checked' : ''} ${l.code === primary ? 'disabled' : ''} />
-      <span>${escHtml(l.label)}</span>
+      <span>${escHtml(nameOf(l))}</span>
     </label>`).join('');
-  const opts = langs.map((l) => `<option value="${l.code}" ${l.code === primary ? 'selected' : ''}>${escHtml(l.label)}</option>`).join('');
+  const opts = langs.map((l) => `<option value="${l.code}" ${l.code === primary ? 'selected' : ''}>${escHtml(nameOf(l))}</option>`).join('');
   bd.innerHTML = `
     <div class="modal" style="width:440px">
       <h2 style="font-size:16px">${t("This book's languages…")}</h2>
-      <p>${t('A word is left alone if any language you pick here knows it. Suggestions and quotes follow the primary.')}</p>
+      <p>${t('So that correctly spelled foreign words are never marked wrong: a word is left alone if any language you pick here knows it. Suggestions follow the primary language.')}</p>
       <label style="display:block;margin:8px 0">${t('Primary language')}
         <select id="sb-primary" style="width:100%;margin-top:4px">${opts}</select>
       </label>
       <div style="margin:6px 0 2px">${t('Also accept words from')}</div>
       <div id="sb-also" style="max-height:220px;overflow:auto">${rows}</div>
+      <div style="font-size:12px;opacity:.7;margin-top:4px">${t('Up to 5 languages per book')}</div>
       <div style="text-align:right;margin-top:10px">
         <button class="m-cancel btn-quiet">${t('Cancel')}</button>
         <button class="m-save" style="margin-left:8px">${t('Save')}</button>
@@ -87,8 +100,19 @@ async function bookSpellPicker() {
     </div>`;
   document.body.appendChild(bd);
   const primarySel = bd.querySelector('#sb-primary');
-  const syncDisabled = () => bd.querySelectorAll('#sb-also input').forEach((i) => { i.disabled = i.dataset.code === primarySel.value; });
+  const boxes = () => [...bd.querySelectorAll('#sb-also input')];
+  // Gate round-2 (UX): the cap of five is spoken, not silent — once the
+  // set is full the remaining boxes grey out; and a box promoted to
+  // primary unchecks itself (a checked-but-greyed box reads as "also").
+  const syncDisabled = () => {
+    const full = 1 + boxes().filter((i) => i.checked).length >= 5;
+    boxes().forEach((i) => {
+      if (i.dataset.code === primarySel.value) { i.checked = false; i.disabled = true; }
+      else i.disabled = full && !i.checked;
+    });
+  };
   primarySel.onchange = syncDisabled;
+  bd.querySelectorAll('#sb-also input').forEach((i) => { i.onchange = syncDisabled; });
   syncDisabled();
   const done = () => bd.remove();
   bd.querySelector('.m-cancel').onclick = done;
@@ -98,7 +122,7 @@ async function bookSpellPicker() {
     // open book — wait for it to finish, same guard openBook uses.
     while (shelfExport) await new Promise((r) => setTimeout(r, 50));
     const p = primarySel.value;
-    const extra = [...bd.querySelectorAll('#sb-also input:checked')].map((i) => i.dataset.code).filter((c) => c !== p);
+    const extra = boxes().filter((i) => i.checked).map((i) => i.dataset.code).filter((c) => c !== p);
     const set = rhemaValidSet([p, ...extra]);
     book.spellLanguages = set;
     await saveMeta();
@@ -106,7 +130,12 @@ async function bookSpellPicker() {
     const ok = await syncBookSpell();
     if (!ok) { toast(t('That dictionary would not load')); return; }
     rhemaRescanSpelling();
-    toast(t('{n} languages for this book', { n: set.length }));
+    // Gate round-2 (UX): the toast names the primary — the checkpoint
+    // against the likeliest mistake (primary left in the wrong language).
+    const label = nameOf(langs.find((l) => l.code === set[0]) || { code: set[0], label: set[0] });
+    toast(set.length > 1
+      ? `${t('Primary: {lang}', { lang: label })} · ${t('{n} more', { n: set.length - 1 })}`
+      : t('Primary: {lang}', { lang: label }));
   };
 }
 
