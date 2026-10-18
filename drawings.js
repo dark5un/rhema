@@ -210,7 +210,7 @@ const RhemaDraw = (() => {
     toast(t('The AI is drawing…'), 2500);
     const got = await window.neo.rhema.draw(bookId, chId, kind, ask.trim(), poemText(chId));
     if (gone()) return false;
-    if (got && got.busy) return false;
+    if (got && got.busy) { toast(t('One drawing at a time — the last one is still going.'), 2500); return false; }
     if (got && got.raster) {
       // the picture is already saved main-side (coding gate: it really
       // does stay a picture); a successful trace replaces it with a vector
@@ -225,6 +225,9 @@ const RhemaDraw = (() => {
           renderChapters();
           return true;
         }
+        // coding gate NICE: the trace worked but the vector save did not —
+        // say so, then keep the picture below
+        if (!gone()) toast(t('The vector could not be saved — the picture is kept.'), 4000);
       }
       await RhemaQr.loadDrawing(bookId, chId);
       if (gone()) return false;

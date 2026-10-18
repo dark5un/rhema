@@ -101,3 +101,11 @@ test('sanitizeSvg catches the deny-list gaps (security gate NICE-4)', () => {
   assert.equal(A.sanitizeSvg('<svg><a href="javascript:alert(1)">t</a></svg>'), 'external', 'plain javascript: scheme');
   assert.equal(A.sanitizeSvg('<svg><path d="M0 0L10 10"/></svg>'), null, 'the honest monoline still passes');
 });
+
+test('sanitizeSvg does not false-positive on honest internal url(#..) refs (coding gate S1)', () => {
+  const honest = '<svg><style>.a{fill:red}</style><path filter="url(#f)" d="M0 0L9 9"/></svg>';
+  assert.equal(A.sanitizeSvg(honest), null, 'style block + internal filter ref passes');
+  const clip = '<svg><defs><clipPath id="c"><rect width="9" height="9"/></clipPath></defs><style>.a{fill:red}</style><path clip-path="url(#c)" d="M0 0L9 9"/></svg>';
+  assert.equal(A.sanitizeSvg(clip), null, 'clipPath ref passes');
+  assert.equal(A.sanitizeSvg('<svg><style>.a{mask:url(http://x)}</style><path d="M0 0"/></svg>'), 'external', 'external url inside style still refused');
+});

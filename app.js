@@ -1217,6 +1217,7 @@ async function renderShelves() {
     poemBlank.appendChild(pbLabel);
     poemBlank.title = t('New Poem Collection');
     poemBlank.onclick = () => NeoHooks.format('poetry').createOnShelf(shelf);
+    poemBlank.addEventListener('contextmenu', (e) => e.preventDefault()); /* RHEMA — coding gate: no native menu on the poem tile */
     pressable(poemBlank, t('New Poem Collection'));
     // right-click (a long press on a phone): a book or a script
     if (!isBound(shelf)) {
@@ -18033,7 +18034,7 @@ function installLinuxBodyFonts() {
       value: stack, enumerable: false, writable: true, configurable: true
     });
   }
-  DROPCAP_FONTS.literary = '"Libre Bodoni", "Didot", "Bodoni 72", Georgia, serif';
+  DROPCAP_FONTS.literary = '"GFS Didot", "Libre Bodoni", "Didot", "Bodoni 72", Georgia, serif'; // RHEMA — coding gate B2: an explicit drop-cap pick sets an INLINE --dropcap-font (applyFonts), which would evaporate the GFS Didot win unless the literary stack leads with it too
   DROPCAP_FONTS.fantasy = '"TeX Gyre Chorus", "Apple Chancery", "Snell Roundhand", cursive';
   DROPCAP_FONTS.scifi = '"Jost", Futura, "Avenir Next", "Helvetica Neue", sans-serif';
   // A shared choice list, when the renderer defines one, has to name these

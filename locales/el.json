@@ -19,6 +19,8 @@
  "The drawing of “{title}”": "Το σχέδιο του «{title}»",
  "What the AI drew is not a clean drawing — it was not saved.": "Αυτό που σχεδίασε το AI δεν είναι καθαρό σχέδιο — δεν αποθηκεύτηκε.",
  "Something went wrong with the AI.": "Κάτι πήγε στραβά με το AI.",
+ "One drawing at a time — the last one is still going.": "Ένα σχέδιο τη φορά — το προηγούμενο δεν έχει τελειώσει ακόμα.",
+ "The vector could not be saved — the picture is kept.": "Το διάνυσμα δεν μπόρεσε να αποθηκευτεί — μένει η εικόνα.",
  "Poem": "Ποίημα",
  "The endpoint refused the saved key.": "Η πηγή απέρριψε το αποθηκευμένο κλειδί.",
  "The line drawing could not be turned into vectors — it stays a picture.": "Το γραμμικό σχέδιο δεν μπόρεσε να διανυσματοποιηθεί — μένει εικόνα.",

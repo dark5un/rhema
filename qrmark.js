@@ -144,23 +144,27 @@ const RhemaQr = (() => {
   }
 
   // ---- the drawings (rhema-drawing.* / rhema-drawing-<chId>.* in the book folder) ----
-  async function loadDrawing(bookId, key) {
+  async function loadDrawing(bookId, key, gen) {
     try {
       const got = await window.neo.rhema.assetRead(bookId, key);
+      // coding gate S2: check the generation BEFORE the write — 'collection'
+      // is a shared key, so an old book's in-flight read could otherwise
+      // land in the new book's map after the await
+      if (gen !== undefined && gen !== drawingsGen) return;
       drawings.set(key, got && got.base64 ? `data:${got.mime};base64,${got.base64}` : null);
-    } catch (err) { drawings.set(key, null); }
+    } catch (err) { if (gen === undefined || gen === drawingsGen) drawings.set(key, null); }
   }
   async function loadAllDrawings(meta) {
     const gen = ++drawingsGen;
     drawings.clear();
-    await loadDrawing(meta.id, 'collection');
+    await loadDrawing(meta.id, 'collection', gen);
     if (gen !== drawingsGen) return;
     const poems = (meta.rhema && meta.rhema.poems) || {};
     for (const chId of Object.keys(poems)) {
       const d = poems[chId].drawing;
       // 'kind:…' declarations are generated inline — no file to load
       if (typeof d === 'string' && d !== 'off' && d.indexOf('kind:') !== 0) {
-        await loadDrawing(meta.id, chId);
+        await loadDrawing(meta.id, chId, gen);
         if (gen !== drawingsGen) return;
       }
     }

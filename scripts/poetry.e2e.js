@@ -588,7 +588,7 @@ test('AI drawing kinds (Stone 17): the menu path is live, a dead endpoint answer
   }
   assert.ok(okClicked, 'the motif prompt appears (empty means: derive it from the poem)');
   let hint = '';
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < 200; i++) { // coding gate NICE: 5s budget vs the toast's 5s lifetime was tight on slow machines
     hint = await js('document.getElementById("hint").textContent');
     if (/did not answer/.test(hint)) break;
     await tick(50);

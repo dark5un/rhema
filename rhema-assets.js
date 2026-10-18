@@ -48,7 +48,7 @@ function sanitizeSvg(text) {
   // through HTML entities
   if (/<\s*[A-Za-z0-9_.-]+:\s*(script|foreignObject)\b/i.test(t)) return 'script';
   if (/<\s*(animate|animateTransform|set)\b/i.test(t)) return 'script';
-  if (/<style[^>]*>[\s\S]*?url\s*\(/i.test(t)) return 'external';
+  if (/<style[^>]*>(?:(?!<\/style>)[\s\S])*?url\s*\(/i.test(t)) return 'external'; // coding gate S1: bounded — [\s\S]*? alone ran past </style> and refused honest SVGs with internal url(#..) refs
   if (/(?:xlink:)?href\s*=\s*["'][^"']*&#/i.test(t)) return 'external';
   if (/(?:xlink:)?href\s*=\s*["']\s*(?:javascript|vbscript|data|file):/i.test(t)) return 'external';
   if (/\son[a-z]+\s*=/i.test(t)) return 'script';
