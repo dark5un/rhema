@@ -1069,7 +1069,7 @@
  "This book's languages…": "Γλώσσες αυτού του βιβλίου…",
  "Open a book first, then choose its languages.": "Ανοίξτε πρώτα ένα βιβλίο και μετά διαλέξτε τις γλώσσες του.",
  "The dictionary list could not be read.": "Το Ρήμα δεν μπόρεσε να διαβάσει τη λίστα με τα λεξικά.",
- "So that correctly spelled foreign words are never marked wrong: a word is left alone if any language you pick here knows it. Suggestions follow the primary language.": "Για να μην επισημαίνονται ως λάθος σωστές ξένες λέξεις: μια λέξη δεν πειράζεται αν οποιαδήποτε γλώσσα από όσες διαλέξετε την αναγνωρίζει. Οι προτάσεις ακολουθούν την κύρια γλώσσα.",
+ "So that correctly spelled foreign words are never marked wrong: a word is left alone if any language you pick here knows it. Suggestions and quotes follow the primary language.": "Για να μην επισημαίνονται ως λάθος σωστές ξένες λέξεις: μια λέξη δεν πειράζεται αν οποιαδήποτε γλώσσα από όσες διαλέξετε την αναγνωρίζει. Οι προτάσεις και τα εισαγωγικά ακολουθούν την κύρια γλώσσα.",
  "Primary language": "Κύρια γλώσσα",
  "Also accept words from": "Επίσης δεκτές λέξεις από",
  "Up to 5 languages per book": "Μέχρι 5 γλώσσες ανά βιβλίο",

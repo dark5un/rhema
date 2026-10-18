@@ -82,19 +82,19 @@ async function bookSpellPicker() {
   bd.className = 'modal-backdrop sb-picker';
   const rows = langs.map((l) => `
     <label style="display:flex;gap:8px;align-items:center;padding:3px 0">
-      <input type="checkbox" data-code="${l.code}" ${also.has(l.code) ? 'checked' : ''} ${l.code === primary ? 'disabled' : ''} />
+      <input type="checkbox" data-code="${escAttr(l.code)}" ${also.has(l.code) ? 'checked' : ''} ${l.code === primary ? 'disabled' : ''} />
       <span>${escHtml(nameOf(l))}</span>
     </label>`).join('');
-  const opts = langs.map((l) => `<option value="${l.code}" ${l.code === primary ? 'selected' : ''}>${escHtml(nameOf(l))}</option>`).join('');
+  const opts = langs.map((l) => `<option value="${escAttr(l.code)}" ${l.code === primary ? 'selected' : ''}>${escHtml(nameOf(l))}</option>`).join('');
   bd.innerHTML = `
     <div class="modal" style="width:440px">
       <h2 style="font-size:16px">${t("This book's languages…")}</h2>
-      <p>${t('So that correctly spelled foreign words are never marked wrong: a word is left alone if any language you pick here knows it. Suggestions follow the primary language.')}</p>
+      <p>${t('So that correctly spelled foreign words are never marked wrong: a word is left alone if any language you pick here knows it. Suggestions and quotes follow the primary language.')}</p>
       <label style="display:block;margin:8px 0">${t('Primary language')}
         <select id="sb-primary" style="width:100%;margin-top:4px">${opts}</select>
       </label>
       <div style="margin:6px 0 2px">${t('Also accept words from')}</div>
-      <div id="sb-also" style="max-height:220px;overflow:auto">${rows}</div>
+      <div id="sb-also" style="max-height:220px;overflow:auto;scrollbar-width:thin;scrollbar-color:rgba(200,200,200,.55) transparent">${rows}</div>
       <div style="font-size:12px;opacity:.7;margin-top:4px">${t('Up to 5 languages per book')}</div>
       <div style="text-align:right;margin-top:10px">
         <button class="m-cancel btn-quiet">${t('Cancel')}</button>

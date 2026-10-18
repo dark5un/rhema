@@ -4931,7 +4931,10 @@ function safeSegmentLocale(code) {
 }
 function quoteStyle() {
   const code = writingLanguage();
-  return QUOTE_STYLES[code] || QUOTE_STYLES[code.split('-')[0]] || QUOTE_STYLES.en;
+  // Gate round-3 (security): own-property lookups — a tampered book.json
+  // code like 'constructor' must not resolve through the prototype chain.
+  const own = (m, k) => (typeof k === 'string' && Object.hasOwn(m, k) ? m[k] : null);
+  return own(QUOTE_STYLES, code) || own(QUOTE_STYLES, code.split('-')[0]) || QUOTE_STYLES.en;
 }
 // …unless the book has settled on guillemets its language doesn't use:
 // German novels often set »…« where the language says „…“, Swiss writing
