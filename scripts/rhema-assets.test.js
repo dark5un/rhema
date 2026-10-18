@@ -91,3 +91,13 @@ test('findAsset / clearAsset: one drawing in, none out', () => {
     assert.equal(A.findAsset(dir, '../x'), null, 'bad key reads nothing');
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
+
+test('sanitizeSvg catches the deny-list gaps (security gate NICE-4)', () => {
+  assert.equal(A.sanitizeSvg('<svg><x:script/></svg>'), 'script', 'namespaced script tag');
+  assert.equal(A.sanitizeSvg('<svg><animate attributeName="href" to="http://x/"/></svg>'), 'script', 'SMIL can repoint href after the gate ran');
+  assert.equal(A.sanitizeSvg('<svg><set attributeName="href" to="javascript:alert(1)"/></svg>'), 'script', 'SMIL set');
+  assert.equal(A.sanitizeSvg('<svg><style>path{mask:url(http://x)}</style></svg>'), 'external', 'CSS url() outside reference');
+  assert.equal(A.sanitizeSvg('<svg><a href="&#106;avascript:alert(1)">t</a></svg>'), 'external', 'entity-decoded scheme');
+  assert.equal(A.sanitizeSvg('<svg><a href="javascript:alert(1)">t</a></svg>'), 'external', 'plain javascript: scheme');
+  assert.equal(A.sanitizeSvg('<svg><path d="M0 0L10 10"/></svg>'), null, 'the honest monoline still passes');
+});

@@ -354,3 +354,9 @@ test('drawIllustration: the poem book chain rides the existing SDXL settings', a
   assert.match(graph['2'].inputs.text, /book cover illustration/);
   assert.equal(graph['4'].inputs.width, 832);
 });
+
+test('drawMonolineSvg refuses a non-http base at the call site (security gate NICE-5)', async () => {
+  await assert.rejects(
+    () => ai.drawMonolineSvg({ base: 'file:///etc', apiKey: 'k', model: 'm', motif: 'a lamp', text: 'x' }),
+    /http\(s\) URL: the text model URL/);
+});

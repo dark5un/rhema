@@ -35,7 +35,9 @@ const RhemaScraps = (() => {
       if (n.nodeName === 'BR') lines.push('');
       else lines[lines.length - 1] += n.textContent;
     }
-    return lines.filter((l) => l.trim() !== '');
+    return lines.filter((l) => l.trim() !== '').map((l) => l.trim()); // UX gate: a
+    // poem line's indentation is not part of the quotation — a stray leading
+    // space broke the scrap card's alignment
   }
 
   async function cut(body, chId) {

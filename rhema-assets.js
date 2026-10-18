@@ -42,6 +42,15 @@ function sanitizeSvg(text) {
   if (!/^<svg[\s>]/i.test(t)) return 'not-an-svg';
   if (t.length > 2 * 1024 * 1024) return 'too-big';
   if (/<\s*(script|foreignObject|use)\b/i.test(t)) return 'script';
+  // security gate (defense-in-depth, NICE-4): namespaced script tags,
+  // SMIL animation (animate/set can repoint href after the gate ran),
+  // CSS url() outside references, and scheme values that only decode
+  // through HTML entities
+  if (/<\s*[A-Za-z0-9_.-]+:\s*(script|foreignObject)\b/i.test(t)) return 'script';
+  if (/<\s*(animate|animateTransform|set)\b/i.test(t)) return 'script';
+  if (/<style[^>]*>[\s\S]*?url\s*\(/i.test(t)) return 'external';
+  if (/(?:xlink:)?href\s*=\s*["'][^"']*&#/i.test(t)) return 'external';
+  if (/(?:xlink:)?href\s*=\s*["']\s*(?:javascript|vbscript|data|file):/i.test(t)) return 'external';
   if (/\son[a-z]+\s*=/i.test(t)) return 'script';
   if (/(?:xlink:)?href\s*=\s*["']\s*(?:https?:|\/\/|file:|data:)/i.test(t)) return 'external';
   return null;

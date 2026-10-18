@@ -562,6 +562,48 @@ test('generated drawings (Stone 17): inline vectors from kind declarations', asy
 });
 
 
+test('AI drawing kinds (Stone 17): the menu path is live, a dead endpoint answers honestly (UX gate BLOCKER-1)', async () => {
+  // the UX gate caught the AI kinds dead at HEAD: drawings.js never
+  // exported aiDrawing, so the real menu path crashed into the generic
+  // toast while every kind-declaration test stayed green. This drives
+  // the menu path itself against a port nothing listens on.
+  const ch0 = await js('book.chapterOrder[0]');
+  await js(`library.rhema = Object.assign(library.rhema || {}, { ai: Object.assign({}, (library.rhema || {}).ai, { text: { base: 'http://127.0.0.1:9/v1', model: 'gone' } }) })`);
+  await js('writeLibrary(library)'); // main reads library.json from disk — the live mutation alone would not reach it
+  await js(`(() => { NeoHooks.emitTrue('chapterMenuChoice', ${JSON.stringify(ch0)}, 'rhemaDrawing'); return 1; })()`);
+  const click = async (label) => {
+    for (let i = 0; i < 50; i++) {
+      const got = await js(`(() => { const b = [...document.querySelectorAll('.modal .fr-choice')].find((x) => x.textContent.includes(${JSON.stringify(label)})); if (!b) return 0; b.click(); return 1; })()`);
+      if (got) return true;
+      await tick();
+    }
+    return false;
+  };
+  assert.ok(await click('A generated drawing…'), 'the drawing menu offers a generated drawing');
+  assert.ok(await click('AI line drawing'), 'a configured text endpoint offers the AI line drawing');
+  let okClicked = false;
+  for (let i = 0; i < 50 && !okClicked; i++) {
+    okClicked = await js(`(() => { const b = document.querySelector('.modal .m-ok'); if (!b) return 0; b.click(); return 1; })()`);
+    if (!okClicked) await tick();
+  }
+  assert.ok(okClicked, 'the motif prompt appears (empty means: derive it from the poem)');
+  let hint = '';
+  for (let i = 0; i < 100; i++) {
+    hint = await js('document.getElementById("hint").textContent');
+    if (/did not answer/.test(hint)) break;
+    await tick(50);
+  }
+  assert.match(hint, /did not answer/, 'a dead endpoint answers with the honest unreachable toast, not the crash toast');
+  // and the menu stays honest the other way: endpoint off, no AI entries
+  await js(`library.rhema = Object.assign(library.rhema || {}, { ai: {} })`);
+  await js('writeLibrary(library)');
+  await js(`(() => { NeoHooks.emitTrue('chapterMenuChoice', ${JSON.stringify(ch0)}, 'rhemaDrawing'); return 1; })()`);
+  assert.ok(await click('A generated drawing…'), 'the drawing menu opens again');
+  const aiShown = await js(`(() => [...document.querySelectorAll('.modal .fr-choice')].some((x) => x.textContent.includes('AI line drawing')))()`);
+  assert.equal(aiShown, false, 'with no endpoint configured the AI kinds are not offered');
+  await js(`(() => { const b = document.querySelector('.modal .m-cancel'); if (b) b.click(); return 1; })()`);
+});
+
 test('outline board (Stone 17): the poem card group centers on wide windows, tracks capped', async () => {
   await js(`document.querySelector('.tab[data-tab="outline"]').click()`);
   await tick(600);
@@ -826,10 +868,36 @@ test('chapbook: a real 5x8 PDF renders with the verse, the mark, and 5x8 pages',
   const html = await js(`buildPrintHtml(bookExportData(), { trim: '5x8', paper: 'white', links: {}, alsoByText: '', reviewText: '', reviewWords: '' })`);
   assert.ok(html.includes('rhema-poem-mark'), 'the print HTML carries the poem mark');
   assert.ok(!html.includes('class="ch-num"'), 'a titled poem prints its title alone — no POEM n label (UX gate)');
-  assert.ok(html.includes('class="poetry" style="margin-top:0.9em"'), 'the second stanza of a poem carries the widened stanza gap inline (UX round 2)');
+  assert.ok(html.includes('class="poetry" style="margin-top:0.9em'), 'the second stanza of a poem carries the widened stanza gap inline (UX round 2)');
+  assert.ok(html.includes('break-after:avoid;page-break-after:avoid'), 'the poem’s last stanza is tied to its colophon — no orphaned mark at a page top (UX gate S3)');
   assert.ok(/class="rhema-mark-drawing"[^>]*>\s*<svg[^>]*viewBox="0 0 80 80"/.test(html), 'the kind drawing rides the print HTML as INLINE svg (not an img, no ancestor CSS) — Stone 17');
   await js(`(() => { delete book.rhema.poems[book.chapterOrder[0]].drawing; saveMeta(); })()`);
   await js(`(async () => { try { await window.__pb; } catch {} })()`); // settle the job
+});
+
+test('the shelf shows a visible poem tile, and simple mode still offers poems (UX gate BLOCKER-2)', async () => {
+  // the formal ruling: right-click-on-blank-card behind Show More
+  // Features is not acceptable as the poet's first action — Rhema shows
+  // a second blank tile, and the right-click offers poems even in
+  // simple mode
+  await js('renderShelves()');
+  await tick(300);
+  const tile = await js(`(() => { const t = document.querySelector('.rhema-new-poem'); return t ? { label: t.textContent, title: t.title } : null; })()`);
+  assert.ok(tile, 'a second blank tile for poems sits on the shelf');
+  assert.match(tile.label, /Poem/, 'the tile is labeled, not a bare plus');
+  assert.equal(tile.title, 'New Poem Collection');
+  // one click: a poem collection appears and opens — not a prose book
+  await js(`document.querySelector('.rhema-new-poem').click()`);
+  await tick(900);
+  assert.equal(await js('book.format'), 'poetry', 'the tile opens a poem collection');
+  // and in simple mode the blank card's right-click is no longer a silent no-op
+  await js(`library.moreFeatures = false; renderShelves();`);
+  await tick(300);
+  await js(`(() => { const b = document.querySelector('.new-book:not(.rhema-new-poem)'); b.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 100, clientY: 100 })); return 1; })()`);
+  await tick(300);
+  const menu = await js(`(() => { const m = document.querySelector('.pop-menu'); return m ? [...m.querySelectorAll('button')].map((x) => x.textContent) : null; })()`);
+  assert.ok(menu && menu.includes('New Poem Collection'), 'simple mode right-click offers the poem collection');
+  await js(`(() => { const m = document.querySelector('.pop-menu'); if (m) m.remove(); library.moreFeatures = true; return 1; })()`);
 });
 
 async function main() {

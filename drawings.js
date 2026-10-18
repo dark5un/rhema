@@ -28,10 +28,12 @@ const RhemaDraw = (() => {
   'use strict';
 
   const MONO = 'stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"';
+  // security gate (NICE-6): escHtml is quote-blind; attribute sites use this
+  const escAttr = (s) => escHtml(s).replace(/"/g, '&quot;');
 
   function frame(inner) {
     // fixed pixel size: the mark's colophon box is 72px tall
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="72" height="72" role="img" aria-label="${escHtml(t('Poem drawing'))}">${inner}</svg>`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="72" height="72" role="img" aria-label="${escAttr(t('Poem drawing'))}">${inner}</svg>`;
   }
 
   // ---- ornaments (hand-authored monoline vectors) ----
@@ -71,7 +73,7 @@ const RhemaDraw = (() => {
     const letter = txt ? txt[0].toUpperCase() : '✦';
     return frame(
       `<circle cx="40" cy="40" r="34" stroke="currentColor" fill="none" stroke-width="1.5"/>` +
-      `<text x="40" y="54" text-anchor="middle" font-family="Didot, 'Bodoni 72', Georgia, serif" font-size="44" fill="currentColor">${escHtml(letter)}</text>`);
+      `<text x="40" y="54" text-anchor="middle" font-family="'GFS Didot', 'Libre Bodoni', Didot, Georgia, serif" font-size="44" fill="currentColor">${escHtml(letter)}</text>`);
   }
 
   // ---- poem fingerprint: seeded monoline, deterministic from the text ----
@@ -96,7 +98,9 @@ const RhemaDraw = (() => {
     // a small harmonograph: two sines make one continuous line; the poem's
     // hash picks the frequencies and phases, so the same poem always
     // draws the same mark and every different poem differs.
-    const f1 = 2 + Math.floor(rnd() * 3), f2 = 3 + Math.floor(rnd() * 4);
+    // frequencies capped at 5 (UX gate): at 72px a denser harmonograph
+    // reads as noise, and the gift is in the uniqueness being legible
+    const f1 = 2 + Math.floor(rnd() * 3), f2 = 3 + Math.floor(rnd() * 3);
     const f3 = 2 + Math.floor(rnd() * 4), f4 = 1 + Math.floor(rnd() * 4);
     const p1 = rnd() * Math.PI * 2, p2 = rnd() * Math.PI * 2;
     const d = 0.0006 + rnd() * 0.0008; // gentle damping: the line breathes
@@ -121,7 +125,7 @@ const RhemaDraw = (() => {
     return frame(
       `<circle cx="40" cy="40" r="34" stroke="currentColor" fill="none" stroke-width="1.5"/>` +
       `<circle cx="40" cy="40" r="29" stroke="currentColor" fill="none" stroke-width="0.75"/>` +
-      `<text x="40" y="51" text-anchor="middle" font-family="Didot, 'Bodoni 72', Georgia, serif" font-size="26" letter-spacing="1" fill="currentColor">${escHtml(initials)}</text>`);
+      `<text x="40" y="51" text-anchor="middle" font-family="'GFS Didot', 'Libre Bodoni', Didot, Georgia, serif" font-size="26" letter-spacing="1" fill="currentColor">${escHtml(initials)}</text>`);
   }
 
   // ---- AI kinds (Stone 17): offered by availability, generated in the
@@ -183,38 +187,58 @@ const RhemaDraw = (() => {
     if (k === 'unreachable') return t('The AI endpoint did not answer — is it running?');
     if (k === 'auth') return t('The endpoint refused the saved key.');
     if (k === 'unset') return t('No AI endpoint is configured — set one under File → Rhema Settings…');
-    return t('The AI could not draw: {error}', { error: escHtml((got && got.error) || '?') });
+    if (k === 'bad_svg') return t('What the AI drew is not a clean drawing — it was not saved.');
+    if (k === 'save') return t('The drawing could not be saved.');
+    // UI gate: the Greek toast never carries raw internal English — the
+    // detail goes to the console, the poet gets one honest sentence
+    console.warn('rhema draw:', (got && got.error) || got);
+    return t('Something went wrong with the AI.');
   }
 
   async function aiDrawing(chId, kind) {
+    // coding gate: the AI call is long — if the poet opens another book
+    // mid-flight, nothing may be written into the wrong book
+    const bookId = book.id;
+    const gone = () => !book || book.id !== bookId;
     const rec = (book.rhema && book.rhema.poems && book.rhema.poems[chId]) || {};
     const ask = await askInput(
       t('The drawing of “{title}”', { title: escHtml(shownTitle(chapterName(chId))) }),
       t('What should the AI draw? Leave it empty to derive it from the poem.'),
       typeof rec.motif === 'string' ? rec.motif : '');
-    if (ask === null) return false;
+    if (ask === null || gone()) return false;
     RhemaQr.setPoemField(chId, 'motif', ask.trim() || undefined); // remembered for the next draw
     toast(t('The AI is drawing…'), 2500);
-    const got = await window.neo.rhema.draw(book.id, chId, kind, ask.trim(), poemText(chId));
+    const got = await window.neo.rhema.draw(bookId, chId, kind, ask.trim(), poemText(chId));
+    if (gone()) return false;
     if (got && got.busy) return false;
+    if (got && got.raster) {
+      // the picture is already saved main-side (coding gate: it really
+      // does stay a picture); a successful trace replaces it with a vector
+      const svg = await vectorize(got.raster);
+      if (gone()) return false;
+      if (svg) {
+        const wrote = await window.neo.rhema.assetWrite(bookId, chId, svg);
+        if (!gone() && typeof wrote === 'string') {
+          await RhemaQr.loadDrawing(bookId, chId);
+          if (gone()) return false;
+          RhemaQr.setPoemField(chId, 'drawing', wrote);
+          renderChapters();
+          return true;
+        }
+      }
+      await RhemaQr.loadDrawing(bookId, chId);
+      if (gone()) return false;
+      RhemaQr.setPoemField(chId, 'drawing', got.fname);
+      renderChapters();
+      if (!svg) toast(t('The line drawing could not be turned into vectors — it stays a picture.'), 4000);
+      return true;
+    }
     if (got && got.fname) {
-      await RhemaQr.loadDrawing(book.id, chId);
+      await RhemaQr.loadDrawing(bookId, chId);
+      if (gone()) return false;
       RhemaQr.setPoemField(chId, 'drawing', got.fname);
       renderChapters();
       return true;
-    }
-    if (got && got.raster) {
-      const svg = await vectorize(got.raster);
-      if (!svg) toast(t('The line drawing could not be turned into vectors — it stays a picture.'), 4000);
-      const wrote = await window.neo.rhema.assetWrite(book.id, chId, svg || '');
-      if (typeof wrote === 'string') {
-        await RhemaQr.loadDrawing(book.id, chId);
-        RhemaQr.setPoemField(chId, 'drawing', wrote);
-        renderChapters();
-        return true;
-      }
-      toast(t('The drawing could not be saved.'));
-      return false;
     }
     toast(aiError(got), 5000);
     return false;
@@ -244,6 +268,6 @@ const RhemaDraw = (() => {
     return '';
   }
 
-  return { KINDS, svgFor, textHash, mulberry32,
+  return { KINDS, svgFor, textHash, mulberry32, aiDrawing,
     fleuron, asterism, meander, dropCap, fingerprint, monogram };
 })();

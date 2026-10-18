@@ -322,6 +322,9 @@ function extractSvg(reply) {
 // LLM-SVG: motif first ("draw what the poet asked for"), else derive from
 // the poem itself. Returns the SVG text, already gate-checked.
 async function drawMonolineSvg({ base, apiKey, model, tokenParam, motif, text }) {
+  base = assertHttpUrl(base, 'the text model URL'); // security gate: same
+  // direct assertion writeBrief does — base is library-sourced, assert at
+  // the call site, not only upstream
   const user = (motif && motif.trim())
     ? 'MOTIF (draw this): ' + motif.trim()
     : 'POEM (derive one central image from it):\n\n' + excerpt(text);

@@ -1101,10 +1101,14 @@ ipcMain.handle('rhema:asset:clear', (_e, bookId, key) => {
    art and hands the picture back for the renderer to vectorize (the
    canvas-prune contract keeps tracers out of the main process).
    kind 'illustration': the existing SDXL chain, saved as a raster asset. */
-const drawJobs = new Set(); // one drawing job per poem at a time
+const drawJobs = new Set(); // one drawing job at a time (the cover-paint
+// ceiling — security gate: the renderer picks the book/poem ids, so a
+// per-poem lock alone would let a misbehaving renderer spawn unbounded
+// concurrent jobs against the user's own endpoints)
+const drawMotif = (m) => String(m || '').slice(0, 500); // prompt text capped
 ipcMain.handle('rhema:draw', async (_e, bookId, chId, kind, motif, text) => {
   const jobKey = bookId + '/' + chId;
-  if (drawJobs.has(jobKey)) return { busy: true };
+  if (drawJobs.size >= 1) return { busy: true };
   drawJobs.add(jobKey);
   try {
     const settings = rhemaAiSettings();
@@ -1118,7 +1122,7 @@ ipcMain.handle('rhema:draw', async (_e, bookId, chId, kind, motif, text) => {
       if (tcfg.base) {
         const svg = await ai.drawMonolineSvg({
           base: tcfg.base, apiKey, model: tcfg.model, tokenParam: tcfg.tokenParam,
-          motif: String(motif || ''), text: cleanText
+          motif: drawMotif(motif), text: cleanText
         });
         const got = RhemaAssets.saveAsset(dir, chId, 'svg', svg);
         if (got && got.rejected) return { error: 'The drawing the model returned is not a plain vector picture.', kind: 'bad_svg' };
@@ -1128,16 +1132,21 @@ ipcMain.handle('rhema:draw', async (_e, bookId, chId, kind, motif, text) => {
       const img = settings.image || {};
       if (img.provider === 'comfyui') {
         const out = await ai.paintLineart({
-          url: img.url, workflow: img.workflow, motif: String(motif || ''), text: cleanText,
+          url: img.url, workflow: img.workflow, motif: drawMotif(motif), text: cleanText,
           checkpoint: img.checkpoint, steps: img.steps, cfg: img.cfg, seed: img.seed
         });
-        return { raster: { base64: out.buffer.toString('base64'), mime: out.ext === 'png' ? 'image/png' : 'image/jpeg' } };
+        // save the picture first (coding gate): if the renderer's trace
+        // fails it really does stay a picture, as the toast promises —
+        // a successful assetWrite(svg) then replaces it by extension
+        const saved = RhemaAssets.saveAsset(dir, chId, out.ext === 'png' ? 'png' : 'jpg', out.buffer);
+        if (!saved) return { error: 'The drawing could not be saved.', kind: 'save' };
+        return { fname: saved, raster: { base64: out.buffer.toString('base64'), mime: out.ext === 'png' ? 'image/png' : 'image/jpeg' } };
       }
       return { error: 'No AI endpoint is configured.', kind: 'unset' };
     }
     if (kind === 'illustration') {
       if (!settings.image || !settings.image.url) return { error: 'No image endpoint is configured.', kind: 'unset' };
-      const out = await ai.drawIllustration({ settings, apiKey, motif: String(motif || ''), text: cleanText });
+      const out = await ai.drawIllustration({ settings, apiKey, motif: drawMotif(motif), text: cleanText });
       const got = RhemaAssets.saveAsset(dir, chId, out.ext || 'jpg', out.buffer);
       if (!got) return { error: 'The drawing could not be saved.', kind: 'save' };
       return { fname: got };

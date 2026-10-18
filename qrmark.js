@@ -29,6 +29,10 @@ const RhemaQr = (() => {
   'use strict';
 
   const drawings = new Map(); // key ('collection' or chId) -> dataUrl|null
+  let drawingsGen = 0; // coding gate: a book switch mid-load must not let
+  // a stale IPC load write into the new book's drawings map
+  // security gate (NICE-6): escHtml is quote-blind; attribute sites use this
+  const escAttr = (s) => escHtml(s).replace(/"/g, '&quot;');
 
   function cfg() { return (library.rhema && library.rhema.qr) || {}; }
   function poemRec(chId) { return (book && book.rhema && book.rhema.poems && book.rhema.poems[chId]) || null; }
@@ -70,7 +74,7 @@ const RhemaQr = (() => {
         }
       }
       // a quiet margin, or scanners refuse the print
-      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-2 -2 ${n + 4} ${n + 4}" width="${px}" height="${px}" shape-rendering="crispEdges" role="img" aria-label="${escHtml(t('QR code'))}"><rect x="-2" y="-2" width="${n + 4}" height="${n + 4}" fill="#fff"/><g fill="#000">${cells}</g></svg>`;
+      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-2 -2 ${n + 4} ${n + 4}" width="${px}" height="${px}" shape-rendering="crispEdges" role="img" aria-label="${escAttr(t('QR code'))}"><rect x="-2" y="-2" width="${n + 4}" height="${n + 4}" fill="#fff"/><g fill="#000">${cells}</g></svg>`;
     } catch (err) {
       if (window.neo && neo.logError) neo.logError('rhema-qr: ' + ((err && err.message) || err));
       return '';
@@ -147,13 +151,18 @@ const RhemaQr = (() => {
     } catch (err) { drawings.set(key, null); }
   }
   async function loadAllDrawings(meta) {
+    const gen = ++drawingsGen;
     drawings.clear();
     await loadDrawing(meta.id, 'collection');
+    if (gen !== drawingsGen) return;
     const poems = (meta.rhema && meta.rhema.poems) || {};
     for (const chId of Object.keys(poems)) {
       const d = poems[chId].drawing;
       // 'kind:…' declarations are generated inline — no file to load
-      if (typeof d === 'string' && d !== 'off' && d.indexOf('kind:') !== 0) await loadDrawing(meta.id, chId);
+      if (typeof d === 'string' && d !== 'off' && d.indexOf('kind:') !== 0) {
+        await loadDrawing(meta.id, chId);
+        if (gen !== drawingsGen) return;
+      }
     }
   }
 

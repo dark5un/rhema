@@ -1205,11 +1205,31 @@ async function renderShelves() {
     blank.title = t('Start a new book');
     blank.onclick = () => createBookOnShelf(shelf);
     pressable(blank, t('Start a new book'));
+    /* RHEMA — the poet's first action must be visible (UX gate): a second
+       blank tile for poem collections, not a right-click hidden behind
+       Show More Features */
+    const poemBlank = document.createElement('div');
+    poemBlank.className = 'new-book rhema-new-poem';
+    poemBlank.textContent = '+';
+    const pbLabel = document.createElement('div');
+    pbLabel.className = 'rhema-blank-label';
+    pbLabel.textContent = t('Poem');
+    poemBlank.appendChild(pbLabel);
+    poemBlank.title = t('New Poem Collection');
+    poemBlank.onclick = () => NeoHooks.format('poetry').createOnShelf(shelf);
+    pressable(poemBlank, t('New Poem Collection'));
     // right-click (a long press on a phone): a book or a script
     if (!isBound(shelf)) {
       blank.addEventListener('contextmenu', async (e) => {
         e.preventDefault();
-        if (!moreOn()) return; // scripts are behind Show More Features
+        if (!moreOn()) { /* RHEMA — poems are not a "more feature": even in
+           simple mode the right-click offers the poem collection */
+          const pickP = await popMenu(e.clientX, e.clientY, [
+            { label: t('New Poem Collection'), value: 'poem' }
+          ], { from: blank });
+          if (pickP === 'poem') NeoHooks.format('poetry').createOnShelf(shelf);
+          return;
+        } // otherwise: scripts are behind Show More Features
         const pick = await popMenu(e.clientX, e.clientY, [
           { label: t('New Book'), value: 'book' },
           { label: t('New Script'), value: 'script' },
@@ -1232,6 +1252,7 @@ async function renderShelves() {
         row.appendChild(bookTile(meta));
       }
       row.appendChild(blank);
+      row.appendChild(poemBlank); /* RHEMA — the poet's visible first action */
     }
 
     sec.appendChild(label);
@@ -15903,7 +15924,8 @@ function buildPrintHtml(d, o) {
     let first = opening;
     let afterBreak = false;
     let prevPoetry = false; /* RHEMA */
-    return paras.map((p) => {
+    const lastPoem = paras.reduce((acc, p, i) => p.poetry ? i : acc, -1); /* RHEMA — UX gate: tie the poem's last stanza to its colophon */
+    return paras.map((p, i) => {
       if (p.sceneBreak) { afterBreak = true; prevPoetry = false; return '<p class="brk">*&#8195;*&#8195;*</p>'; }
       const inner = atFoot(p.html.replace(/^<p[^>]*>|<\/p>$/g, ''), p);
       if (p.poetry) {
@@ -15912,7 +15934,9 @@ function buildPrintHtml(d, o) {
            top margin (inline survives Paged.js's page cloning where the
            ancestor CSS selector did not — UX review round 2; novels'
            poetry-in-prose untouched) */
-        const st = [prevPoetry && poemBook() ? 'margin-top:0.9em' : '', p.align ? `text-align:${p.align}` : ''].filter(Boolean).join(';');
+        const st = [prevPoetry && poemBook() ? 'margin-top:0.9em' : '',
+          poemBook() && i === lastPoem ? 'break-after:avoid;page-break-after:avoid' : '',
+          p.align ? `text-align:${p.align}` : ''].filter(Boolean).join(';');
         prevPoetry = true; afterBreak = false;
         return `<p class="poetry"${st ? ` style="${st}"` : ''}>${inner}</p>`;
       }
