@@ -103,7 +103,7 @@ jobs:
           path: ${{ runner.temp }}/neo-pocket.apk
 
       - name: Refresh the rolling pocket-latest release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: pocket-latest
           name: NEO Pocket — latest build
@@ -120,7 +120,7 @@ jobs:
 
       - name: Publish numbered release for this tag
         if: startsWith(github.ref, 'refs/tags/pocket-v')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           name: NEO Pocket ${{ steps.ver.outputs.name }}
           prerelease: true
