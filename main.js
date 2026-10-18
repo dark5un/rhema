@@ -3584,7 +3584,9 @@ ipcMain.handle('update:install', () => {
 
 // the renderer may only open the release page fetched above — never arbitrary URLs
 ipcMain.handle('update:openRelease', () => {
-  if (lastReleaseUrl && /^https:\/\/github\.com\//.test(lastReleaseUrl)) {
+  // pinned to our own repo's releases (security gate NICE, 2026-10-18):
+  // the trust boundary is dark5un/rhema, not all of github.com
+  if (lastReleaseUrl && /^https:\/\/github\.com\/dark5un\/rhema(\/|$)/.test(lastReleaseUrl)) {
     require('electron').shell.openExternal(lastReleaseUrl);
   }
   return true;
