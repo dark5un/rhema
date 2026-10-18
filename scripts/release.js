@@ -85,7 +85,8 @@ gitLoud('push', 'origin', tag);
 
 console.log(`
 ✅ ${next} is building. In about 15 minutes:
-   1. Open https://github.com/hughhowey/neo/releases
-   2. Open the ${tag} draft, check the Windows file is NEO-Setup-${next}.exe
-   3. Press Publish. Everyone's NEO updates itself from there.
+   1. Open https://github.com/dark5un/rhema/releases
+   2. The CI run on the ${tag} tag publishes the release itself (AppImage,
+      Windows Setup + portable, macOS dmg+zip) — no draft to press.
+   3. Rhema's updater channels (latest*.yml) ride on that release.
 ${notes ? `\nWhat's in it (a start for the release notes):\n${notes}\n` : ''}`);

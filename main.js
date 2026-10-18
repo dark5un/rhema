@@ -1039,6 +1039,7 @@ function readCover(fp, fname) {
    and writes live in rhema-assets.js (unit-testable); the handlers below
    own the IPC surface and the one-time pick tokens. */
 const RhemaAssets = require('./rhema-assets.js');
+/* RHEMA */ const { compareVersions, releaseVersionFromTag } = require('./update-core.js'); // tag-suffix-safe update versions (unit-tested)
 // Security review (2026-10-17): the renderer never names a source path.
 // pick hands back a one-time token bound to the dialog's result; set only
 // accepts tokens this handler issued — a compromised renderer cannot stage
@@ -3454,15 +3455,9 @@ function watchEditMenu() {
 // lookup, separate from the silent auto-updater. Works in dev builds too.
 let lastReleaseUrl = null;
 
-function compareVersions(a, b) {
-  const pa = a.split('.').map(Number);
-  const pb = b.split('.').map(Number);
-  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-    const na = pa[i] || 0, nb = pb[i] || 0;
-    if (na !== nb) return na - nb;
-  }
-  return 0;
-}
+/* RHEMA */ // compareVersions moved to update-core.js — the old split('.').map(Number)
+/* RHEMA */ // turned '1.5.9-rhema' into [1,5,NaN], so every suffixed tag compared NaN
+/* RHEMA */ // (never an update). update-core.js compares numeric cores instead.
 
 // toggling at the session level forces the engine to re-scan visible text —
 // newer Chromium ignores attribute changes on text it has already looked at
@@ -3531,14 +3526,16 @@ function lookForUpdate() {
 }
 
 // what's on GitHub, for the fallback path and the release link
+/* RHEMA */ // Stone 18 identity + updater-target fix: Rhema's own releases, never
+/* RHEMA */ // upstream NEO's; tags are v1.5.9-rhema, so reduce to the numeric core.
 async function latestReleaseFromGitHub() {
-  const res = await fetch('https://api.github.com/repos/hughhowey/neo/releases/latest', {
-    headers: { 'User-Agent': 'NEO-App' }
+  const res = await fetch('https://api.github.com/repos/dark5un/rhema/releases/latest', {
+    headers: { 'User-Agent': 'Rhema-App' }
   });
   if (!res.ok) throw new Error('GitHub API returned ' + res.status);
   const data = await res.json();
   lastReleaseUrl = data.html_url || null;
-  return String(data.tag_name || '').replace(/^v/, '');
+  return releaseVersionFromTag(data.tag_name);
 }
 
 ipcMain.handle('update:check', async () => {
