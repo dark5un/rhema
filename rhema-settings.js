@@ -106,7 +106,7 @@ const RhemaSettings = (() => {
           <div class="stats-row">
             <label><input id="ra-auto" type="checkbox" ${cfg().autoUpdate ? 'checked' : ''}/> ${t('Keep Rhema up to date automatically')}</label>
           </div>
-          <p class="soft" style="font-size:12px;margin:0 0 6px">${t('Off by default. When on, Rhema checks GitHub about once an hour and downloads a new version in the background — but never interrupts your writing: it installs when you quit, or when you press {restart}. {check} works either way.', { restart: t('Restart to update'), check: t('Check for Update…') })}</p>
+          <p class="soft" style="font-size:12px;margin:0 0 6px">${t('Off by default. When on, Rhema checks GitHub about once an hour and downloads a new version in the background — but never interrupts your writing: it installs when you quit, or when the “{restart}” button appears. You can also run “{check}” from the Help menu at any time.', { restart: t('Restart to update'), check: t('Check for Update…') })}</p>
         </details>
         <details class="st-advanced">
           <summary class="soft">${t('Poem QR')}</summary>
