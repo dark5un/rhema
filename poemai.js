@@ -89,7 +89,7 @@ const RhemaPoemAi = (() => {
   document.addEventListener('keydown', (e) => {
     if (e.defaultPrevented || e.isComposing || e.repeat) return; // coding gate: no key-repeat spam
     if ((e.metaKey || e.ctrlKey) && e.shiftKey && !e.altKey && e.code === 'KeyE') {
-      if (!poemBook()) return;
+      if (!poemBook()) { toast(t("Reader's Eye reads poems — open a poem collection."), 3000); return; } // UX gate 4r2: no silent dead chords
       e.preventDefault();
       readersEye();
     }

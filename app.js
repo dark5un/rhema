@@ -232,6 +232,10 @@ function numberedChapters(meta = book, chId = null) {
 // second chapter (or a prologue, an epilogue or a part) joins it. The pages
 // around it don't count.
 function soloStory(meta = book) {
+  /* RHEMA — a lone POEM is a poem, not "the story": its own title leads the
+     header, nav, contents and exports (Panos's ship-time ruling 2026-10-18,
+     UX gate 4 S4). Novels keep NEO's solo behavior untouched. */
+  if (poemBook(meta)) return null;
   const story = meta.chapterOrder.filter((c) => isStory(c, meta) || chapterKind(c, meta) === 'part');
   return story.length === 1 && chapterKind(story[0], meta) === 'chapter' ? story[0] : null;
 }
@@ -2887,9 +2891,15 @@ async function chapterMenu(chId, x = 0, y = 0, from = null) {
     items.push('-', { label: t('Restart Chapter Numbers at Each Part'), value: 'restart', checked: !!book.restartNumbering });
   }
   items.push('-', { label: t('Delete'), value: 'delete', danger: true });
-  /* RHEMA — poem books: the chapter menu grows poem items (poetry.js) */
-  const rhemaExtra = NeoHooks.emitList('chapterMenuItems', chId); /* RHEMA — emitList: poetry.js and qrmark.js both add items */
-  if (rhemaExtra && rhemaExtra.length) items.push(...rhemaExtra);
+  /* RHEMA — poem books: the chapter menu grows poem items (poetry.js).
+     Phase 4 gate r2 (UX SHOULD): they ride the TOP, above the kind list —
+     on short windows the poet's actions must not fall below the scroll
+     fold. Leading separators trimmed, one kept between the groups. */
+  const rhemaExtra = NeoHooks.emitList('chapterMenuItems', chId); /* RHEMA — emitList: poetry.js, qrmark.js and poemai.js all add items */
+  if (rhemaExtra && rhemaExtra.length) {
+    while (rhemaExtra[0] === '-') rhemaExtra.shift();
+    if (rhemaExtra.length) items.unshift(...rhemaExtra, '-');
+  }
   const choice = await popMenu(x, y, items, { title: chapterName(chId), from: from || document.querySelector(`.nav-item[data-id="${chId}"] .n-row`) });
   if (!choice || choice === kind) return null;
   if (NeoHooks.emitTrue('chapterMenuChoice', chId, choice)) return null; /* RHEMA — poem items answer their own choices */
@@ -14094,6 +14104,8 @@ $('#search-close').onclick = closeSearch;
 /*  IMPORT                                                             */
 /* ================================================================== */
 
+// CONTRACT: text-node sinks only (<p>, <strong>, list items). For a value
+// between quotation marks use escAttr below — model/network text included.
 const escHtml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 // …and for a value between quotation marks (an attribute)
 const escAttr = (s) => escHtml(s).replace(/"/g, '&quot;');
@@ -15417,7 +15429,8 @@ function bookShortcutSections() {
       [KPH, tk('Insert a placeholder note')],
       ...(more ? [[KFN, tk('Add a footnote'), tk('Type the note, then Enter to go back to writing. Click its number to change it.')]] : []),
       [KDA, tk('Move selected text to Darlings')],
-      ...(more ? [[K('⌘⇧U', IS_LINUX ? 'Ctrl+Shift+K' : 'Ctrl+Shift+U'), tk('Read aloud from the cursor'), tk('Again, Esc or any key stops it. Uses your computer’s own voice.')]] : [])
+      ...(more ? [[K('⌘⇧U', IS_LINUX ? 'Ctrl+Shift+K' : 'Ctrl+Shift+U'), tk('Read aloud from the cursor'), tk('Again, Esc or any key stops it. Uses your computer’s own voice.')]] : []),
+      ...(more && poemBook() ? [[K('⌘⇧E', 'Ctrl+Shift+E'), tk("Reader's Eye"), tk('The AI reads the open poem and files observations in the Notes tab. It never touches the poem.')]] : [])
     ] },
     { title: tk('Formatting'), rows: [
       ...(more ? [[['*…*', '**…**', '***…***'], tk('Italic, bold, the Markdown way'), tk('Typed around a word (or pasted). Undo right after keeps the asterisks. Format → Markdown Emphasis turns it off.')]] : []),

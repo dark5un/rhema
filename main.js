@@ -1121,7 +1121,10 @@ ipcMain.handle('rhema:poemai', async (_e, bookId, chId, kind, text, collection) 
     return { error: 'Unknown poet-AI kind.', kind: 'bad_kind' };
   } catch (err) {
     const ai = require('./ai.js');
-    return { error: String(err && err.message || err), kind: err.kind || ai.errKind(err, err.status) };
+    // security gate 4r2: the kind travels, the raw message (host:port in
+    // ECONNREFUSED and friends) stays in the main-process console
+    console.warn('rhema ai:', err && err.message || err);
+    return { kind: err.kind || ai.errKind(err, err.status) };
   } finally {
     drawJobs.delete(jobKey);
   }
@@ -1189,7 +1192,10 @@ ipcMain.handle('rhema:draw', async (_e, bookId, chId, kind, motif, text) => {
     return { error: 'Unknown drawing kind.', kind: 'bad_kind' };
   } catch (err) {
     const ai = require('./ai.js');
-    return { error: String(err && err.message || err), kind: err.kind || ai.errKind(err, err.status) };
+    // security gate 4r2: the kind travels, the raw message (host:port in
+    // ECONNREFUSED and friends) stays in the main-process console
+    console.warn('rhema ai:', err && err.message || err);
+    return { kind: err.kind || ai.errKind(err, err.status) };
   } finally {
     drawJobs.delete(jobKey);
   }

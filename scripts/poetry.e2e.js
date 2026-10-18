@@ -947,6 +947,47 @@ test("Reader's Eye + title suggestions (Phase 4, Stones 7+8): notes gain observa
   } finally { server.close(); }
 });
 
+test('poem AI chrome never leaks into a novel menu, and the chord toasts honestly there (UI gate B2 pin + UX gate 4r2)', async () => {
+  // the exact condition B2 leaked under: a text endpoint IS configured
+  await js(`library.rhema = Object.assign(library.rhema || {}, { ai: Object.assign({}, (library.rhema || {}).ai, { text: { base: 'http://127.0.0.1:1/v1', model: 'fake' } }) })`);
+  await js('writeLibrary(library)'); // main reads library.json from disk
+  await js(`(async () => {
+    await addImportedBooks([{ name: 'A Novel B', chapters: [{ title: 'One', paras: [{ text: 'Prose here.' }] }] }], library.shelves[0]);
+    const ids = library.shelves[0].bookIds;
+    await openBook(ids[ids.length - 1]);
+  })()`);
+  await tick(500);
+  assert.equal(await js('poemBook()'), false, 'the novel is open');
+  const vals = await js(`(() => (NeoHooks.emitList('chapterMenuItems', book.chapterOrder[0]) || []).map((x) => x && x.value))()`);
+  assert.ok(!vals.includes('rhemaEye') && !vals.includes('rhemaTitles'), 'a novel never grows the poem AI items (UI gate B2)');
+  // the chord in a novel toasts honestly instead of dying silent (UX gate 4r2)
+  await js(`document.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, code: 'KeyE', key: 'E', ctrlKey: true, shiftKey: true }))`);
+  let toasted = false;
+  for (let i = 0; i < 20 && !toasted; i++) { toasted = await js(`document.body.innerText.includes('Reader\\'s Eye reads poems')`); if (!toasted) await tick(50); }
+  assert.ok(toasted, 'Ctrl/Cmd+Shift+E in a novel says so plainly');
+  await js(`library.rhema = Object.assign(library.rhema || {}, { ai: {} }); writeLibrary(library)`);
+});
+
+test('a single-poem collection shows the poem\u2019s own title, not the collection name (Panos ship ruling, UX gate 4 S4)', async () => {
+  await js(`NeoHooks.format('poetry').createOnShelf(library.shelves[0])`);
+  await tick(600);
+  await js(`(async () => {
+    const chId = book.chapterOrder[0];
+    book.title = 'Συλλογή Μία';
+    (book.chapterTitles = book.chapterTitles || {})[chId] = 'Μοναχικό';
+    await window.neo.writeChapter(book.id, chId, '<p class="poetry">Ένα ποίημα</p>');
+    saveMeta(); renderChapters();
+  })()`);
+  await tick(400);
+  const state = await js(`(() => {
+    const sec = document.querySelector('.chapter');
+    const t = sec && sec.querySelector('.ch-title');
+    return { solo: !!(sec && sec.classList.contains('solo')), title: t ? t.textContent : null };
+  })()`);
+  assert.equal(state.solo, false, 'a lone poem is not treated as soloStory');
+  assert.equal(state.title, 'Μοναχικό', 'the header carries the poem\u2019s own title');
+});
+
 test('the shelf shows a visible poem tile, and simple mode still offers poems (UX gate BLOCKER-2)', async () => {
   // the formal ruling: right-click-on-blank-card behind Show More
   // Features is not acceptable as the poet's first action — Rhema shows
