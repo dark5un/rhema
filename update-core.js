@@ -12,10 +12,12 @@
 'use strict';
 
 // the leading dotted-number of a version string: 'v1.5.9-rhema' -> '1.5.9';
-// '' when there is no number to find (garbage in, empty out — never NaN)
+// '' when there is no number to find (garbage in, empty out — never NaN).
+// Anchored: a number only counts at the start (after an optional v), so a
+// label like 'beta-1.5' can never masquerade as a version (gate NICE 2026-10-18).
 function numericCore(s) {
-  const m = String(s == null ? '' : s).match(/\d+(?:\.\d+)*/);
-  return m ? m[0] : '';
+  const m = String(s == null ? '' : s).match(/^v?(\d+(?:\.\d+)*)/i);
+  return m ? m[1] : '';
 }
 
 // GitHub release tag -> comparable version (also used for display)

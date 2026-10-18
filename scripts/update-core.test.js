@@ -15,6 +15,7 @@ test('releaseVersionFromTag: both tag shapes reduce to the numeric core', () => 
   assert.equal(U.releaseVersionFromTag(''), '');
   assert.equal(U.releaseVersionFromTag(null), '');
   assert.equal(U.releaseVersionFromTag('latest'), '', 'garbage never becomes NaN');
+  assert.equal(U.releaseVersionFromTag('beta-1.5'), '', 'anchored: a number mid-string is not a version');
 });
 
 test('compareVersions: suffixed tags compare like clean ones (the old NaN trap)', () => {
