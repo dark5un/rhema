@@ -80,25 +80,30 @@ async function bookSpellPicker() {
 
   const bd = document.createElement('div');
   bd.className = 'modal-backdrop sb-picker';
+  // Gate round-4 (design): classes, not inline styles — the picker wears
+  // the app's own clothes (rhema-poetry.css): accent-tinted choice rows,
+  // a two-column grid (nothing hides behind a scroll), a badge on the
+  // primary row, and the two button voices every dialog speaks in.
   const rows = langs.map((l) => `
-    <label style="display:flex;gap:8px;align-items:center;padding:3px 0">
-      <input type="checkbox" data-code="${escAttr(l.code)}" ${also.has(l.code) ? 'checked' : ''} ${l.code === primary ? 'disabled' : ''} />
+    <label class="sb-lang${also.has(l.code) && l.code !== primary ? ' sel' : ''}${l.code === primary ? ' is-primary' : ''}">
+      <input type="checkbox" data-code="${escAttr(l.code)}" ${also.has(l.code) && l.code !== primary ? 'checked' : ''} ${l.code === primary ? 'disabled' : ''} />
       <span>${escHtml(nameOf(l))}</span>
+      <span class="sb-primary-badge">${t('Primary')}</span>
     </label>`).join('');
   const opts = langs.map((l) => `<option value="${escAttr(l.code)}" ${l.code === primary ? 'selected' : ''}>${escHtml(nameOf(l))}</option>`).join('');
   bd.innerHTML = `
-    <div class="modal" style="width:440px">
-      <h2 style="font-size:16px">${t("This book's languages…")}</h2>
+    <div class="modal">
+      <h2>${t("This book's languages…")}</h2>
       <p>${t('So that correctly spelled foreign words are never marked wrong: a word is left alone if any language you pick here knows it. Suggestions and quotes follow the primary language.')}</p>
-      <label style="display:block;margin:8px 0">${t('Primary language')}
-        <select id="sb-primary" style="width:100%;margin-top:4px">${opts}</select>
+      <label>${t('Primary language')}
+        <select id="sb-primary">${opts}</select>
       </label>
-      <div style="margin:6px 0 2px">${t('Also accept words from')}</div>
-      <div id="sb-also" style="max-height:220px;overflow:auto;scrollbar-width:thin;scrollbar-color:rgba(200,200,200,.55) transparent">${rows}</div>
-      <div style="font-size:12px;opacity:.7;margin-top:4px">${t('Up to 5 languages per book')}</div>
-      <div style="text-align:right;margin-top:10px">
+      <div class="sb-section">${t('Also accept words from')}</div>
+      <div id="sb-also">${rows}</div>
+      <p class="sb-cap-note">${t('Up to 5 languages per book')}</p>
+      <div class="sb-foot">
         <button class="m-cancel btn-quiet">${t('Cancel')}</button>
-        <button class="m-save" style="margin-left:8px">${t('Save')}</button>
+        <button class="m-save btn-gold">${t('Save')}</button>
       </div>
     </div>`;
   document.body.appendChild(bd);
@@ -110,8 +115,15 @@ async function bookSpellPicker() {
   const syncDisabled = () => {
     const full = 1 + boxes().filter((i) => i.checked).length >= 5;
     boxes().forEach((i) => {
-      if (i.dataset.code === primarySel.value) { i.checked = false; i.disabled = true; }
-      else i.disabled = full && !i.checked;
+      const lab = i.closest('label');
+      if (i.dataset.code === primarySel.value) {
+        i.checked = false; i.disabled = true;
+        lab.classList.add('is-primary'); lab.classList.remove('sel');
+      } else {
+        i.disabled = full && !i.checked;
+        lab.classList.remove('is-primary');
+        lab.classList.toggle('sel', i.checked);
+      }
     });
   };
   // Gate round-3 (coding+UX): demoting the old primary must not silently

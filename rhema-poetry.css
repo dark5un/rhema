@@ -154,3 +154,38 @@ body.light .st-done { background: #2e7d43; }
    Eye block, whose newlines were collapsing into one run-on line. The
    stored text already has the breaks; let them show. */
 #notes-outline, .ns-outline { white-space: pre-line; }
+
+/* RHEMA — Phase 6 redesign: the book-languages picker speaks the app's
+   own design language — styled select (print-modal), choice rows with an
+   accent tint (first-run .fr-choice), the two button voices (.btn-gold /
+   .btn-quiet), and a two-column grid so no language hides behind a
+   scroll. No inline styles; hooks (#sb-primary, #sb-also, .m-save,
+   .m-cancel) stay pinned by spellbook.e2e. */
+.sb-picker .modal { width: 520px; }
+.sb-picker #sb-primary {
+  display: block; width: 100%; margin-top: 6px; padding: 8px 10px;
+  background: var(--bg); border: 1px solid #3a3a3a; border-radius: 6px;
+  color: #eee; font: inherit; font-size: 14px;
+}
+.sb-picker #sb-primary:focus { outline: none; border-color: var(--accent); }
+body.light .sb-picker #sb-primary { background: #fff; border-color: #cfcac0; color: #1c1a17; }
+.sb-picker .sb-section { font-size: 13px; color: var(--muted); margin: 4px 0 6px; }
+.sb-picker #sb-also { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; }
+.sb-picker label.sb-lang {
+  display: flex; align-items: center; gap: 8px; padding: 6px 8px; margin: 0;
+  border: 1px solid transparent; border-radius: 6px; cursor: pointer;
+  font-size: 14px; color: #ddd;
+}
+.sb-picker label.sb-lang:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.sb-picker label.sb-lang input { display: inline-block; width: auto; margin: 0; flex-shrink: 0; }
+.sb-picker label.sb-lang.sel { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.sb-picker label.sb-lang.is-primary { opacity: .6; cursor: default; }
+.sb-picker label.sb-lang.is-primary:hover { background: none; }
+.sb-picker label.sb-lang:has(input:disabled:not(.is-primary)) { opacity: .38; }
+.sb-picker .sb-primary-badge {
+  display: none; margin-left: auto; font-size: 11px; color: var(--accent);
+  text-transform: uppercase; letter-spacing: .5px;
+}
+.sb-picker label.sb-lang.is-primary .sb-primary-badge { display: inline; }
+.sb-picker .sb-cap-note { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
+.sb-picker .sb-foot { text-align: right; margin-top: 18px; }

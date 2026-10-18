@@ -124,8 +124,13 @@ test('the picker opens from the Edit menu message and saves the book set', async
   while (Date.now() < until && !(await js('!!document.querySelector(".sb-picker #sb-primary")'))) await tick(100);
   assert.ok(await js('!!document.querySelector(".sb-picker #sb-primary")'), 'the picker modal opened');
   // Gate round-3: the rows speak the UI's names (SPELL_LANGUAGE_NAMES),
-  // not main's endonyms — a round-2 fix was inert behind a window. guard.
-  assert.equal(await js(`document.querySelector('#sb-also label span').textContent`), 'US English',
+  // not main's endonyms — a round-2 fix was inert behind a window.
+  // guard. Locale-aware: in the el UI the same row reads «Αγγλικά ΗΠΑ».
+  const uiLang = await js('NeoI18n.getLocale()');
+  const wantRow = uiLang === 'el'
+    ? JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', 'locales', 'el.json'), 'utf8'))['US English']
+    : 'US English';
+  assert.equal(await js(`document.querySelector('#sb-also label span').textContent`), wantRow,
     'picker rows use the t()-translated dictionary names');
   // primary el, also accept en-US
   await js(`(() => { const s = document.querySelector('#sb-primary'); s.value = 'el'; s.dispatchEvent(new Event('change'));
