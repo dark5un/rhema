@@ -10,14 +10,7 @@ Rhema is a new project based on [Hugh Howey's NEO](https://github.com/hughhowey/
 
 ## Download
 
-Rhema is a private family project: builds are handed over directly, not posted. Today the shipped build is the Linux **AppImage**:
-
-```
-chmod +x Rhema-*.AppImage
-./Rhema-*.AppImage
-```
-
-If it complains about a sandbox (common on Ubuntu 24.04 and newer), run it as `./Rhema-*.AppImage --no-sandbox`. Your library lives in `~/Documents/Rhema Library`; File → Library Folder… moves it anywhere you like. On first run Rhema notices an existing `NEO Library` and offers to open it — nothing from NEO is ever left behind or moved without asking.
+Binaries are built by CI and posted on the [Releases page](https://github.com/dark5un/rhema/releases): Linux **AppImage** (x64 + arm64), Windows installer + portable, and macOS dmg/zip (arm64 + x64). The macOS builds are unsigned for now — Gatekeeper will warn; open with right-click → Open. On Linux, if the AppImage complains about a sandbox (common on Ubuntu 24.04 and newer), run it as `./Rhema-*.AppImage --no-sandbox`. Your library lives in `~/Documents/Rhema Library`; File → Library Folder… moves it anywhere you like. On first run Rhema notices an existing `NEO Library` and offers to open it — nothing from NEO is ever left behind or moved without asking.
 
 ## Poetry, the third format
 
@@ -59,7 +52,7 @@ Rhema opens in **Greek (Ελληνικά)** and switches to any other language i
 Requires [Node.js](https://nodejs.org).
 
 ```
-git clone git@github.com:dark5un/rhema.git   # private; ask Panos
+git clone https://github.com/dark5un/rhema.git
 cd rhema
 npm install
 npm start
@@ -71,8 +64,8 @@ The app is very simple: an Electron shell (`main.js`), a preload bridge (`preloa
 
 ## Contributing
 
-Rhema is a private family project **today** — it goes public at ship time, and from then on pull requests and issues are welcome. It exists because Hugh Howey built NEO and opened it under MIT; his LICENSE, attribution and philosophy travel with it. Upstream NEO fixes are cherry-picked in when they matter. Hugh's fair warning stands: writing apps die of bloat, and the bar for anything new is "does this help a working writer write, finish, and publish?"
+Rhema is public — pull requests and issues are welcome, read [CONTRIBUTING.md](CONTRIBUTING.md) first. It exists because Hugh Howey built NEO and opened it under MIT; his LICENSE, attribution and philosophy travel with it. Upstream NEO fixes are cherry-picked in when they matter. Hugh's fair warning stands: writing apps die of bloat, and the bar for anything new is "does this help a working writer write, finish, and publish?"
 
 ## License
 
-[MIT](LICENSE) — Hugh's license, kept whole. Free to use, free to modify, free to share.
+[MIT](LICENSE) — Hugh's license, kept whole, with a notice for Rhema's own portions. Free to use, free to modify, free to share.

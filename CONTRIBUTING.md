@@ -1,8 +1,8 @@
 # Contributing to Rhema
 
-Rhema is a **family project, private today and public at ship time** — once
-the repo is public, pull requests and issues are welcome, and the ground
-rules below will apply to them. If you were pointed here from NEO, thank
+Rhema is a **new project based on Hugh Howey's NEO** (MIT), public since
+October 2026 — pull requests and issues are welcome, and the ground rules
+below apply to them. If you were pointed here from NEO, thank
 you: Rhema is a new project based on [Hugh Howey's
 NEO](https://github.com/hughhowey/neo) (MIT), and the best place to
 contribute to the shared roots is upstream, where Hugh welcomes issues and PRs.

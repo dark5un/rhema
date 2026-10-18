@@ -4,7 +4,7 @@
   "desktopName": "rhema",
   "version": "1.5.8",
   "description": "A word processor for authors — novels, screenplays, and poetry. Distraction-free by default.",
-  "homepage": "https://github.com/hughhowey/neo",
+  "homepage": "https://github.com/dark5un/rhema",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -102,7 +102,7 @@
           "Keywords": "writing;writer;novel;book;author;manuscript;wordprocessor;"
         }
       },
-      "maintainer": "Hugh Howey <hughhowey@gmail.com>"
+      "maintainer": "Panagiotis Xynos <panos@onlyascii.io>"
     },
     "nsis": {
       "oneClick": true,
@@ -157,7 +157,7 @@
       "appimage": "1.0.3"
     }
   },
-  "author": "Hugh Howey",
+  "author": "Panagiotis Xynos",
   "license": "MIT",
   "devDependencies": {
     "electron": "^43.0.0",
