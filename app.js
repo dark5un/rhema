@@ -17865,7 +17865,7 @@ async function showAbout() {
   bd.className = 'modal-backdrop';
   bd.innerHTML = `
     <div class="modal" style="width:340px;text-align:center">
-      <h2 style="font-size:22px;letter-spacing:6px">Rhema</h2> <!-- RHEMA: was NEO; attribution stays in LICENSE and the plan's About posture -->
+      <h2 style="font-size:22px;letter-spacing:6px;margin-bottom:4px">Rhema</h2> <!-- RHEMA: was NEO; attribution stays in LICENSE and the plan's About posture; margin-bottom scoped here (gate r2): the mark groups with the wordmark -->
       <div class="brand-greek about-greek">ῥῆμα</div><!-- RHEMA: polytonic brand mark (Panos 2026-10-18) -->
       <p class="about-version">${t('Version {version}', { version: v })}</p>
       <p class="about-line">${t('A word processor for authors.')}</p>

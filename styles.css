@@ -668,8 +668,10 @@ body.light .print-modal select, body.light .print-modal textarea { background: #
    plus this 6px margin is the whole lockup gap (~16px painted) */
 #shelf-header h1 .brand-greek { font-size: 16px; color: var(--muted); margin-left: 6px; }
 .fr-brand { text-align: center; font-size: 26px; color: var(--accent); margin-bottom: 10px; }
-/* mark belongs to the brand block, not the meta block: gap below > gap above */
-.about-greek { font-size: 16px; color: var(--muted); margin: 2px 0 10px; }
+/* mark belongs to the brand block, not the meta block (gate r2: box gaps
+   4 above / 18 below — margin-collapse-proof, the 2px top margin was
+   swallowed by the h2's 10px bottom margin) */
+.about-greek { font-size: 16px; color: var(--muted); margin: 0 0 18px; }
 
 /* ========================= EDITOR ========================= */
 
