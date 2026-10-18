@@ -2945,7 +2945,7 @@ function buildMenu() {
         { label: t('Take Snapshot'), accelerator: 'CmdOrCtrl+S', registerAccelerator: false, click: () => sendToWindow({ type: 'snapshot' }) },
         { type: 'separator' },
         { more: true, label: t('Cover Art…'), click: () => sendToWindow({ type: 'coverArt' }) },
-        { more: true, label: t('Rhema Settings…'), click: () => sendToWindow({ type: 'rhemaSettings' }) }, /* RHEMA — the pane holds AI, QR, import and retention: Settings, not AI */
+        { label: t('Rhema Settings…'), click: () => sendToWindow({ type: 'rhemaSettings' }) }, /* RHEMA — the pane holds AI, QR, import and retention: Settings, not AI — and not a "more feature": the guide's step 13 must be findable on first run */
         {
           label: t('Goals…'),
           accelerator: 'CmdOrCtrl+,',
@@ -3012,7 +3012,8 @@ function buildMenu() {
           click: () => sendToWindow({ type: 'spellcheck' })
         },
         {
-          more: true,
+          /* RHEMA — spellcheck is a poet's core control, not a "more
+             feature" (same posture as Language and Rhema Settings). */
           label: t('Spellcheck Language'),
           submenu: Object.entries(SPELL_LANGUAGES).map(([code, lang]) => ({
             label: lang.label,
@@ -3235,7 +3236,8 @@ function buildMenu() {
         },
         { type: 'separator' },
         {
-          more: true,
+          /* RHEMA — Stone 11: Greek is "one switch away" from the English
+             first-run default, so the switch is not a "more feature". */
           label: t('Language'),
           submenu: listLanguages().map((lang) => ({
             label: lang.name,

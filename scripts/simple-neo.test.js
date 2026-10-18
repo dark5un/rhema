@@ -62,14 +62,18 @@ function labels(items, out = []) {
 const menu = (template, name) => template.find((m) => m.label === name).submenu;
 
 // the items behind the switch, and some that simple NEO keeps
+// RHEMA: 'Language' and 'Spellcheck Language' moved from MORE to SIMPLE —
+// Stone 11 promises Greek "one switch away" and spellcheck is a poet's
+// core control; neither is a "more feature" in Rhema (Phase 5 gate, UI
+// reviewer: the guide's step 1 path must exist on first run).
 const MORE = ['Plain Text (.txt)', 'Markdown (.md)', 'Web Page (.html)', 'Manuscript Format…', 'Chapter Titles Only',
-  'Cover Art…', 'New Books Open To', 'Import Chapters…', 'Reshelve a Book…', 'Spellcheck Language', 'Other Font…',
+  'Cover Art…', 'New Books Open To', 'Import Chapters…', 'Reshelve a Book…', 'Other Font…',
   'Align Paragraph', 'Show Pages', 'Two Pages Side by Side', 'Page Width', 'Non-Breaking Marks', 'Poetry Paragraph',
-  'Markdown Emphasis', 'Focus Mode', 'Vim Keys', 'Brighter Interface', 'Language'];
+  'Markdown Emphasis', 'Focus Mode', 'Vim Keys', 'Brighter Interface'];
 const SIMPLE = ['PDF (.pdf)', 'Word (.docx)', 'EPUB (.epub)', 'Paperback for KDP…', 'Email Draft to Myself', 'Email Settings…',
   'Take Snapshot', 'Goals…', 'Import Manuscripts…', 'Library Folder…', 'Show More Features', 'Find & Replace', 'Spellcheck Pass',
   'Body Font', 'Drop Cap Style', 'Larger Text', 'Typewriter Scrolling', 'Flush Paragraph', 'Keyboard Shortcuts…',
-  'Full Screen', 'Page'];
+  'Full Screen', 'Page', 'Language', 'Spellcheck Language', 'Rhema Settings…'];
 
 describe('the menu bar, simple and with Show More Features', () => {
   for (const platform of ['darwin', 'win32', 'linux']) {

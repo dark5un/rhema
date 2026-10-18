@@ -93,10 +93,10 @@ const RhemaSettings = (() => {
           <summary class="soft">${t('Backups and snapshots')}</summary>
           <div class="stats-row">
             <label>${t('Keep daily backups for')}
-              <select id="ra-retbackups">${sel(ret.backups === undefined ? 14 : ret.backups, [[14, '14 days'], [30, '30 days'], [90, '90 days'], [365, '365 days'], ['unlimited', 'unlimited']])}</select>
+              <select id="ra-retbackups">${sel(ret.backups === undefined ? 14 : ret.backups, [[14, t('14 days')], [30, t('30 days')], [90, t('90 days')], [365, t('365 days')], ['unlimited', t('unlimited')]])}</select>
             </label>
             <label>${t('Keep automatic snapshots for')}
-              <select id="ra-retsnaps">${sel(ret.snapshots === undefined ? 30 : ret.snapshots, [[30, '30 days'], [90, '90 days'], [365, '365 days'], ['unlimited', 'unlimited']])}</select>
+              <select id="ra-retsnaps">${sel(ret.snapshots === undefined ? 30 : ret.snapshots, [[30, t('30 days')], [90, t('90 days')], [365, t('365 days')], ['unlimited', t('unlimited')]])}</select>
             </label>
           </div>
           <p class="soft" style="font-size:12px;margin:0 0 6px">${t('Snapshots you take yourself ({key}) are always kept. “Unlimited” never deletes — the library folder just grows.', { key: K('⌘S', 'Ctrl+S') })}</p>
