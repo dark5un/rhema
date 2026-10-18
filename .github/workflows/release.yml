@@ -4,8 +4,9 @@
 # bumps arrive as Dependabot PRs (see .github/dependabot.yml) and get
 # proven by the Canary workflow before this file moves. Pushing a v* tag
 # (or a manual run) builds the full binary set and publishes it as a
-# GitHub Release. macOS builds are unsigned until an Apple Developer ID
-# is wired in (notarize is forced off here — CI has no credentials).
+# GitHub Release. macOS builds are Developer ID-signed and notarized: the
+# signing key material lives ONLY in the protected 'signing' environment,
+# and the macos job waits for a required reviewer before it can read it.
 name: Release
 
 on:
@@ -74,6 +75,16 @@ jobs:
   macos:
     needs: test
     runs-on: macos-26
+    # Protected environment: the five secrets below exist ONLY here, and
+    # every run of this job waits for its required reviewer to approve
+    # before the signing key is exposed to it.
+    environment: signing
+    env:
+      CSC_LINK: "${{ secrets.CSC_LINK }}"
+      CSC_KEY_PASSWORD: "${{ s...WORD }}"
+      APPLE_API_KEY: "${{ s..._KEY }}"
+      APPLE_API_KEY_ID: "${{ secrets.APPLE_API_KEY_ID }}"
+      APPLE_API_ISSUER_ID: "${{ secrets.APPLE_API_ISSUER_ID }}"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -81,8 +92,9 @@ jobs:
           node-version: 26.7.0
           cache: npm
       - run: npm ci
-      # unsigned: no Developer ID in CI; -c overrides package.json's notarize
-      - run: npx electron-builder --mac --publish never -c.mac.notarize=false -c.mac.identity=null
+      # Developer ID sign + notarize (notarytool) + staple: electron-builder
+      # picks all of this up from the env vars above. No -c overrides.
+      - run: npx electron-builder --mac --publish never
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: macos
