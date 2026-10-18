@@ -1,12 +1,14 @@
-# Builds NEO on remote Windows, Linux, and macOS machines whenever a version
-# tag is pushed, and attaches the installers to a draft GitHub release. 
+# Builds Rhema on remote Windows, Linux, and macOS machines whenever a version
+# tag is pushed, and attaches the installers to a draft GitHub release.
+# RHEMA fork: the tag trigger is parked — Rhema builds locally and ships by hand
+# (Stone 15); run this by hand from the Actions tab if ever needed.
 
-name: Build NEO
+name: Build Rhema
 
 on:
   push:
     tags:
-      - 'v*'
+      - 'rhema-never-*'
   workflow_dispatch: {}
 
 permissions:

@@ -1,11 +1,11 @@
-// Where NEO Pocket keeps its books on iOS.
+// Where Rhema Pocket keeps its books on iOS.
 //
 // Same principle as everywhere else NEO runs: plain files in a folder on the
 // device. When the writer has iCloud Drive switched on, that folder is the
 // app's iCloud folder — still local, still offline-capable, but Apple carries
 // changes to the Mac in the background, where desktop NEO can point at it via
-// File → Library Folder… (it shows up as iCloud Drive → NEO Pocket → NEO
-// Library). With iCloud Drive off, the folder is On My iPad → NEO Pocket.
+// File → Library Folder… (it shows up as iCloud Drive → Rhema Pocket → Rhema
+// Library). With iCloud Drive off, the folder is On My iPad → Rhema Pocket.
 // No account is required, no dialog is shown; the shelf simply appears.
 
 import Foundation
@@ -31,7 +31,7 @@ public class LibraryHomePlugin: CAPPlugin, CAPBridgedPlugin {
         call.resolve()
     }
 
-    private static let folderName = "NEO Library"
+    private static let folderName = "Rhema Library"
     private static var cached: (url: URL, cloud: Bool)?
 
     private func home() -> (url: URL, cloud: Bool) {

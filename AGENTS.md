@@ -1,6 +1,8 @@
-# NEO — notes for agents
+# Rhema (Ρήμα) — notes for agents
 
-NEO is a local word processor for books. It is an Electron app made of plain JavaScript, HTML, and CSS. There is no bundler, no framework, and no compile step. `npm start` runs `electron .`.
+Rhema is a local word processor for books — novels, screenplays, and poetry. It is an Electron app made of plain JavaScript, HTML, and CSS. There is no bundler, no framework, and no compile step. `npm start` runs `electron .`.
+
+Rhema is a **new project based on Hugh Howey's NEO** (MIT, https://github.com/hughhowey/neo), not a fork that merges upstream: upstream fixes arrive by **cherry-pick** when they matter, and identity strings (names, ids, folders, logs, URLs) are Rhema's own wherever they clash. Every anchored change in upstream-owned files and every Rhema-only file is listed in [RHEMA-ANCHORS.md](RHEMA-ANCHORS.md) — read it before touching `app.js`, `main.js`, `index.html`, `preload.js`, or the locales. Never push to upstream and never contact its maintainers; Panos handles that relationship.
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) before adding a feature. The product is opinionated on purpose. A change that helps someone finish a book belongs here. A change that adds a panel, a prompt, or a dependency usually does not.
 
@@ -24,7 +26,10 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md) before adding a feature. The product is 
 | `app.js` | The whole UI, in banner-marked sections. Search for the banner before reading the file |
 | `styles.css` | All styling. Tokens are CSS variables at the top |
 | `covers.js` | Shelf covers in the window: seeded canvas art plus real title type. `window.NeoCovers` |
-| `art.js` | Painted covers in the main process. OpenAI only. Title and author are never sent to the image model |
+| `art.js` | Painted covers in the main process (upstream: OpenAI only). Title and author are never sent to the image model. Rhema's `ai.js` replaces the endpoint: any OpenAI-compatible text base + ComfyUI for images, settings from the library file only |
+| `poetry.js` | The poetry format: `book.format:'poetry'`, Enter rhythm, line ops, rich cards, status |
+| `scraps.js` `compare.js` `qrmark.js` `drawings.js` | Scraps drawer, snapshot compare view, the poem colophon (QR + drawing), the five drawing kinds |
+| `rhema-assets.js` `ai.js` `poemai.js` `rhema-settings.js` | Asset store (SVG gate) in main; AI providers; Reader's Eye + title suggestions; the Rhema Settings pane |
 | `i18n.js` | `t()` / `tk()`, shared by main and the window. English source text is the key |
 | `spell-worker.js` | Hunspell WASM, forked with `utilityProcess`. Messages: `load`, `check`, `suggest`, `add` |
 | `backup-worker.js` | The day's backup zip, forked with `utilityProcess` by `dailyBackup` so a file that won't come off iCloud never holds the main process |
@@ -38,19 +43,19 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md) before adding a feature. The product is 
 
 Menus are built in `buildMenu()` in `main.js`. A menu click sends `{ type, ... }` to the window; `app.js` handles it on `window.neo.onMenu`.
 
-## Simple NEO and Show More Features
+## Simple mode and Show More Features
 
-NEO opens simple. File → Show More Features (`library.moreFeatures`) brings back the rest: SIMPLE NEO near the end of `app.js`, and `moreState` / `simpleTemplate` in `main.js`.
+Rhema opens simple. File → Show More Features (`library.moreFeatures`) brings back the rest: the SIMPLE NEO block near the end of `app.js` (the brand seam displays it as SIMPLE RHEMA), and `moreState` / `simpleTemplate` in `main.js`.
 
 - A menu item behind the switch carries `more: true` in `buildMenu()`; `simpleTemplate` leaves it (and the separators it would strand) out. A key, right-click choice or pane behind it asks `moreOn()` in `app.js`.
-- Behind the switch now: alignment, poetry paragraphs, footnotes (⌘⇧N), Markdown emphasis (*italic* typed; off in simple NEO), Other Font…, non-breaking marks, pages views, page width, brighter interface, interface size, focus mode, vim keys, read aloud, Look Up, the tab keys, chapter notes pages, outline cards (loose cards, cards beside the page), New Books Open To, painted covers and Cover Art…, pen names, binding shelves, duplicate, Reshelve, scripts and Fountain/Final Draft import, Import Chapters, txt/md/html exports, Chapter Titles Only, the shelf anthology, Manuscript Format, and the two language menus.
-- Simple NEO treats those settings as NEO's defaults (`applyLook`) and never erases them: the writer's choices wait in library.json for the switch.
+- Behind the switch now: alignment, poetry paragraphs, footnotes (⌘⇧N), Markdown emphasis (*italic* typed; off in simple mode), Other Font…, non-breaking marks, pages views, page width, brighter interface, interface size, focus mode, vim keys, read aloud, Look Up, the tab keys, chapter notes pages, outline cards (loose cards, cards beside the page), New Books Open To, painted covers and Cover Art…, pen names, binding shelves, duplicate, Reshelve, scripts and Fountain/Final Draft import, Import Chapters, txt/md/html exports, Chapter Titles Only, the shelf anthology, Manuscript Format, and the two language menus.
+- Simple mode treats those settings as Rhema's defaults (`applyLook`) and never erases them: the writer's choices wait in library.json for the switch.
 - Nothing a book already holds is hidden. A script, footnote, poetry paragraph, bound shelf, painted cover, loose card or chapter notes page with notes on it opens and exports as before, and other pen names stay reachable.
-- A book's right-click in simple NEO is the larger cards (`optionModal`), with no cover menu: art is dragged onto the book; New cover and Remove cover art stand with the rest. Word goals are set in Goals, inside the book, never from the shelf.
+- A book's right-click in simple mode is the larger cards (`optionModal`), with no cover menu: art is dragged onto the book; New cover and Remove cover art stand with the rest. Word goals are set in Goals, inside the book, never from the shelf.
 - The shortcuts window (`bookShortcutSections`) lists a key only when its feature is showing.
 - A library from before the switch is decided once (`decideMoreFeatures`): on when it uses something behind it, off otherwise (with one toast saying where things went).
-- Pocket (Android and iOS) is always simple and has no switch; its ⋯ sheet in `pocket/www/index.html` offers only simple NEO's choices.
-- A new feature goes behind the switch unless Hugh says it belongs in simple NEO. `scripts/simple-neo.test.js`, `npm run test:simple`.
+- Pocket (Android and iOS) is always simple and has no switch; its ⋯ sheet in `pocket/www/index.html` offers only simple mode's choices.
+- A new feature goes behind the switch unless it belongs in the poet's core loop (upstream rule: unless Hugh says). `scripts/simple-neo.test.js`, `npm run test:simple`.
 
 ## Outline cards
 
@@ -89,25 +94,25 @@ File → Export → Manuscript Format… (MANUSCRIPT FORMAT in `app.js`, the pag
 
 - **.docx** (`docxEntries`): the title page is its own section with no header, the story the next one with `pgNumType start=1` and a PAGE field in `header1.xml`; a short story is one section with `titlePg` and an empty first-page header. A `settings.xml` keeps Word out of Compatibility Mode. Saved through `export:save`.
 - **PDF** (`html`): one page for Paged.js, the header in `@page`'s `@top-right` margin box, `@page titlepage` without it; `print:manuscript` lays it out with `renderPaged` (the story's first section is `.pg1`, so it's page 1) and saves it. It shares the print window with the paperback, so each refuses while the other runs. Courier Prime (bundled) goes into the PDF; Word gets Courier New.
-- The dialog remembers the contact block for every book (`library.manuscript`: name, address, phone, email, font, end) and the byline and header for this book (`book.manuscript`, only where they differ from NEO's own choice). "Anonymous" is never taken for a byline. Values go into the fields from code, so a quotation mark can't cut one short. It never opens over another dialog or twice. Scripts keep their own PDF; Pocket has no manuscript export (its page doesn't load `manuscript.js`).
-- `scripts/manuscript.test.js`; `npm run test:manuscript` (`scripts/manuscript.e2e.js`: the dialog, both files, the .docx read back by NEO's import, the PDF's pages read back with `pdftotext` where it's installed).
+- The dialog remembers the contact block for every book (`library.manuscript`: name, address, phone, email, font, end) and the byline and header for this book (`book.manuscript`, only where they differ from Rhema's own choice). "Anonymous" is never taken for a byline. Values go into the fields from code, so a quotation mark can't cut one short. It never opens over another dialog or twice. Scripts keep their own PDF; Pocket has no manuscript export (its page doesn't load `manuscript.js`).
+- `scripts/manuscript.test.js`; `npm run test:manuscript` (`scripts/manuscript.e2e.js`: the dialog, both files, the .docx read back by Rhema's import, the PDF's pages read back with `pdftotext` where it's installed).
 
 ## Paperbacks for KDP
 
 Export → Paperback for KDP… (also on the shelf's right-click Export) writes a print interior PDF and a cover template PDF beside it. `printPaperback` and `buildPrintHtml` are the PRINT BOOK section of `app.js`; `makePaperback`, `renderPaged` and `kdpCoverHtml` are in `main.js`, behind `print:paperback`.
 
-- Trims are KDP's four most-used: 5×8, 5.25×8, 5.5×8.5, 6×9 (`PRINT_TRIMS` in `app.js`, `KDP_TRIMS` in `main.js`). Paper thickness, page limits and the inside-margin bands (`kdpGutterMin`) come from KDP's help pages; NEO adds a quarter inch to the minimum. If the page count crosses a band, the book is laid out again with the wider margin.
+- Trims are KDP's four most-used: 5×8, 5.25×8, 5.5×8.5, 6×9 (`PRINT_TRIMS` in `app.js`, `KDP_TRIMS` in `main.js`). Paper thickness, page limits and the inside-margin bands (`kdpGutterMin`) come from KDP's help pages; Rhema adds a quarter inch to the minimum. If the page count crosses a band, the book is laid out again with the wider margin.
 - Pages are set by Paged.js (`print/paged.polyfill.js`, vendored, MIT) in one offscreen window per export. A hidden window stalls its animation frames; a second offscreen window opened right after one closes fails. The window closes when the export ends. One patch in it is marked `NEO:` (a word hyphenated across a page turn broke a letter late).
 - Hyphenation is soft hyphens put in by `hyphenateHtml` in `main.js` with TeX patterns (`print/hyphen/`, ISC), because Chromium only hyphenates on macOS. Only `p.hy` prose is touched; names (capitalised words, except in German) and a paragraph's last word stay whole.
 - Chromium rounds page sizes to 0.01 in; `exactPageBox` rewrites the MediaBox to the exact size in the same number of bytes.
 - The page count is kept even. Chapters open on a right-hand page; blank pages carry no head or number. Page numbers sit at the outside corners (left pages at the left, right pages at the right); the regular PDF keeps them centered.
-- Choices are kept: trim, paper, ISBN and fiction notice in `book.print`; on the pen name, `author.print` holds the back-matter links, `alsoByText` (the writer's own list, one title per line) and `reviewText` (own wording, with `{title}` for the book's title; empty means NEO's translated wording). A dedication typed in the dialog becomes the book's own Dedication page.
+- Choices are kept: trim, paper, ISBN and fiction notice in `book.print`; on the pen name, `author.print` holds the back-matter links, `alsoByText` (the writer's own list, one title per line) and `reviewText` (own wording, with `{title}` for the book's title; empty means Rhema's translated wording). A dedication typed in the dialog becomes the book's own Dedication page.
 - Page 1 is the story's first page (the first `chapter` section, so a prologue). In the paperback that section is `.pg1` and each page's number is set on it after layout. The regular PDF stops counting on `@page front` pages and numbers its contents from the `data-p1` link; pages after page 1 that show no number (a part's title) are `.page.counted`.
 - `scripts/print.test.js` covers the margin bands, hyphenation, the page box and the cover's size. Pocket has no paperback export.
 
 ## Snapshots
 
-⌘S (Ctrl+S; File → Take Snapshot) snapshots the whole book (SNAPSHOTS in `app.js`). NEO also takes one before the first change of each writing day (`maybeDailySnapshot`, from `scheduleChapterSave` and `snapshotStructure`, built from `savedHTML` so it holds the day's start). No timer, and nothing is taken when nothing changed.
+⌘S (Ctrl+S; File → Take Snapshot) snapshots the whole book (SNAPSHOTS in `app.js`). Rhema also takes one before the first change of each writing day (`maybeDailySnapshot`, from `scheduleChapterSave` and `snapshotStructure`, built from `savedHTML` so it holds the day's start). No timer, and nothing is taken when nothing changed.
 
 - One folder per snapshot, `book-…/snapshots/<UTC stamp>Z-<kind>-<chapters changed>-<words>-<rand>/`, holding only the chapters that changed since the last snapshot and, written last, `snapshot.json` (order, titles, kinds, a `textHash` of every chapter). Files are written once (`snapshot:list/read/write/remove` in `main.js`, the same four in Pocket's bridge). A chapter's text at a snapshot is in the newest snapshot at or before it holding the file (`snapHolder`).
 - Kinds: `k` ⌘S, kept until deleted; `d` start of a day and `r` just before a restore, which go after 30 days (`snapsToThin`). A snapshot that goes first copies its chapter files into the next one that lacks them, so later snapshots still read whole.
@@ -116,7 +121,7 @@ Export → Paperback for KDP… (also on the shelf's right-click Export) writes 
 
 ## Per device
 
-How NEO looks belongs to each device: `DEVICE_LOOK` in `app.js` (page theme, brightness, zoom, type size, page width, typewriter, non-breaking marks, pages view, focus, counters, outline view, vim keys). Every library write also keeps them in this device's `localStorage`; every library read takes them back from there (`applyDeviceLook`). The library's copy is the last device's, which is what a device new to the library starts with. Zoom is per device and per view: the page per mode, the cards, and the shelf (`neo.shelfZoom`, ⌘+/− and pinch on the shelf), each in `localStorage`; the page moves in tenths. The desktop also keeps its page theme in `settings.json` for the window's color at launch, and `exportFolder` there, so save dialogs open where the last export went.
+How Rhema looks belongs to each device: `DEVICE_LOOK` in `app.js` (page theme, brightness, zoom, type size, page width, typewriter, non-breaking marks, pages view, focus, counters, outline view, vim keys). Every library write also keeps them in this device's `localStorage`; every library read takes them back from there (`applyDeviceLook`). The library's copy is the last device's, which is what a device new to the library starts with. Zoom is per device and per view: the page per mode, the cards, and the shelf (`neo.shelfZoom`, ⌘+/− and pinch on the shelf), each in `localStorage`; the page moves in tenths. The desktop also keeps its page theme in `settings.json` for the window's color at launch, and `exportFolder` there, so save dialogs open where the last export went.
 
 Format → Page Width (Regular, Wide, Wider; `PAGE_WIDTHS` in `app.js`) sets `--page-wf` and `--page-pad-x`, which `--page-w` and the sheet's side padding in `styles.css` follow. The page also grows a little by itself in a wide window (`--page-w` clamps 680 to 760 px by the window); Pocket's page fills the screen up to 680 px (`pocket.css`).
 
@@ -127,7 +132,7 @@ Pocket makes PDFs through `NeoPdf`, a native plugin in each project: Android ope
 ## Processes
 
 ```
-index.html + app.js  →  preload.js (window.neo)  →  main.js  →  NEO Library
+index.html + app.js  →  preload.js (window.neo)  →  main.js  →  Rhema Library
                                                       ↓
                                                spell-worker.js
 ```
@@ -136,14 +141,14 @@ The window is created with `contextIsolation: true` and `nodeIntegration: false`
 
 ## Files on disk
 
-Default library: `~/Documents/NEO Library` (`app.getPath('documents')`). **File → Library Folder…** stores another path in `userData/settings.json` and restarts. NEO does not move existing books.
+Default library: `~/Documents/Rhema Library` (`app.getPath('documents')`). **File → Library Folder…** stores another path in `userData/settings.json` and restarts. Rhema does not move existing books; on first run it offers to adopt an existing `NEO Library` (one prompt, never automatic).
 
 ```
-NEO Library/
+Rhema Library/
   library.json          shelves, author, pen names, customWords, spellLanguage
   _catalog.txt          regenerated map of folder → title; edits are ignored
-  neo-errors.log
-  Backups/neo-backup-YYYY-MM-DD.zip    one per day, 14 kept
+  rhema-errors.log
+  Backups/rhema-backup-YYYY-MM-DD.zip  one per day; retention is a Rhema Settings choice, unlimited available
   Exports/              emailed PDF snapshots
   book-<slug>-<id>/
     book.json           metadata and chapterOrder
@@ -199,11 +204,11 @@ node scripts/i18n.js check fr
 
 Details, plural forms, and regional fallback (`fr-CA` → `fr` → English) are in [TRANSLATING.md](TRANSLATING.md). Quotation marks follow the spellcheck language (`QUOTE_STYLES` in `app.js`). Import chapter detection is `CHAPTER_WORDS` in `main.js`. Cover small-words are `CONNECTORS` in `covers.js`.
 
-Italian has no spellcheck dictionary: the only Hunspell package on npm is GPL-3.0-only, and NEO is MIT. Do not add it.
+Italian has no spellcheck dictionary: the only Hunspell package on npm is GPL-3.0-only, and Rhema is MIT. Do not add it.
 
-## Pocket
+## Pocket (Rhema Pocket — not shipped yet)
 
-`pocket/` is a Capacitor app that runs the desktop editor. Its bridge (`pocket/www/pocket-bridge.js`) implements `window.neo` against the phone's library folder. Android shares `Documents/NEO Library` via sync. iOS uses the app folder, optionally iCloud, with `LibraryHome.swift` locating that folder.
+`pocket/` is a Capacitor app that runs the desktop editor; Rhema keeps it design-compatible but ships desktop-only for now (Stone 14). Its ids are Rhema's own (`io.onlyascii.rhemapocket`). Its bridge (`pocket/www/pocket-bridge.js`) implements `window.neo` against the phone's library folder. Android shares `Documents/Rhema Library` via sync. iOS uses the app folder, optionally iCloud, with `LibraryHome.swift` locating that folder.
 
 `scripts/pocket-www.js` (run by CI, and by hand before a local build) copies `app.js`, `covers.js`, `styles.css`, `i18n.js`, `fonts/`, `locales/`, Hunspell's browser build, and the `SPELL_LANGUAGES` dictionaries from `main.js` into `pocket/www/`. Pocket's checker is `pocket/www/pocket-spell.js`, a module worker with the same messages as `spell-worker.js`. A change to those files changes Pocket. Pocket-only behavior belongs in `pocket-bridge.js` or the native projects, not behind a desktop-only branch scattered through `app.js`.
 
@@ -217,20 +222,20 @@ npm run test:coverage      # node --test --experimental-test-coverage scripts/*.
 npm run lint               # oxlint, Electron's standard-style JavaScript rules
 npm run test:spellcheck    # node --test scripts/spellcheck.test.js
 npm run test:dashes        # node --test scripts/dashes.test.js
-npm run bundle             # Hugh: brings in the newest .bundle from ~/Downloads and pushes main
-npm run try                # Hugh: opens the newest .bundle's NEO on a copy of the library, pushes nothing (-- fresh: an empty library)
-npm run release            # Hugh: next version (x.y.9 → x.(y+1).0), commit, push, tag (npm run release -- 2.0.0 for another)
+npm run bundle             # upstream flow (Hugh's) — Rhema does not use it; cherry-pick from the upstream remote instead
+npm run try                # opens the newest .bundle's app on a copy of the library, pushes nothing (-- fresh: an empty library)
+npm run release            # upstream flow (Hugh's) — Rhema versions by hand
 npm run package:mac        # macOS build; npm run package calls this
 npm run package:linux      # AppImage via electron-builder; also package, package:mac, package:win, package:all
 ```
 
-Tests use `node:test` and load `app.js` or `spell-worker.js` inside `vm`. They are not run by CI. The only CI check is a Windows smoke test that the packaged exe boots and creates a library (`.github/workflows/build.yml`, on `v*` tags). Pocket builds from `.github/workflows/pocket.yml`.
+Tests use `node:test` and load `app.js` or `spell-worker.js` inside `vm`. They are not run by CI — run them here. Rhema's CI triggers are parked (`.github/workflows/build.yml` and `pocket.yml` only fire on names that never occur); builds are local (`npm run package:linux`) and shipped by hand.
 
 `node scripts/check-romanian-package.js <Resources dir>` compares a packaged app's dictionaries to the source tree. `node scripts/benchmark-spellcheck.js` times the checker. Neither is an npm script.
 
-## Handing changes to Hugh
+## Upstream (hughhowey/neo)
 
-Hugh pushes and releases himself and isn't a git user. Hand him work as a git bundle of main..your-branch, built on the latest origin/main, then tell him: save it to Downloads, `npm run bundle`. To ship a desktop release: `npm run release`. Both commands check their footing and stop with a plain sentence instead of half-finishing. Don't give him raw git or npm version steps when these cover it.
+The `upstream` remote is fetch-only. Rhema does not merge upstream — it cherry-picks fixes that matter, file by file, checking each against RHEMA-ANCHORS.md so anchored seams survive. Never push to upstream, never open issues or PRs there, never contact its maintainers: Panos owns that relationship. Attribution stays: Hugh's LICENSE, the About box, and this file.
 
 ## When you change something
 
@@ -238,4 +243,4 @@ Hugh pushes and releases himself and isn't a git user. Hand him work as a git bu
 - A new writer-visible string needs `t()` and a template refresh.
 - A new way to remove text needs a recovery path and a sentence in the UI that says where the words went.
 - Export formats are assembled in `app.js` and written by `export:save` in `main.js`. EPUB is a zip built in memory. PDF is printed from temporary HTML.
-- Errors in the main process are appended to `neo-errors.log` via `logError`. Renderer failures go through `window.neo.logError`. Do not swallow a save failure; `persistChapter` rolls `savedHTML` back so the next flush retries.
+- Errors in the main process are appended to `rhema-errors.log` via `logError`. Renderer failures go through `window.neo.logError`. Do not swallow a save failure; `persistChapter` rolls `savedHTML` back so the next flush retries.

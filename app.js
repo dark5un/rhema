@@ -921,7 +921,7 @@ function showFirstRun() {
 }
 
 // Pen names: each author owns a set of shelves. Books all live in the one
-// NEO Library folder on disk regardless of name — switching or deleting a
+// Rhema Library folder on disk regardless of name — switching or deleting a
 // pen name never touches files.
 function currentAuthor() {
   if (!library.authors || !library.authors.length) {

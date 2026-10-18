@@ -106,7 +106,7 @@ async function backup({ libraryDir, target, keep, fileLimitMs = FILE_LIMIT_MS })
   await writeDurable(target, data);
   // the oldest go once there are more than `keep`
   const dir = path.dirname(target);
-  const backups = (await fsp.readdir(dir)).filter((f) => /^neo-backup-.*\.zip$/.test(f)).sort();
+  const backups = (await fsp.readdir(dir)).filter((f) => /^(rhema|neo)-backup-.*\.zip$/.test(f)).sort();
   while (backups.length > keep) await fsp.unlink(path.join(dir, backups.shift())).catch(() => {});
   return { missed, away: [...away] };
 }

@@ -9,7 +9,7 @@
 //                                      only holds what differs from fr.json
 //
 // Strings are found in t('…'), tk('…') and NeoI18n.t('…') calls in the
-// JavaScript, and in the data-i18n* attributes of index.html. NEO Pocket's
+// JavaScript, and in the data-i18n* attributes of index.html. Rhema Pocket's
 // own page and bridge count too: they show the same locales/ files.
 
 'use strict';

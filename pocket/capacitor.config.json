@@ -1,6 +1,6 @@
 {
-  "appId": "com.hughhowey.neopocket",
-  "appName": "NEO Pocket",
+  "appId": "io.onlyascii.rhemapocket",
+  "appName": "Rhema Pocket",
   "webDir": "www",
   "android": {
     "allowMixedContent": false

@@ -61,4 +61,4 @@ try {
 }
 say('Sending them to GitHub…');
 gitLoud('push', 'origin', 'main');
-console.log('\n✅ Done. NEO Pocket rebuilds by itself; type  npm run release  when you want desktop users to get it.\n');
+console.log('\n✅ Done. Rhema Pocket rebuilds by itself; type  npm run release  when you want desktop users to get it.\n');

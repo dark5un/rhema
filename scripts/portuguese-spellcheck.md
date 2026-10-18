@@ -42,9 +42,9 @@ so `well-knwon` marks `knwon` alone. This applies to every language.
 
 ## Licensing
 
-`dictionary-pt` is LGPL-3.0 or MPL. NEO uses the MPL 2.0 option. The
+`dictionary-pt` is LGPL-3.0 or MPL. Rhema uses the MPL 2.0 option. The
 files ship unpacked and unmodified in `app.asar.unpacked/node_modules/
 dictionary-pt/` with `NOTICE.txt`, `MPL-2.0.txt` and the upstream license
 (`licenses/dictionary-pt`). Hunspell itself is MPL 1.1 / GPL 2 / LGPL 2.1;
-NEO uses MPL 1.1 and ships its notice, with a link to the exact source
+Rhema uses MPL 1.1 and ships its notice, with a link to the exact source
 commit, in `Resources/licenses/hunspell`.

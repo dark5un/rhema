@@ -3,7 +3,7 @@
   "productName": "Rhema",
   "desktopName": "rhema",
   "version": "1.5.8",
-  "description": "A word processor for authors. Distraction-free by default.",
+  "description": "A word processor for authors — novels, screenplays, and poetry. Distraction-free by default.",
   "homepage": "https://github.com/hughhowey/neo",
   "main": "main.js",
   "scripts": {

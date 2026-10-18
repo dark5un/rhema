@@ -1,7 +1,7 @@
 /* =========================== NEO POCKET =========================== */
 /* The window.neo doorway, implemented for Android and iOS. Reads and    */
-/* writes the same plain files as desktop NEO, in a NEO Library folder:  */
-/* Android: Documents/NEO Library, shared with the Mac via Syncthing.    */
+/* writes the same plain files as desktop Rhema, in a Rhema Library folder: */
+/* Android: Documents/Rhema Library, shared with the Mac via Syncthing.   */
 /* iOS: the app's own folder — inside iCloud Drive when the writer has  */
 /* it on (so desktop NEO can point at the same folder), else On My iPad. */
 /* Desktop-only powers (email, import) stub out                          */
@@ -14,7 +14,7 @@
   const t = (s, vars) => (window.NeoI18n ? window.NeoI18n.t(s, vars) : s);
   const FS = () => window.Capacitor.Plugins.Filesystem;
   const DIR = 'DOCUMENTS';
-  const ROOT = 'NEO Library';
+  const ROOT = 'Rhema Library';
   const isIOS = () => !!(window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === 'ios');
 
   // iOS: HOME is the library folder as a file:// URL, found by the little
@@ -102,9 +102,9 @@
       'display:flex;align-items:center;justify-content:center;padding:40px;text-align:center';
     const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const why = isIOS()
-      ? '<p style="line-height:1.6;margin-top:16px">' + esc(t('Pocket couldn\'t open its NEO Library folder. Force-quit and reopen the app; if it keeps happening, check that iCloud Drive is signed in (Settings → your name → iCloud), or turn it off so Pocket keeps books on the iPad itself.')) + '</p>'
-      : '<p style="line-height:1.6;margin-top:16px">' + esc(t('Pocket can see the NEO Library folder but Android is blocking it from reading files that other apps (like Syncthing) created.')) + '</p>' +
-        '<p style="line-height:1.6;color:#999;margin-top:12px">' + esc(t('The switch is not on the app\'s own Permissions page. Open Android Settings, search for {setting} (or Apps → Special app access → {setting}), turn it on for NEO Pocket, then come back here.')).split('{setting}').join('<b>' + esc(t('All files access')) + '</b>') + '</p>';
+      ? '<p style="line-height:1.6;margin-top:16px">' + esc(t('Pocket couldn\'t open its Rhema Library folder. Force-quit and reopen the app; if it keeps happening, check that iCloud Drive is signed in (Settings → your name → iCloud), or turn it off so Pocket keeps books on the iPad itself.')) + '</p>'
+      : '<p style="line-height:1.6;margin-top:16px">' + esc(t('Pocket can see the Rhema Library folder but Android is blocking it from reading files that other apps (like Syncthing) created.')) + '</p>' +
+        '<p style="line-height:1.6;color:#999;margin-top:12px">' + esc(t('The switch is not on the app\'s own Permissions page. Open Android Settings, search for {setting} (or Apps → Special app access → {setting}), turn it on for Rhema Pocket, then come back here.')).split('{setting}').join('<b>' + esc(t('All files access')) + '</b>') + '</p>';
     bd.innerHTML = '<div style="max-width:420px"><h2 style="letter-spacing:5px">NEO POCKET</h2>' + why +
       '<p style="font:12px/1.5 monospace;color:#777;margin-top:20px;word-break:break-word">' + String(err && err.message || err || '') + '</p></div>';
     document.body.appendChild(bd);
@@ -218,7 +218,7 @@
         if (HOME) return window.Capacitor.convertFileSrc(HOME);
         const u = await FS().getUri({ path: ROOT, directory: DIR });
         return window.Capacitor.convertFileSrc(u.uri);
-      } catch { return 'Documents/NEO Library'; }
+      } catch { return 'Documents/Rhema Library'; }
     },
 
     /* ---------- books ---------- */
@@ -494,9 +494,9 @@
     logError: async (msg) => {
       try {
         let prior = '';
-        try { prior = await readText(p('neo-errors.log')); } catch { /* first entry */ }
+        try { prior = await readText(p('rhema-errors.log')); } catch { /* first entry */ }
         const line = `[${new Date().toISOString()}] [pocket] ${msg}\n`;
-        await writeText(p('neo-errors.log'), (prior + line).slice(-100000));
+        await writeText(p('rhema-errors.log'), (prior + line).slice(-100000));
       } catch { console.error(msg); }
       showErrorDetail(msg);
     },

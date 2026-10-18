@@ -3,7 +3,7 @@
 
 // node scripts/pocket-www.js
 //
-// Fills pocket/www with what NEO Pocket shares with desktop NEO: the editor
+// Fills pocket/www with what Rhema Pocket shares with desktop Rhema: the editor
 // (app.js, covers.js, styles.css, i18n.js, fonts, locales), JSZip, and the
 // spellchecker (Hunspell's browser build plus the same dictionaries desktop
 // NEO bundles). The robot build runs this; so does a local Android or iOS

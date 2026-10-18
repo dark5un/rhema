@@ -1,15 +1,15 @@
-# Getting Started with NEO
+# Getting Started with Rhema
 
 **Installing**
 
-Mac: open the .dmg for older Intel macs ... or the arm64.dmg for Apple silicon machines. Drag NEO into Applications. 
+Mac: open the .dmg for older Intel macs ... or the arm64.dmg for Apple silicon machines. Drag Rhema into Applications. 
 PC: run the installer or the standalone .exe.
 
-NEO will ask you two things when it opens: your name (this goes on your title pages, and you can leave it blank and be Anonymous), and whether you're a **pantser or a plotter**. If you don't know the difference, pantsers write by the seat of their pants and figure our the story as they go. Plotters outline first. There's no wrong answer, and you can change it later. The difference in NEO is plotters have new books that open in the Outline tab, while pantsers get a blank page. Then NEO asks you to pick a font and a drop cap style and shows you exactly what your page will look like. You can change these options later.
+Rhema will ask you two things when it opens: your name (this goes on your title pages, and you can leave it blank and be Anonymous), and whether you're a **pantser or a plotter**. If you don't know the difference, pantsers write by the seat of their pants and figure our the story as they go. Plotters outline first. There's no wrong answer, and you can change it later. The difference in Rhema is plotters have new books that open in the Outline tab, while pantsers get a blank page. Then Rhema asks you to pick a font and a drop cap style and shows you exactly what your page will look like. You can change these options later.
 
 **Your bookshelf**
 
-NEO opens on a bookshelf because you're a novelist, and novelists write books. (Or short stories; I won't judge). Click the dashed rectangle with the + in it and you've started your first story. That's it. And guess what? It already looks like a book!
+Rhema opens on a bookshelf because you're a novelist, and novelists write books. (Or short stories; I won't judge). Click the dashed rectangle with the + in it and you've started your first story. That's it. And guess what? It already looks like a book!
 
 You can add more shelves (button in the top right corner), rename any shelf by clicking its label, and drag books around like you're rearranging a real bookshelf. Right-click a book to set a word count goal (this puts a subtle progress bar on the cover. You have to write to see it!). You can also right-click to remove a book. Each book gets its own colored cover; hover over one and click the little ↻ refresh button if you want a new one. Or drag 2:3 ratio cover art right on the book to make it extra purty.
 
@@ -19,13 +19,13 @@ New in v0.4.2 is the ability to have bookshelves for each of your pen names. Jus
 
 **Writing**
 
-Here's everything you need to know about writing in NEO:
+Here's everything you need to know about writing in Rhema:
 
 Type your title. Hit Enter. Start writing.
 
-The first paragraph of every chapter gets a big drop cap, like a real book, because **you are writing a real book** and NEO wants you to feel that every time you open it up. The writing should delight you the way it delights your readers!
+The first paragraph of every chapter gets a big drop cap, like a real book, because **you are writing a real book** and Rhema wants you to feel that every time you open it up. The writing should delight you the way it delights your readers!
 
-When you finish a scene and want a section break — those little *** dividers — hit **Enter twice**. When you finish a chapter, hit **Enter three times**. A new chapter appears, numbered. If this is the first time you've created a new chapter, it will be Chapter 2 and NEO will label your first section Chapter 1 (this way short stories are exported without chapters at all). If you later squeeze a chapter in between two others, every chapter renumbers itself.
+When you finish a scene and want a section break — those little *** dividers — hit **Enter twice**. When you finish a chapter, hit **Enter three times**. A new chapter appears, numbered. If this is the first time you've created a new chapter, it will be Chapter 2 and Rhema will label your first section Chapter 1 (this way short stories are exported without chapters at all). If you later squeeze a chapter in between two others, every chapter renumbers itself.
 
 Type two hyphens and get an em dash — like that. The change happens immediately. Type three periods and get a real ellipsis… Quotes curl themselves in the right direction (imported files might have weird quotes; working on this).
 
@@ -41,7 +41,7 @@ SHIFT + ENTER gives you a paragraph with no indent. Hit it again for another, or
 
 **When you need to mark a spot and keep moving**
 
-I used to type XXX in drafts when I needed to change something later (or look something up, or verify some continuity). Now, you can just hit ⌘⇧X instead. NEO drops a little mark, makes a sticky note in the margin for later, and you keep writing. The chapter list shows a red dot everywhere you left a sticky. The notes are on the hidden right panel any time you need to look for something to fix.
+I used to type XXX in drafts when I needed to change something later (or look something up, or verify some continuity). Now, you can just hit ⌘⇧X instead. Rhema drops a little mark, makes a sticky note in the margin for later, and you keep writing. The chapter list shows a red dot everywhere you left a sticky. The notes are on the hidden right panel any time you need to look for something to fix.
 
 **Darlings**
 
@@ -59,7 +59,7 @@ Drag a card to move it. Your writing moves with it, so you can rearrange scenes 
 
 If you'd rather type your outline, click List at the top of the Outline. Enter always makes a new chapter. Tab always makes a section: on a chapter's line it tucks that chapter under the one above, and on a section's line it starts a new section below. ⇧Tab turns a section back into a chapter. The List and the cards are the same outline, so switch whenever you like.
 
-The Outline, Notes and Darlings show the interface a little brighter than the manuscript does, so the tips at the bottom are easy to read. View → Brighter Interface changes whichever one you're looking at, and NEO remembers both.
+The Outline, Notes and Darlings show the interface a little brighter than the manuscript does, so the tips at the bottom are easy to read. View → Brighter Interface changes whichever one you're looking at, and Rhema remembers both.
 
 Pantsers, this is for you too. You don't have to outline anything. Every chapter and every section between your *** breaks is already a card, showing its first line in quotes until you give it a note of its own.
 
@@ -79,33 +79,41 @@ Click the word counter that says "0 today" and you get the progress room: set a 
 
 **Cover Art**
 
-New books are automatically given cover art with a seeded abstract look (six art styles, six type templates, typefaces bundled with NEO) so no two stories on the shelf look alike. Once a story passes 1,000 words, NEO can read it and paint a cover from the text. This is a bit more work but totally worth it. Get an OpenAI API key from their website and paste it into **File → Cover Art…**. The art is generated in the background for about a penny a picture. (These are not meant for publication, just writing inspiration!) The API key is stored encrypted in NEO's own settings, never in your library folder. The title and author are always set in real type on top, so the lettering is never left to a gen-AI model. The ↻ on any book re-rolls its type and colors, or paints it again. And you can always switch back and forth from the seeded modern look to the painted variety.
+New books are automatically given cover art with a seeded abstract look (six art styles, six type templates, typefaces bundled with Rhema) so no two stories on the shelf look alike. Once a story passes 1,000 words, Rhema can read it and paint a cover from the text. This is a bit more work but totally worth it. Rhema paints with **your own local AI**: point **File → Rhema Settings…** at a local text model and ComfyUI on your machine, and nothing leaves the computer. (These are not meant for publication, just writing inspiration!) Any API key you do store is encrypted in Rhema's own settings, never in your library folder. The title and author are always set in real type on top, so the lettering is never left to a gen-AI model. The ↻ on any book re-rolls its type and colors, or paints it again. And you can always switch back and forth from the seeded modern look to the painted variety.
 
+
+**Poetry**
+
+Rhema's third format. On any shelf, the + tile offers **+ Poem** (or right-click it for **New Poem Collection**), and you can import your existing files — txt, md, docx, PDF — with **File → Import Poems…**: each file becomes a collection, split into poems.
+
+Inside a poem, Enter is the rhythm: one Enter is a new **line**, two is a new **stanza**, three is a new **poem**. Lines are real structure: Alt+↑/↓ moves a line (even across stanzas), Alt+D duplicates one, Alt+J joins or splits at the caret, Tab indents. Every move undoes with ⌘Z. The Outline tab shows one card per poem — title, first line, line count, and a status dot you set (draft → fair copy → done); drag the cards to sequence the collection. A line you cut with Alt+Shift+X waits in the **Scraps** drawer, tagged with the poem it came from, until a better one claims it.
+
+Each poem ends with a small colophon: a QR and a drawing of your choice — an ornament, a monogram, a line drawing generated from the poem's own text, or your own picture. **File → Rhema Settings…** is where the local AI lives (a text model and ComfyUI on your own machine); the **Reader's Eye** reads a poem and leaves observations in the Notes tab — in the poem's own language, and never touching a single line of the poem itself. When the collection is ready, export it as an EPUB, a 5×8 chapbook PDF, or plain text.
 
 **Writing a screenplay**
 
-NEO writes scripts now! It's tucked away so it doesn't clutter things up for novelists: right-click the + on any shelf and choose **New Script**. (On a phone or tablet, press and hold the +) Your script lands on the shelf looking like a script, white card stock and brass brads.
+Rhema writes scripts now! It's tucked away so it doesn't clutter things up for novelists: right-click the + on any shelf and choose **New Script**. (On a phone or tablet, press and hold the +) Your script lands on the shelf looking like a script, white card stock and brass brads.
 
-Type a title and hit Enter, same as a book. Then write. NEO works out what each line is:
+Type a title and hit Enter, same as a book. Then write. Rhema works out what each line is:
 
-- Start a line with INT. or EXT. and it becomes a scene heading. Hit Tab after INT and NEO adds the period; Tab after the place adds the dash. Places you've already used, and DAY or NIGHT, show up in gray as you type.
+- Start a line with INT. or EXT. and it becomes a scene heading. Hit Tab after INT and Rhema adds the period; Tab after the place adds the dash. Places you've already used, and DAY or NIGHT, show up in gray as you type.
 - Type a character's name in capitals and hit Enter. The name jumps to the middle of the page, and the next line is dialogue.
 - Hit Enter at the end of a speech and you're back to action. Hit Enter AGAIN on that empty line and it turns into the next speaker's name, with whoever is being answered already filled in gray. Enter once more accepts the suggestion.
 - Start a line of dialogue with ( and it's a parenthetical. Enter after it goes back to dialogue, and a ( on the next line down makes another one, so a speech can have a (beat) in the middle.
 - Scene headings are bold, on the page and in the PDF.
 - Capitals ending in TO: (CUT TO:, SMASH CUT TO:) make a transition.
 
-Gray text is only ever a suggestion, built from names and places you've already written. Tab, Enter, or the → key accepts it. Keep typing or hit Esc and it goes away. And if NEO guesses wrong (a sound effect in capitals can look like a character's name), hit Backspace on the empty dialogue line below it and it goes back to being action.
+Gray text is only ever a suggestion, built from names and places you've already written. Tab, Enter, or the → key accepts it. Keep typing or hit Esc and it goes away. And if Rhema guesses wrong (a sound effect in capitals can look like a character's name), hit Backspace on the empty dialogue line below it and it goes back to being action.
 
 If you'd rather choose for yourself, ⌘1 through ⌘7 (Ctrl on Windows) are Scene Heading, Action, Character, Parenthetical, Dialogue, Transition, and Shot. Those are Final Draft's keys, so some of you might already know them. Tab steps through them as well, and you can click any of them in the left panel.
 
-In a script the left panel stays open (click the little ☉ to tuck it away). Under the elements is every scene, with how long it runs in eighths of a page. Click a scene to jump there. Drag one to move the whole scene; ⌘Z puts it back. Down at the bottom, NEO shows what page you're on and how long the script runs, figured at a page a minute. Click the page counter to count scenes instead.
+In a script the left panel stays open (click the little ☉ to tuck it away). Under the elements is every scene, with how long it runs in eighths of a page. Click a scene to jump there. Drag one to move the whole scene; ⌘Z puts it back. Down at the bottom, Rhema shows what page you're on and how long the script runs, figured at a page a minute. Click the page counter to count scenes instead.
 
 The Outline tab turns your script into index cards, one per scene: the scene heading, how long it runs, who's in it, and a few lines of notes you can write right on the card (until you do, it shows the scene's first line of action). Drag a card to move the scene. Click a card's heading to change it. The + beside a card starts a new scene after it (and + Scene at the end adds one there), so you can lay out a whole script as cards before writing a word, and loose cards in the right-hand panel hold scenes that don't have a place yet.
 
 Scroll up to the title page and fill it in: "Written by," your name, your contact info at the bottom left (type it once and every script uses it), and your draft and date at the bottom right.
 
-When it's done, **File → Export** makes a PDF formatted the way the industry expects, on US letter paper, ready to send. It also exports Fountain and Final Draft (.fdx) files for when someone wants to open it in another program. To bring a script into NEO, drag a .fountain or .fdx file onto a shelf, or use Import. You can also paste in a whole script written in Fountain (the plain-text format most screenwriting apps can save), and NEO sorts the lines into scene headings, dialogue, and the rest.
+When it's done, **File → Export** makes a PDF formatted the way the industry expects, on US letter paper, ready to send. It also exports Fountain and Final Draft (.fdx) files for when someone wants to open it in another program. To bring a script into Rhema, drag a .fountain or .fdx file onto a shelf, or use Import. You can also paste in a whole script written in Fountain (the plain-text format most screenwriting apps can save), and Rhema sorts the lines into scene headings, dialogue, and the rest.
 
 Everything else works in scripts too: Notes, Darlings, ⌘⇧X placeholders, goals and sprints, and ⌘E, which emails you a PDF of the script.
 
@@ -115,14 +123,14 @@ When your draft is done, the File menu exports to Word for your editor so they c
 
 **Email backup**
 
-Hit ⌘E and NEO emails a timestamped PDF snapshot of your draft to yourself, with a digital fingerprint of the text. Crypto bros rejoice! Not only is this good for having a backup of your work (even though NEO is saving constantly and protecting against crashes), it creates a paper trail proving your words existed on a date, written by you. This feature could be worth $2.4 million dollars someday!
+Hit ⌘E and Rhema emails a timestamped PDF snapshot of your draft to yourself, with a digital fingerprint of the text. Crypto bros rejoice! Not only is this good for having a backup of your work (even though Rhema is saving constantly and protecting against crashes), it creates a paper trail proving your words existed on a date, written by you. This feature could be worth $2.4 million dollars someday!
 
 **Safety**
 
-Everything is saved automatically, constantly, into plain ordinary files in a folder called NEO Library in your Documents. Open the folder and look — your chapters are just files. Back them up, sync them with Dropbox, whatever you like. If NEO disappeared tomorrow, every word you wrote would still be there. There's nothing being sent to a cloud (except your own email), nothing anyone else can read, just files on your computer.
+Everything is saved automatically, constantly, into plain ordinary files in a folder called Rhema Library in your Documents. Open the folder and look — your chapters are just files. Back them up, sync them with Dropbox, whatever you like. If Rhema disappeared tomorrow, every word you wrote would still be there. There's nothing being sent to a cloud (except your own email), nothing anyone else can read, just files on your computer.
 
 **That's it**
 
-That's NEO. Hit ⌘/ anytime to see the shortcut list, but the important bits are: Enter, Enter, Enter. Write, write, write.
+That's Rhema. Hit ⌘/ anytime to see the shortcut list, but the important bits are: Enter, Enter, Enter. Write, write, write.
 
 Go get it. Your rough draft doesn't have to be good. It just has to exist. If you want to know anything else I've learned about writing and publishing, I've posted it all for free starting here: https://hughhowey.com/writing-insights-part-one-becoming-a-writer/

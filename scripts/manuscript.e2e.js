@@ -179,7 +179,7 @@ test('Save as PDF: the title page, then the story from page 1 under the header',
   } else console.log('     (pdftotext not here: the pages\' text not read back)');
   assert.equal(JSON.parse(fs.readFileSync(path.join(LIB, 'library.json'), 'utf8')).manuscript.font, 'courier');
   let errors = '';
-  try { errors = fs.readFileSync(path.join(LIB, 'neo-errors.log'), 'utf8'); } catch { /* none */ }
+  try { errors = fs.readFileSync(path.join(LIB, 'rhema-errors.log'), 'utf8'); } catch { /* none */ }
   assert.equal(errors, '');
 });
 

@@ -1,14 +1,18 @@
 # RHEMA anchors
 
-Every place this fork touches an upstream file. All fork edits in core files
+Every place Rhema touches a NEO-owned file. All Rhema edits in core files
 are marked `/* RHEMA */` (or a `RHEMA` block comment) and listed here. At
-each upstream merge, `grep -in rhema <core files>` must match this list —
-renamed or moved wrapped functions show up at merge time, not at runtime.
-(The check is case-INsensitive: rename sites read 'Rhema', guards read 'RHEMA'.)
+each upstream **cherry-pick**, `grep -in rhema <core files>` must match this
+list — renamed or moved wrapped functions show up at pick time, not at
+runtime. (The check is case-INsensitive: rename sites read 'Rhema', guards
+read 'RHEMA'.)
 
-Fork posture: new features live in NEW files (`poetry.js`, `scraps.js`,
-`compare.js`, `ai.js`, `rhema-settings.js`, `qrmark.js`, …); core files only
-carry anchors. Target: <300 changed lines across core files.
+Project posture (Stone 18, 2026-10-18): Rhema is a NEW project based on NEO,
+not a fork that merges upstream. New features live in NEW files (`poetry.js`,
+`scraps.js`, `compare.js`, `ai.js`, `poemai.js`, `rhema-settings.js`,
+`qrmark.js`, `drawings.js`, `rhema-assets.js`, …); NEO-owned files carry
+anchors. Where identity is at stake (names, ids, runtime artifacts, URLs),
+Rhema's own wins and cherry-picks resolve around it — see "Identity" below.
 
 ## app.js
 
@@ -67,13 +71,19 @@ carry anchors. Target: <300 changed lines across core files.
 | poem-terms map inside `t()` (`setTerms`) | Display-only poem chrome: while a poem book is open, chapter words in the TRANSLATED template become poem words (en + el maps ride together; before variable fill, so writer's words untouched). poetry.js arms on `bookOpened`, clears on `shelfShown`. Covers header, footer counter, nav, add card, snapshot labels, exports — zero new core anchors. Locale files stay byte-identical. | 2h-fix |
 | brand replace inside `t()` | Display-only rebrand: `\bNEO\b` → `Rhema` applied to the translated/English template BEFORE variable fill (writer's own words in `{vars}` are never touched; strings containing `hughhowey` skipped). Shared by main process and window, so every visible string — dialogs, menus, toasts, all locales — rebrands through this one line. Upstream keys and all `locales/*.json` stay byte-identical: zero merge friction. | 0 |
 
-## Rebrand strategy (Panos, 2026-10-17)
+## Rebrand strategy (Panos 2026-10-17; updated by Stone 18, 2026-10-18)
 
-Only what is VISIBLE says Rhema. Code identifiers, comments, env vars
-(`NEO_TRY_DIR`), locale keys, and upstream string literals keep "NEO" —
-renaming them would collide with upstream on every merge. The i18n.js brand
-line is the single seam; `index.html` title/h1 and the main.js library-folder
-name are the only literal renames (both listed above).
+2026-10-17 rule: only what is VISIBLE says Rhema; the i18n.js brand line is
+the display seam, and locale keys/literals stayed byte-identical to minimize
+merge friction.
+
+2026-10-18 (Stone 18): "This is not a fork. This is a new project." The
+display seam stays (it works, and it is one line), but identity strings are
+now Rhema's own AT THE SOURCE where identity matters — see Identity below.
+Code identifiers that carry no identity (`window.neo`, `NeoHooks`,
+`NeoCovers`, `NeoManuscript`, `NeoPdf`, `NEO_TRY_DIR`, CSS classes,
+`simple-neo.test.js`) stay: churn without truth. Cherry-pick conflicts on
+identity lines are expected and resolved in Rhema's favor.
 
 ## main.js
 
@@ -171,12 +181,32 @@ semantics, extend emit then — don't special-case call-sites.
 ## Deliberately NOT touched
 
 - `LICENSE` + Hugh Howey attribution + About-box credits — MIT posture.
-- Crash-report string `github.com/hughhowey/neo/issues:` — upstream code
-  crashes go upstream.
-- `locales/*.json` keys — English source strings are translation keys;
-  product-name strings inside locales are handled with the Greek top-up
-  pass (Stone 11), not by renaming keys. el.json topped up 2026-10-17
-  (295 new Greek entries incl. every Rhema string; en.json gained the
-  fork's three English plurals). Other locales untouched — they fall back
-  to English keys, rebranded by the i18n seam.
+- Desktop locale keys containing "NEO Library" — the brand seam displays
+  them as Rhema Library, so the display is already truthful; renaming the
+  keys would churn 15 files for zero visible change. (Stone 18 renamed the
+  three POCKET-owned toast keys, which the desktop seam never renders.)
+- el.json topped up 2026-10-17 (295 new Greek entries incl. every Rhema
+  string; en.json gained the fork's three English plurals).
+
+## Identity (Stone 18, 2026-10-18) — Rhema's own at the source
+
+Cherry-pick contract: these lines are Rhema's; upstream edits to them
+conflict and resolve in Rhema's favor.
+
+- Runtime artifacts: `rhema-errors.log` (was neo-errors.log), backup zips
+  `rhema-backup-YYYY-MM-DD.zip` (backup-worker's retention regex matches
+  BOTH `rhema-` and legacy `neo-` names so pre-rename backups still prune).
+- Crash-report URL: `github.com/dark5un/rhema/issues` in main.js + all 31
+  locale sites (the seam maps the word NEO, never URLs).
+- Library folder `Rhema Library` (Phase 0) + Pocket's functional
+  `ROOT`/`folderName` now read it too.
+- Pocket: name **Rhema Pocket**, ids `io.onlyascii.rhemapocket` (capacitor,
+  gradle namespace/applicationId/keyAlias, strings.xml, pbxproj, Info.plist,
+  entitlements iCloud container `iCloud.io.onlyascii.rhemapocket`).
+  Not shipped yet (Stone 14); CI parked.
+- Workflows parked: build.yml fires only on `rhema-never-*` tags,
+  pocket.yml only on branch `never-rhema-ci`; both keep workflow_dispatch.
+- Docs (README, AGENTS, TUTORIAL, TRANSLATING, CONTRIBUTING, print/,
+  pocket/, scripts/*-spellcheck.md) are Rhema's own prose — upstream doc
+  edits never cherry-pick without a manual truth pass.
 - `upstream` remote is fetch-only (`--push no_push`); never contact upstream.

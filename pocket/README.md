@@ -1,45 +1,42 @@
-# NEO Pocket
+# Rhema Pocket
 
-The Android and iOS companion to NEO: open a WIP, write, close. The
-manuscript editor is desktop NEO's own code (`app.js` / `styles.css`, copied
-in at build time), running in a Capacitor shell with a pocket-sized
-implementation of the `window.neo` bridge (`www/pocket-bridge.js`). Same
-plain files as the desktop, no accounts.
+**Status in Rhema: not shipped yet.** Rhema is desktop-only for now (Stone 14);
+this code is kept design-compatible so a companion app can come later. The
+ids and names below are Rhema's own (`io.onlyascii.rhemapocket`); the
+upstream robot that auto-builds APKs belongs to NEO, not this repo —
+Rhema's Pocket CI is parked.
 
-- **Android:** files live in `Documents/NEO Library`, shared with the desktop
-  via Syncthing.
+Rhema Pocket is the planned Android and iOS companion to Rhema: open a WIP,
+write, close. The manuscript editor is desktop Rhema's own code (`app.js` /
+`styles.css`, copied in at build time), running in a Capacitor shell with a
+pocket-sized implementation of the `window.neo` bridge
+(`www/pocket-bridge.js`). Same plain files as the desktop, no accounts.
+
+- **Android:** files live in `Documents/Rhema Library`, shared with the
+  desktop via Syncthing.
 - **iOS:** files live in the app's own folder. With iCloud Drive on, that's
-  iCloud Drive → NEO Pocket → NEO Library (still local files; Apple carries
-  changes in the background), and desktop NEO can point at the same folder
-  with File → Library Folder…. With iCloud Drive off, it's On My iPad → NEO
-  Pocket. Nothing is required on the desktop side: NEO stays local unless
-  the writer chooses that folder.
+  iCloud Drive → Rhema Pocket → Rhema Library (still local files; Apple
+  carries changes in the background), and desktop Rhema can point at the
+  same folder with File → Library Folder…. With iCloud Drive off, it's On
+  My iPad → Rhema Pocket. Nothing is required on the desktop side: Rhema
+  stays local unless the writer chooses that folder.
 
 ## Building
 
-Robots build it. Every push to `main` that touches `pocket/`, `app.js`, or
-`styles.css` produces a fresh, signed APK and drops it on the rolling
-**pocket-latest** pre-release:
-
-    https://github.com/hughhowey/neo/releases/download/pocket-latest/neo-pocket.apk
-
-Bookmark that on the phone. Tap it, open the download, and it installs over
-the previous build — same signing key every time, so no uninstalling and no
-lost settings. The build takes about five minutes after the push. Pushing a
-`pocket-v*` tag additionally publishes a numbered release for that version.
-
-The signing key lives in two repo secrets (`POCKET_KEYSTORE_BASE64`,
-`POCKET_KEYSTORE_PASSWORD`). If they ever change, the phone will need one
-uninstall/reinstall.
+No robots here (yet): build locally, or re-enable the parked
+`.github/workflows/pocket.yml` with a real branch trigger and Rhema's own
+signing secrets (`POCKET_KEYSTORE_BASE64`, `POCKET_KEYSTORE_PASSWORD`).
+Upstream NEO's robot publishes its own APK at
+https://github.com/hughhowey/neo/releases — that is NEO Pocket, a different
+app id; it will not install over or beside Rhema Pocket.
 
 First install only: sideload, then grant **All files access**
-(Settings → Apps → NEO Pocket).
+(Settings → Apps → Rhema Pocket).
 
 Local builds need Android Studio and: `npm install` at the top of the repo,
 `node scripts/pocket-www.js` (copies the editor, fonts, locales, and the
 spellchecker with its dictionaries into `www/`), then `cd pocket && npm install`,
-`npx cap sync android`, and build from `android/`. Local builds are debug-signed and won't install over a
-robot build (or vice versa).
+`npx cap sync android`, and build from `android/`. Local builds are debug-signed.
 
 ## Building for iOS
 
@@ -53,7 +50,7 @@ and an Apple Developer account for a real device. Then:
 
 In Xcode: pick your Team under Signing & Capabilities, add the **iCloud**
 capability with **iCloud Documents** ticked and the container
-`iCloud.com.hughhowey.neo.pocket`, choose an iPad simulator or a plugged-in
+`iCloud.io.onlyascii.rhemapocket`, choose an iPad simulator or a plugged-in
 iPad, and press Run. After changing `app.js`, `styles.css` or anything in
 `www/`, repeat `node scripts/pocket-www.js` (from the top of the repo) and
 `npx cap copy ios`, then Run again.
@@ -64,12 +61,12 @@ another device wrote before they're read.
 
 To test with real books in the simulator, run Pocket once, then:
 
-    open "$(xcrun simctl get_app_container booted com.hughhowey.neo.pocket data)/Documents"
+    open "$(xcrun simctl get_app_container booted io.onlyascii.rhemapocket data)/Documents"
 
-and copy a `NEO Library` folder in there (simulators have no iCloud, so this
+and copy a `Rhema Library` folder in there (simulators have no iCloud, so this
 is the On My iPad path).
 
-## Status — early alpha
+## Status — early alpha (upstream lineage)
 
 Working: bookshelf, opening books, writing (hardware keyboard), autosave to
 the shared library, pen-name switching, chapter list via the ☰ button or a

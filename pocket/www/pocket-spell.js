@@ -1,4 +1,4 @@
-/* NEO Pocket's spellchecker: the same Hunspell and the same dictionaries
+/* Rhema Pocket's spellchecker: the same Hunspell and the same dictionaries
    as desktop NEO (spell-worker.js there), in a web worker so the page never
    waits on a dictionary. scripts/pocket-www.js puts Hunspell's browser build
    in hunspell/ and the dictionaries in dict/<code>/.

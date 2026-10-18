@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace = "com.hughhowey.neopocket"
+    namespace = "io.onlyascii.rhemapocket"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.hughhowey.neopocket"
+        applicationId "io.onlyascii.rhemapocket"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         // CI passes these in (see .github/workflows/pocket.yml); local builds get 1 / "local".
@@ -26,7 +26,7 @@ android {
             if (ksFile && file(ksFile).exists()) {
                 storeFile file(ksFile)
                 storePassword System.getenv("POCKET_KEYSTORE_PASSWORD")
-                keyAlias "neopocket"
+                keyAlias "rhemapocket"
                 keyPassword System.getenv("POCKET_KEYSTORE_PASSWORD")
             }
         }

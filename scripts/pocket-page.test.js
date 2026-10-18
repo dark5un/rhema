@@ -35,7 +35,7 @@ for (const page of ['index.html', 'pocket/www/index.html']) {
 test('every word on Pocket\'s page is marked for translation', () => {
   const html = fs.readFileSync(path.join(root, 'pocket/www/index.html'), 'utf8')
     .replace(/<script[\s\S]*?<\/script>/g, '');
-  const names = new Set(['NEO', 'NEO Pocket']); // the app's name stays as it is
+  const names = new Set(['Rhema', 'Rhema Pocket']); // the fork's name stays unmarked
   const unmarked = [];
   for (const [, tag, attrs, text] of html.matchAll(/<(\w+)([^>]*)>([^<]*)/g)) {
     const words = text.trim();

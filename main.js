@@ -1495,7 +1495,7 @@ ipcMain.handle('export:save', async (_e, { format, defaultName, content, zipEntr
     }
   } catch (err) {
     // Main-process export failures used to vanish: the renderer saw a bare
-    // rejection and nothing reached neo-errors.log. Log it here, and hand the
+    // rejection and nothing reached rhema-errors.log. Log it here, and hand the
     // renderer a sentence it can show the writer.
     logError('export save', err);
     throw new Error('Could not write the file (' + ((err && err.message) || err) + ')');
@@ -2361,7 +2361,7 @@ ipcMain.handle('import:pick', async (_e, opts) => {
 // ---------------------------------------------------------------------------
 // Robustness: error log, daily backups, single instance
 // ---------------------------------------------------------------------------
-const ERROR_LOG = () => path.join(LIBRARY_DIR, 'neo-errors.log');
+const ERROR_LOG = () => path.join(LIBRARY_DIR, 'rhema-errors.log');
 
 function logError(source, err) {
   const line = `[${new Date().toISOString()}] [${source}] ${err && err.stack ? err.stack : String(err)}\n`;
@@ -2371,7 +2371,7 @@ function logError(source, err) {
   } catch {
     // the library can't be written (the very case worth logging): NEO's own
     // app folder takes the line instead
-    try { fs.appendFileSync(path.join(app.getPath('userData'), 'neo-errors.log'), line); } catch { /* never let logging crash the app */ }
+    try { fs.appendFileSync(path.join(app.getPath('userData'), 'rhema-errors.log'), line); } catch { /* never let logging crash the app */ }
   }
 }
 
@@ -2395,7 +2395,7 @@ function dailyBackup() {
     ensureLibrary();
     const backupsDir = path.join(LIBRARY_DIR, 'Backups');
     if (!fs.existsSync(backupsDir)) fs.mkdirSync(backupsDir, { recursive: true });
-    target = path.join(backupsDir, `neo-backup-${new Date().toISOString().slice(0, 10)}.zip`);
+    target = path.join(backupsDir, `rhema-backup-${new Date().toISOString().slice(0, 10)}.zip`);
     if (fs.existsSync(target)) return Promise.resolve();
   } catch (err) {
     logError('backup', err);
@@ -3689,7 +3689,7 @@ app.whenReady().then(() => {
     logError('startup', err);
     try {
       dialog.showErrorBox(t('NEO failed to start'),
-        t('Please report this at github.com/hughhowey/neo/issues:') + '\n\n' + String((err && err.stack) || err));
+        t('Please report this at github.com/dark5un/rhema/issues:') + '\n\n' + String((err && err.stack) || err));
     } catch { /* nothing left to try */ }
   }
   app.on('activate', () => {

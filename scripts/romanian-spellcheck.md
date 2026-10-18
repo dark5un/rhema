@@ -1,6 +1,6 @@
 # Romanian dictionary evaluation
 
-> Update, 2026-09-30: NEO now checks spelling with Hunspell (WebAssembly)
+> Update, 2026-09-30: Rhema now checks spelling with Hunspell (WebAssembly)
 > instead of nspell. Hunspell reads `dictionary-ro` as published, so the
 > flag conversion described below is gone; cedilla normalization stays.
 > The nspell measurements below are kept as the record of that evaluation.
@@ -49,14 +49,14 @@ their existing lookup behavior. Diacritics are not stripped, and both
 ## Distribution
 
 The [upstream notice](https://github.com/wooorm/dictionaries/blob/main/dictionaries/ro/license)
-offers GPL, LGPL, and MPL alternatives for the dictionary data. NEO selects
+offers GPL, LGPL, and MPL alternatives for the dictionary data. Rhema selects
 MPL 1.1. The packaging project's MIT license does not cover that data.
 
 [MPL 1.1 sections 3.1–3.7](https://www.mozilla.org/en-US/MPL/1.1/)
 require the license and notices to accompany the covered source, source
 availability for modifications, and documentation of changes. Section 3.7
 allows a larger work under separate terms while preserving those obligations
-for the dictionary. NEO includes the full license, upstream attribution,
+for the dictionary. Rhema includes the full license, upstream attribution,
 an Exhibit A notice, source locations, and a dated description of the
 runtime conversion. The conversion code ships as source in `app.asar`.
 
@@ -70,7 +70,7 @@ Verify an unpacked build, for example on macOS:
 
 ```sh
 CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder --mac --arm64 --dir --publish never -c.mac.identity=null -c.mac.notarize=false
-node scripts/check-romanian-package.js dist/mac-arm64/NEO.app/Contents/Resources
+node scripts/check-romanian-package.js dist/mac-arm64/Rhema.app/Contents/Resources
 ```
 
 This checks the packaged source and notices byte for byte, and confirms
