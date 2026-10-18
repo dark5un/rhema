@@ -97,7 +97,7 @@ jobs:
         with:
           path: artifacts
           merge-multiple: true
-      - run: gh release create "$REF" artifacts/* --title "Rhema $REF" --generate-notes
+      - run: gh release create "$REF" -R "$GITHUB_REPOSITORY" artifacts/* --title "Rhema $REF" --generate-notes
         env:
           GH_TOKEN: ${{ github.token }}
           REF: ${{ github.ref_name }}
