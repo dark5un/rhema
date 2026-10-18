@@ -35,12 +35,16 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run package:linux
+      # --publish never: electron-builder's own GitHub publish wants a token
+      # and fights the release job; the release job below is the publisher.
+      # The updater channel files (latest-linux*.yml) ride along as assets.
+      - run: npm run package:linux -- --publish never
       - uses: actions/upload-artifact@v4
         with:
           name: linux
           path: |
             dist/*.AppImage
+            dist/latest-linux*.yml
           if-no-files-found: error
 
   windows:
@@ -53,12 +57,14 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run package:win
+      - run: npx electron-builder --win --publish never
       - uses: actions/upload-artifact@v4
         with:
           name: windows
           path: |
             dist/*.exe
+            dist/latest.yml
+            dist/*.blockmap
           if-no-files-found: error
 
   macos:
@@ -72,13 +78,15 @@ jobs:
           cache: npm
       - run: npm ci
       # unsigned: no Developer ID in CI; -c overrides package.json's notarize
-      - run: npx electron-builder --mac -c.mac.notarize=false -c.mac.identity=null
+      - run: npx electron-builder --mac --publish never -c.mac.notarize=false -c.mac.identity=null
       - uses: actions/upload-artifact@v4
         with:
           name: macos
           path: |
             dist/*.dmg
             dist/*-mac.zip
+            dist/latest-mac.yml
+            dist/*.blockmap
           if-no-files-found: error
 
   release:
