@@ -37,12 +37,13 @@ async function loadOne(factory, language, dir) {
   const dic = fs.readFileSync(path.join(dir, 'index.dic'));
   const normalize = language === 'ro' ? normalizeRomanianWord : (word) => word;
   const n = ++mounts;
-  const files = [
-    factory.mountBuffer(aff, `neo-${n}.aff`),
-    factory.mountBuffer(dic, `neo-${n}.dic`)
-  ];
+  // Gate round-1: mounts land incrementally so a throw on the SECOND
+  // mountBuffer still unmounts the first (no wasm mount leak).
+  const files = [];
   let hunspell;
   try {
+    files.push(factory.mountBuffer(aff, `neo-${n}.aff`));
+    files.push(factory.mountBuffer(dic, `neo-${n}.dic`));
     hunspell = factory.create(files[0], files[1]);
   } catch (err) {
     for (const f of files) { try { factory.unmount(f); } catch { /* gone */ } }

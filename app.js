@@ -2653,6 +2653,7 @@ async function openBook(bookId) {
   $$('.tab[data-tab="notes"]')[0].textContent = tabName('notes');
   $$('.tab[data-tab="outline"]')[0].textContent = tabName('outline');
   spEditorMode(); // a script, or a book
+  focusSegmenter = null; // RHEMA — Stone 20: the writing language is per-book; drop the cached sentence segmenter so the next book rebuilds it in its own language
   NeoHooks.emit('bookOpened', book); /* RHEMA — fork features re-arm per book (scraps.js, poetry.js) */
 
   renderChapters();
@@ -4921,6 +4922,12 @@ function writingLanguage() {
   const bs = book && Array.isArray(book.spellLanguages) ? book.spellLanguages.filter((c) => typeof c === 'string') : null;
   if (bs && bs.length) return bs[0];
   return (library && library.spellLanguage) || 'en-US';
+}
+// Gate round-1 (security): a hand-edited book.json could put a garbage
+// locale here; Intl.Segmenter throws RangeError on structurally invalid
+// tags. Anything that doesn't look like a BCP-47 tag segments as English.
+function safeSegmentLocale(code) {
+  return typeof code === 'string' && /^[a-zA-Z]{2,3}(-[A-Za-z0-9]{2,8})*$/.test(code) ? code : 'en-US';
 }
 function quoteStyle() {
   const code = writingLanguage();
@@ -13756,7 +13763,7 @@ function readSentences(p, from) {
   const text = p.textContent;
   const spans = [];
   if (window.Intl && Intl.Segmenter) {
-    const seg = new Intl.Segmenter(writingLanguage(), { granularity: 'sentence' });
+    const seg = new Intl.Segmenter(safeSegmentLocale(writingLanguage()), { granularity: 'sentence' });
     for (const s of seg.segment(text)) spans.push([s.index, s.index + s.segment.length]);
   } else spans.push([0, text.length]);
   return spans
@@ -14865,7 +14872,7 @@ function sentenceRange(p) {
   if (!text.trim()) return null;
   const at = caretOffsetIn(p);
   if (!focusSegmenter && window.Intl && Intl.Segmenter) {
-    focusSegmenter = new Intl.Segmenter(writingLanguage().split('-')[0], { granularity: 'sentence' }); // RHEMA — Stone 20: the book's language, not the dictionary setting alone
+    focusSegmenter = new Intl.Segmenter(safeSegmentLocale(writingLanguage()).split('-')[0], { granularity: 'sentence' }); // RHEMA — Stone 20: the book's language, not the dictionary setting alone
   }
   if (!focusSegmenter) return null;
   let hit = null, last = null;

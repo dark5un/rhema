@@ -9,7 +9,7 @@
 
 'use strict';
 
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, Menu } = require('electron');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const os = require('os');
@@ -69,6 +69,20 @@ const settle = async (ms = 800) => {
   }
   return last;
 };
+// Gate round-1 (coding BLOCKER): settle() returns the first two IDENTICAL
+// samples — if the marks are stable before an async dictionary load +
+// rescan lands, it hands back the OLD marks. When a test changes the
+// book's language set, wait for the expected marks, not for stability.
+const waitFlags = async (pred, ms = 8000) => {
+  const until = Date.now() + ms;
+  let f = [];
+  while (Date.now() < until) {
+    f = await flagged();
+    if (pred(f)) return f;
+    await tick(150);
+  }
+  return f;
+};
 
 const tests = [];
 const test = (name, fn) => tests.push({ name, fn });
@@ -127,11 +141,18 @@ test('the picker opens from the Edit menu message and saves the book set', async
 });
 
 test('union-acceptance: Greek and English pass, French is still flagged', async () => {
-  // the save rescanned; wait for the scan to settle on the new set
-  const f = await settle(4000);
+  // the save rescanned; wait for the NEW set's marks (gate round-1: not
+  // for mark-stability — the old marks were already stable)
+  const f = await waitFlags((x) => !x.includes('καλημέρα') && !x.includes('poem') && x.includes('bonjour'));
   assert.ok(!f.includes('καλημέρα'), 'Greek accepted by the el dictionary');
   assert.ok(!f.includes('poem'), 'English accepted by the en-US dictionary');
   assert.ok(f.includes('bonjour'), 'French is not in the set — flagged, honestly');
+});
+
+test('the Edit menu really carries the picker entry', () => {
+  const menu = Menu.getApplicationMenu();
+  const edit = menu.items.find((i) => i.submenu && i.submenu.items.some((s) => s.label === "This book's languages…"));
+  assert.ok(edit, 'an Edit submenu holds "This book\'s languages…" (the guide\'s path exists)');
 });
 
 test('the book primary drives quote style, not the English interface', async () => {

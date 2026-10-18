@@ -291,9 +291,12 @@ test('spell:setBookLanguages validates codes, caps the set, and loads them in or
   assert.ok(m.loads[1].languages.every((l) => l.dir.includes('dictionary-')));
   assert.equal(await call(['klingon', 'el']), true);   // unknown codes dropped, not rejected whole
   assert.deepEqual(Array.from(m.loads[2].languages, (l) => l.language), ['el']);
+  // gate round-1 (security): prototype-chain keys are NOT dictionary codes
+  assert.equal(await call(['__proto__', 'el']), true);
+  assert.deepEqual(Array.from(m.loads[3].languages, (l) => l.language), ['el']);
   assert.equal(await call('el'), false);               // not an array: refused
   assert.equal(await call(['en-US', 'en-GB', 'fr', 'de', 'es', 'el']), true);
-  assert.equal(Array.from(m.loads[3].languages).length, 5); // capped at five (loads: init, 1, 2, this)
+  assert.equal(Array.from(m.loads[4].languages).length, 5); // capped at five (loads: init, 1, 2, proto, this)
   // the library default survives book switches (the radio stays the default)
   assert.equal(vm.runInContext('spellLanguage', m.context), 'en-US');
   // the picker's list comes from the bundled dictionaries

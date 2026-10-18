@@ -170,7 +170,7 @@ identity lines are expected and resolved in Rhema's favor.
 | `scripts/import-poetry.test.js` | Phase 3a: main.js in a vm — poemize split knob (auto/headings/whole), Kavafis txt/md/docx fixtures, PDF line/pitch grouping (pdfimport pure functions), novels untouched (no opts = old chapterize) — hermetic |
 | `scripts/rhema-assets.test.js` | Stone 17: rhema-assets.js — name globs (hostile keys), the sanitizeSvg gate (prolog lead-in, script/handler/external refusal), saveAsset replace-by-extension + refusal-writes-nothing — hermetic |
 | `scripts/import-chapters.test.js` | upstream suite; harness gained `poemBook: () => false` + `NeoHooks.format: () => null` stubs for the poem-book seam (novel path always answers) |
-| `scripts/*.e2e.js` (11) | each pins `uiLanguage: 'en'` in its temp settings.json — determinism for suites that read English strings (the first-run default is English since the 2026-10-18 amendment; a saved Greek choice still wins) |
+| `scripts/*.e2e.js` (12) | each pins `uiLanguage: 'en'` in its temp settings.json — determinism for suites that read English strings (the first-run default is English since the 2026-10-18 amendment; a saved Greek choice still wins) |
 | `scripts/spellcheck.test.js` | interface language set via saved settings (the fork never derives it from the system); pinned fork case: first launch = en + en-US dictionary whatever the system language (2026-10-18 amendment) |
 
 ## Phase 6 — the book's languages (Stone 19/20, 2026-10-18)

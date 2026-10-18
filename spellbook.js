@@ -14,7 +14,7 @@ let rhemaSpellLangs = null;   // [{code,label}] from main, fetched once
 let rhemaSpellSynced = null;  // the set last loaded into main, joined
 
 async function rhemaSpellLanguages() {
-  if (!rhemaSpellLangs) {
+  if (!rhemaSpellLangs || !rhemaSpellLangs.length) { // gate round-1: an empty fetch must not cache permanently
     try { rhemaSpellLangs = await window.neo.spellLanguageList(); } catch { rhemaSpellLangs = null; }
     if (!Array.isArray(rhemaSpellLangs)) rhemaSpellLangs = [];
   }
@@ -94,6 +94,9 @@ async function bookSpellPicker() {
   bd.querySelector('.m-cancel').onclick = done;
   bd.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); done(); } });
   bd.querySelector('.m-save').onclick = async () => {
+    // Gate round-1: saveMeta() is a no-op while a shelf export borrows the
+    // open book — wait for it to finish, same guard openBook uses.
+    while (shelfExport) await new Promise((r) => setTimeout(r, 50));
     const p = primarySel.value;
     const extra = [...bd.querySelectorAll('#sb-also input:checked')].map((i) => i.dataset.code).filter((c) => c !== p);
     const set = rhemaValidSet([p, ...extra]);

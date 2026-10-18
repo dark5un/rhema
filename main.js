@@ -2638,9 +2638,15 @@ function startSpellProcess() {
 // an array (primary first) or a single code; the worker loads them all and
 // union-accepts. `spellLanguage` stays the library DEFAULT (new books and
 // the no-book case); `spellLoadedSet` tracks what the helper holds.
+// Gate round-1 (security): own-property check — SPELL_LANGUAGES[c] alone
+// is truthy for '__proto__'/'constructor'/etc. via the prototype chain.
+function spellKnown(code) {
+  return typeof code === 'string' && Object.hasOwn(SPELL_LANGUAGES, code);
+}
+
 async function loadSpellDictionary(codes) {
   const wanted = (Array.isArray(codes) ? codes : [codes])
-    .map((c) => SPELL_LANGUAGES[c] ? c : null).filter(Boolean).slice(0, 5);
+    .map((c) => spellKnown(c) ? c : null).filter(Boolean).slice(0, 5);
   const known = wanted.length ? wanted : ['en-US'];
   startSpellProcess();
   let custom = [];
@@ -2671,12 +2677,12 @@ function defaultSpellLanguage() {
 
 function initSpell() {
   const chosen = chosenSpellLanguage();
-  spellLanguage = SPELL_LANGUAGES[chosen] ? chosen : defaultSpellLanguage();
+  spellLanguage = spellKnown(chosen) ? chosen : defaultSpellLanguage();
   loadSpellDictionary(spellLanguage);
 }
 
 ipcMain.handle('spell:setLanguage', async (_e, code) => {
-  if (!SPELL_LANGUAGES[code]) return false;
+  if (!spellKnown(code)) return false;
   const ok = await loadSpellDictionary(code);
   if (ok) { try { buildMenu(); } catch (err) { logError('menu', err); } }
   return ok;
@@ -2687,7 +2693,7 @@ ipcMain.handle('spell:setLanguage', async (_e, code) => {
 // codes against the bundled dictionaries and loads them.
 ipcMain.handle('spell:setBookLanguages', async (_e, codes) => {
   if (!Array.isArray(codes)) return false;
-  const clean = codes.filter((c) => typeof c === 'string' && SPELL_LANGUAGES[c]);
+  const clean = codes.filter(spellKnown); // gate round-1: own-property whitelist (proto keys refused)
   if (!clean.length) return false;
   return loadSpellDictionary(clean.slice(0, 5));
 });
