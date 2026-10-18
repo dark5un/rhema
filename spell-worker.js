@@ -15,8 +15,11 @@ const { loadModule } = require('@farscrl/hunspell-wasm');
 const { normalizeRomanianWord } = require('./spell-ro');
 
 let factory = null;       // the WebAssembly module, loaded once
-let spell = null;         // { hunspell, files } for the current language
-let normalizeWord = (word) => word;
+// RHEMA — Stone 19/20: a BOOK may speak several languages. `spell` became
+// `spells`: an array, primary first. A word is correct if ANY loaded
+// dictionary knows it (union-acceptance — a correctly spelled foreign word
+// is never flagged); suggestions and learning normalize by the primary.
+let spells = [];          // [{ hunspell, files, normalize }]
 let mounts = 0;
 
 function reply(msg, extra) {
@@ -24,16 +27,15 @@ function reply(msg, extra) {
 }
 
 function correct(word) {
-  if (!spell || !word) return true;
-  return spell.hunspell.spell(normalizeWord(word));
+  if (!word) return true;
+  if (!spells.length) return true;
+  return spells.some((s) => s.hunspell.spell(s.normalize(word)));
 }
 
-async function load(msg) {
-  if (!factory) factory = await loadModule();
-  const aff = fs.readFileSync(path.join(msg.dir, 'index.aff'));
-  const dic = fs.readFileSync(path.join(msg.dir, 'index.dic'));
-  const romanian = msg.language === 'ro';
-  const normalize = romanian ? normalizeRomanianWord : (word) => word;
+async function loadOne(factory, language, dir) {
+  const aff = fs.readFileSync(path.join(dir, 'index.aff'));
+  const dic = fs.readFileSync(path.join(dir, 'index.dic'));
+  const normalize = language === 'ro' ? normalizeRomanianWord : (word) => word;
   const n = ++mounts;
   const files = [
     factory.mountBuffer(aff, `neo-${n}.aff`),
@@ -46,16 +48,35 @@ async function load(msg) {
     for (const f of files) { try { factory.unmount(f); } catch { /* gone */ } }
     throw err;
   }
-  for (const w of msg.custom || []) {
-    if (typeof w === 'string' && w) hunspell.addWord(normalize(w));
+  return { hunspell, files, normalize };
+}
+
+async function load(msg) {
+  if (!factory) factory = await loadModule();
+  // RHEMA: `languages: [{ language, dir }]`; the single language+dir shape
+  // still answers (upstream callers, cherry-pick safety).
+  const wanted = Array.isArray(msg.languages) && msg.languages.length
+    ? msg.languages
+    : [{ language: msg.language, dir: msg.dir }];
+  const fresh = [];
+  try {
+    for (const w of wanted) fresh.push(await loadOne(factory, w.language, w.dir));
+  } catch (err) {
+    for (const s of fresh) {
+      try { s.hunspell.dispose(); } catch { /* freed */ }
+      for (const f of s.files) { try { factory.unmount(f); } catch { /* gone */ } }
+    }
+    throw err; // a failed load keeps the old set whole
   }
-  // only now let go of the previous language: a failed load keeps it
-  const old = spell;
-  spell = { hunspell, files };
-  normalizeWord = normalize;
-  if (old) {
-    try { old.hunspell.dispose(); } catch { /* freed */ }
-    for (const f of old.files) { try { factory.unmount(f); } catch { /* gone */ } }
+  for (const w of msg.custom || []) {
+    if (typeof w === 'string' && w) for (const s of fresh) s.hunspell.addWord(s.normalize(w));
+  }
+  // only now let go of the previous set: a failed load keeps it
+  const old = spells;
+  spells = fresh;
+  for (const s of old) {
+    try { s.hunspell.dispose(); } catch { /* freed */ }
+    for (const f of s.files) { try { factory.unmount(f); } catch { /* gone */ } }
   }
 }
 
@@ -70,9 +91,15 @@ async function handle(msg) {
       for (const w of msg.words || []) out[w] = correct(w);
       reply(msg, { ok: true, result: out });
     } else if (msg.type === 'suggest') {
-      reply(msg, { ok: true, result: spell && msg.word ? spell.hunspell.suggest(normalizeWord(msg.word)).slice(0, 6) : [] });
+      // RHEMA: suggestions come from the PRIMARY dictionary (the book's
+      // main language) — union-acceptance never guesses across languages.
+      const primary = spells[0];
+      reply(msg, { ok: true, result: primary && msg.word ? primary.hunspell.suggest(primary.normalize(msg.word)).slice(0, 6) : [] });
     } else if (msg.type === 'add') {
-      if (spell && typeof msg.word === 'string' && msg.word) spell.hunspell.addWord(normalizeWord(msg.word));
+      // RHEMA: a learned word joins every loaded dictionary — if the poet
+      // says a word is right, it is right in this book, in any of its
+      // languages. (library.customWords persists it across loads.)
+      if (typeof msg.word === 'string' && msg.word) for (const s of spells) s.hunspell.addWord(s.normalize(msg.word));
       reply(msg, { ok: true });
     } else {
       reply(msg, { ok: false, error: 'unknown message' });

@@ -1064,5 +1064,13 @@
  "The AI reads the open poem and files observations in the Notes tab. It never touches the poem.": "Το AI διαβάζει το ανοιχτό ποίημα και καταθέτει παρατηρήσεις στην καρτέλα «Σημειώσεις». Δεν αγγίζει ποτέ το ποίημα.",
  "Open a poem first.": "Ανοίξτε πρώτα ένα ποίημα.",
  "Reader's Eye…": "Το μάτι του αναγνώστη…",
- "Current title: {title}": "Τρέχων τίτλος: {title}"
+ "Current title: {title}": "Τρέχων τίτλος: {title}",
+ "Greek": "Ελληνικά",
+ "This book's languages…": "Γλώσσες αυτού του βιβλίου…",
+ "Open a book first, then choose its languages.": "Ανοίξτε πρώτα ένα βιβλίο και μετά διαλέξτε τις γλώσσες του.",
+ "The dictionary list could not be read.": "Το Ρήμα δεν μπόρεσε να διαβάσει τη λίστα με τα λεξικά.",
+ "A word is left alone if any language you pick here knows it. Suggestions and quotes follow the primary.": "Μια λέξη δεν πειράζεται αν οποιαδήποτε γλώσσα από όσες διαλέξετε την αναγνωρίζει. Οι προτάσεις και τα εισαγωγικά ακολουθούν την κύρια γλώσσα.",
+ "Primary language": "Κύρια γλώσσα",
+ "Also accept words from": "Δεκτές και λέξεις από",
+ "{n} languages for this book": {"one": "{n} γλώσσα για αυτό το βιβλίο.", "other": "{n} γλώσσες για αυτό το βιβλίο."}
 }

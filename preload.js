@@ -64,6 +64,9 @@ contextBridge.exposeInMainWorld('neo', {
   spellSuggest: (word) => ipcRenderer.invoke('spell:suggest', word),
   spellLearn: (word) => ipcRenderer.invoke('spell:learn', word),
   setSpellLanguage: (code) => ipcRenderer.invoke('spell:setLanguage', code),
+  // RHEMA — Stone 19/20: the book's own dictionary set + the picker's list
+  setBookSpellLanguages: (codes) => ipcRenderer.invoke('spell:setBookLanguages', codes),
+  spellLanguageList: () => ipcRenderer.invoke('spell:listLanguages'),
   appVersion: () => ipcRenderer.invoke('app:version'),
   openRelease: () => ipcRenderer.invoke('update:openRelease'),
 

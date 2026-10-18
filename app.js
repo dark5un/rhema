@@ -4915,7 +4915,12 @@ function singleQuotes(el) {
   return { open: '‚', close: '‘' };
 }
 function writingLanguage() {
-  return (library && library.spellLanguage) || NeoI18n.getLocale();
+  // RHEMA — Stone 20: the writing language belongs to the BOOK (its
+  // primary declared language), then the library default; the interface
+  // language never enters. (Upstream fell back to NeoI18n.getLocale().)
+  const bs = book && Array.isArray(book.spellLanguages) ? book.spellLanguages.filter((c) => typeof c === 'string') : null;
+  if (bs && bs.length) return bs[0];
+  return (library && library.spellLanguage) || 'en-US';
 }
 function quoteStyle() {
   const code = writingLanguage();
@@ -14464,13 +14469,15 @@ function toggleSpellcheck() {
 const SPELL_LANGUAGE_NAMES = {
   'en-US': t('US English'), 'en-GB': t('UK English'), 'en-CA': t('Canadian English'),
   'en-AU': t('Australian English'), fr: t('French'), es: t('Spanish'), de: t('German'),
-  nl: t('Dutch'), pl: t('Polish'), 'pt-BR': t('Brazilian Portuguese'), ro: t('Romanian'), ru: t('Russian'), hu: t('Hungarian'), sv: t('Swedish')
+  nl: t('Dutch'), pl: t('Polish'), 'pt-BR': t('Brazilian Portuguese'), ro: t('Romanian'), ru: t('Russian'), hu: t('Hungarian'), sv: t('Swedish'),
+  'el': t('Greek') /* RHEMA — the fork's dictionary; its toast name was missing */
 };
 async function changeSpellLanguage(code) {
   const ok = await window.neo.setSpellLanguage(code);
   if (!ok) { toast(t('That dictionary would not load')); return; }
   library.spellLanguage = code;
   await writeLibrary(library);
+  NeoHooks.emit('spellDefaultChanged'); /* RHEMA — Stone 19/20: spellbook.js re-arms the open book's set on top of the new default */
   spellCache.clear();
   if (spellOn) {
     spellScanned = new Set();
@@ -14858,7 +14865,7 @@ function sentenceRange(p) {
   if (!text.trim()) return null;
   const at = caretOffsetIn(p);
   if (!focusSegmenter && window.Intl && Intl.Segmenter) {
-    focusSegmenter = new Intl.Segmenter((library.spellLanguage || 'en').split('-')[0], { granularity: 'sentence' });
+    focusSegmenter = new Intl.Segmenter(writingLanguage().split('-')[0], { granularity: 'sentence' }); // RHEMA — Stone 20: the book's language, not the dictionary setting alone
   }
   if (!focusSegmenter) return null;
   let hit = null, last = null;
@@ -17917,6 +17924,7 @@ window.neo.onMenu(async (msg) => {
   if (msg.type === 'find') openSearch();
   if (msg.type === 'spellcheck') toggleSpellcheck();
   if (msg.type === 'spellLanguage') changeSpellLanguage(msg.value);
+  if (msg.type === 'bookSpellLanguages') NeoHooks.emit('bookSpellLanguages'); /* RHEMA — Stone 19/20: the picker lives in spellbook.js */
   if (msg.type === 'reshelve') reshelveBook();
   if (msg.type === 'typewriter') toggleTypewriter();
   if (msg.type === 'nbspMarks') toggleNbspMarks();

@@ -152,11 +152,9 @@ function setUiLanguage(code) {
   const settings = readSettings();
   settings.uiLanguage = uiLanguage;
   writeSettings(settings);
-  // no dictionary picked yet: spellcheck moves with the interface
-  if (!SPELL_LANGUAGES[chosenSpellLanguage()] && defaultSpellLanguage() !== spellLanguage) {
-    spellLanguage = defaultSpellLanguage();
-    loadSpellDictionary(spellLanguage);
-  }
+  // RHEMA — Stone 20 (Panos 2026-10-18): the interface never moves the
+  // dictionary. The writing language belongs to the book; switching the
+  // UI language changes menus only.
   try { buildMenu(); } catch (err) { logError('menu', err); }
   sendToWindow({ type: 'uiLanguage', value: uiLanguage });
 }
@@ -2595,16 +2593,16 @@ let spellChild = null;
 let spellSeq = 0;
 const spellWaiting = new Map();
 
-let spellLoaded = null; // the language the running helper has loaded
+let spellLoadedSet = null; // RHEMA — the dictionary SET the running helper has loaded
 function spellRequest(msg) {
   return new Promise((resolve) => {
     // the helper went away (it crashed, the system reclaimed it): start a
     // new one and load the dictionary again, rather than calling every
     // word right for the rest of the session
-    if (!spellChild && msg.type !== 'load' && spellLoaded) {
-      const lang = spellLoaded;
-      spellLoaded = null;
-      loadSpellDictionary(lang).then(() => spellRequest(msg)).then(resolve, () => resolve({ ok: false, error: 'no spell process' }));
+    if (!spellChild && msg.type !== 'load' && spellLoadedSet) {
+      const set = spellLoadedSet;
+      spellLoadedSet = null;
+      loadSpellDictionary(set).then(() => spellRequest(msg)).then(resolve, () => resolve({ ok: false, error: 'no spell process' }));
       return;
     }
     if (!spellChild) { resolve({ ok: false, error: 'no spell process' }); return; }
@@ -2636,37 +2634,39 @@ function startSpellProcess() {
 // The dictionary packages differ in how they export (callback, ES module),
 // so the helper reads their .aff/.dic files directly — the one shape they
 // all share. (Not require.resolve: the newer packages seal package.json.)
-async function loadSpellDictionary(code) {
-  const known = SPELL_LANGUAGES[code] ? code : 'en-US';
-  const entry = SPELL_LANGUAGES[known];
+// RHEMA — Stone 19/20: the dictionary SET belongs to the BOOK. `codes` is
+// an array (primary first) or a single code; the worker loads them all and
+// union-accepts. `spellLanguage` stays the library DEFAULT (new books and
+// the no-book case); `spellLoadedSet` tracks what the helper holds.
+async function loadSpellDictionary(codes) {
+  const wanted = (Array.isArray(codes) ? codes : [codes])
+    .map((c) => SPELL_LANGUAGES[c] ? c : null).filter(Boolean).slice(0, 5);
+  const known = wanted.length ? wanted : ['en-US'];
   startSpellProcess();
   let custom = [];
   try { custom = readJSON(LIBRARY_FILE, {}).customWords || []; } catch { /* a nicety */ }
-  const res = await spellRequest({ type: 'load', language: known, dir: path.join(__dirname, 'node_modules', entry.pkg), custom });
+  const res = await spellRequest({
+    type: 'load',
+    languages: known.map((code) => ({ language: code, dir: path.join(__dirname, 'node_modules', SPELL_LANGUAGES[code].pkg) })),
+    custom
+  });
   if (!res.ok) { logError('spell', new Error(res.error || 'dictionary failed to load')); return false; }
-  spellLanguage = known;
-  spellLoaded = known;
+  spellLoadedSet = known;
+  if (!Array.isArray(codes)) spellLanguage = known[0]; // a library-default pick sticks
   return true;
 }
 
-// One rule for every language: a dictionary picked in Edit → Spellcheck
-// Language wins. Until there is one, spellcheck follows the interface
-// language when NEO has its dictionary (fr-CA → fr), else US English.
-// Nothing is saved on the writer's behalf, so switching the interface back
-// takes the dictionary (and the typed quotes) along with it.
+// One rule (Stone 20, Panos 2026-10-18): the writing language belongs to
+// the BOOK, never to the interface. A picked library default (Edit →
+// Spellcheck Language) wins for books that declare nothing; with none,
+// US English — switching View → Language never moves a dictionary.
 function chosenSpellLanguage() {
   const saved = readJSON(LIBRARY_FILE, null);
   return saved && typeof saved === 'object' && !Array.isArray(saved) ? saved.spellLanguage : undefined;
 }
 
 function defaultSpellLanguage() {
-  const ui = String(uiLanguage || 'en');
-  if (SPELL_LANGUAGES[ui]) return ui;
-  // NEO's Portuguese interface is Brazilian; the dictionary is too. The
-  // European interface (pt-PT) leaves the choice to the writer.
-  if (ui === 'pt' || ui === 'pt-BR') return 'pt-BR';
-  const base = ui.split('-')[0];
-  return SPELL_LANGUAGES[base] ? base : 'en-US';
+  return 'en-US'; // RHEMA — the UI-follow rule is abolished (Stone 20)
 }
 
 function initSpell() {
@@ -2681,6 +2681,19 @@ ipcMain.handle('spell:setLanguage', async (_e, code) => {
   if (ok) { try { buildMenu(); } catch (err) { logError('menu', err); } }
   return ok;
 });
+
+// RHEMA — Stone 19/20: the BOOK's language set (primary first, max 5).
+// The renderer owns book.spellLanguages in book.json; main only validates
+// codes against the bundled dictionaries and loads them.
+ipcMain.handle('spell:setBookLanguages', async (_e, codes) => {
+  if (!Array.isArray(codes)) return false;
+  const clean = codes.filter((c) => typeof c === 'string' && SPELL_LANGUAGES[c]);
+  if (!clean.length) return false;
+  return loadSpellDictionary(clean.slice(0, 5));
+});
+
+ipcMain.handle('spell:listLanguages', () =>
+  Object.entries(SPELL_LANGUAGES).map(([code, l]) => ({ code, label: l.label })));
 
 ipcMain.handle('spell:check', async (_e, words) => {
   const res = await spellRequest({ type: 'check', words });
@@ -3021,7 +3034,8 @@ function buildMenu() {
             checked: spellLanguage === code,
             click: () => sendToWindow({ type: 'spellLanguage', value: code })
           }))
-        }
+        },
+        { label: t("This book's languages…"), click: () => sendToWindow({ type: 'bookSpellLanguages' }) } /* RHEMA — Stone 19/20: the book declares its own language set; the radio above stays the default for new books */
       ]
     },
     {

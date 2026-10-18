@@ -173,6 +173,22 @@ identity lines are expected and resolved in Rhema's favor.
 | `scripts/*.e2e.js` (11) | each pins `uiLanguage: 'en'` in its temp settings.json — determinism for suites that read English strings (the first-run default is English since the 2026-10-18 amendment; a saved Greek choice still wins) |
 | `scripts/spellcheck.test.js` | interface language set via saved settings (the fork never derives it from the system); pinned fork case: first launch = en + en-US dictionary whatever the system language (2026-10-18 amendment) |
 
+## Phase 6 — the book's languages (Stone 19/20, 2026-10-18)
+Every anchor of the increment in one place; the per-file tables above stay
+the running list, this section is the cherry-pick map for the spellchange.
+
+| File | Anchor | Phase |
+|---|---|---|
+| `spellbook.js` (new fork file) | the book's language set: `syncBookSpell()` pushes the open book's `book.spellLanguages` (or the library default, or en-US) into main when it differs; `bookSpellPicker()` — Edit → "This book's languages…" modal (primary select + also-accept checkboxes, primary disabled in the list, cap 5); `rhemaRescanSpelling()` mirrors changeSpellLanguage's rescan; listens on bookOpened / spellDefaultChanged / bookSpellLanguages; the picker backdrop carries `.sb-picker` (first-run modals also use `.modal-backdrop` — scope queries) | 6 |
+| `index.html` | `<script src="spellbook.js">` after scraps.js | 6 |
+| `app.js` | `writingLanguage()`: book primary → library default → 'en-US' — the interface locale NEVER enters (upstream fell back to `NeoI18n.getLocale()`); quote style + focus Segmenter follow it. `SPELL_LANGUAGE_NAMES` gained `'el'` (the fork's dictionary had no toast name). `changeSpellLanguage` emits `spellDefaultChanged`. menu msg `bookSpellLanguages` → `NeoHooks.emit`. `usesMoreFeatures`'s spellLanguage≠UI clause KEPT (legacy-library migration only — Stone 20 makes it normal for new libraries, and `moreFeatures` is already decided by then) | 6 |
+| `main.js` | `loadSpellDictionary(codes)` takes an array (primary first, validated against SPELL_LANGUAGES, cap 5) and sends `{type:'load', languages:[{language,dir}]}`; `spellLoaded` → `spellLoadedSet` (crash-respawn reloads the whole set); `defaultSpellLanguage()` → always 'en-US' (follow rule abolished, Stone 20); `setUiLanguage()` never touches dictionaries; `spell:setBookLanguages` + `spell:listLanguages` handlers; Edit menu "This book's languages…" (ungated) | 6 |
+| `spell-worker.js` (upstream file, anchored) | `spell` → `spells` array; load accepts `languages:[…]` and still answers the legacy single `language`+`dir` shape (cherry-pick safety); `correct` = ANY dictionary (union-acceptance); `suggest` = primary; `add` = every dictionary; a failed member load keeps the previous set whole | 6 |
+| `preload.js` | `setBookSpellLanguages`, `spellLanguageList` | 6 |
+| `locales/el.json` + `en.json` | picker strings + '{n} languages for this book' plurals; 'Greek' toast name | 6 |
+| `scripts/spellcheck.test.js` | follow-rule cases RE-PINNED as the decoupling rule (UI switch never reloads; every locale lands en-US; explicit default wins incl. el); new: `spell:setBookLanguages` gate (validation, cap, order) + worker union (el+en-US accept, fr flags, primary suggests, learn joins, failed member load keeps the set) | 6 |
+| `scripts/spellbook.e2e.js` + `npm run test:spellbook` | real app: default en-US flags Greek; picker via the real menu message; book.json carries `spellLanguages:['el','en-US']`; union-acceptance on screen (French still honestly flagged); quote style « » from the book primary under an English UI; a second book inherits the default; learning quiets under the set | 6 |
+
 ## Hook bus semantics (note for Phase 2)
 
 `NeoHooks.emit` returns the LAST non-undefined listener result

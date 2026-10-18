@@ -235,46 +235,37 @@ function mainContext(temp, systemLocale, settings = {}, library = {}, raw = null
   return { context, loads, handlers, read: () => JSON.parse(fs.readFileSync(path.join(temp, 'library.json'))) };
 }
 
-test('spellcheck follows the interface until a dictionary is picked; nothing is saved for the writer', async (t) => {
+// RHEMA — Stone 20 (Panos 2026-10-18): the interface NEVER moves the
+// dictionary. The library default (Edit → Spellcheck Language) wins when
+// one was picked; otherwise US English, whatever the system or UI locale.
+test('spellcheck ignores the interface: default or en-US, and switching UI never reloads', async (t) => {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'neo-spell-test-'));
   t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
-  // RHEMA — the interface is set through saved settings here; the follow
-  // rule under test is unchanged.
   const fresh = mainContext(temp, 'ro_RO', { uiLanguage: 'ro' }, { authorName: 'Autor', customWords: ['Zorțilă'] });
   assert.equal(fresh.read().spellLanguage, undefined); // not saved on the writer's behalf
   assert.equal(fresh.read().authorName, 'Autor');
-  assert.equal(vm.runInContext('spellLanguage', fresh.context), 'ro');
-  assert.equal(fresh.loads[0].language, 'ro');
-  assert.deepEqual(Array.from(fresh.loads[0].custom), ['Zorțilă']);
-  // switching the interface takes a dictionary nobody picked along with it
-  vm.runInContext('setUiLanguage("en")', fresh.context);
   assert.equal(vm.runInContext('spellLanguage', fresh.context), 'en-US');
-  assert.equal(fresh.loads.length, 2);
-  assert.equal(fresh.loads[1].language, 'en-US');
+  assert.deepEqual(Array.from(fresh.loads[0].languages, (l) => l.language), ['en-US']);
+  assert.deepEqual(Array.from(fresh.loads[0].custom), ['Zorțilă']);
+  // switching the interface moves menus only — no dictionary reload (Stone 20)
+  vm.runInContext('setUiLanguage("el")', fresh.context);
+  assert.equal(vm.runInContext('spellLanguage', fresh.context), 'en-US');
+  assert.equal(fresh.loads.length, 1);
   assert.equal(fresh.read().spellLanguage, undefined);
   await Promise.resolve();
 
-  // the same rule for every language: its own dictionary when NEO has one
-  for (const [locale, code] of [['ru_RU', 'ru'], ['fr-CA', 'fr'], ['de', 'de'], ['pl', 'pl'], ['en-US', 'en-US'], ['it', 'en-US'], ['pt-BR', 'pt-BR'], ['pt-PT', 'en-US']]) {
-    const ui = mainContext(temp, 'en-US', { uiLanguage: locale }); /* RHEMA — interface set, not system-derived */
-    assert.equal(ui.loads[0].language, code, locale);
+  // every interface locale, and every system locale, lands on en-US
+  for (const locale of ['ru_RU', 'fr-CA', 'de', 'pl', 'en-US', 'it', 'pt-BR', 'pt-PT', 'el_GR']) {
+    const ui = mainContext(temp, 'en-US', { uiLanguage: locale });
+    assert.deepEqual(Array.from(ui.loads[0].languages, (l) => l.language), ['en-US'], locale);
     assert.equal(ui.read().spellLanguage, undefined);
     await Promise.resolve();
   }
 
-  // RHEMA — first launch (amended by Panos 2026-10-18): English interface
-  // and dictionary whatever the system language; Greek is one switch away.
-  {
-    const fresh = mainContext(temp, 'el_GR');
-    assert.equal(vm.runInContext('uiLanguage', fresh.context), 'en');
-    assert.equal(fresh.loads[0].language, 'en-US');
-    await Promise.resolve();
-  }
-
   // a dictionary picked in Edit → Spellcheck Language wins, whatever the interface
-  for (const code of ['en-US', 'en-GB', 'fr', 'ro', 'sv']) {
-    const explicit = mainContext(temp, 'ro-RO', {}, { spellLanguage: code });
-    assert.equal(explicit.loads[0].language, code);
+  for (const code of ['en-US', 'en-GB', 'fr', 'ro', 'sv', 'el']) {
+    const explicit = mainContext(temp, 'ro-RO', { uiLanguage: 'de' }, { spellLanguage: code });
+    assert.deepEqual(Array.from(explicit.loads[0].languages, (l) => l.language), [code]);
     assert.equal(explicit.read().spellLanguage, code);
     vm.runInContext('setUiLanguage("de")', explicit.context);
     assert.equal(explicit.loads.length, 1);
@@ -283,10 +274,57 @@ test('spellcheck follows the interface until a dictionary is picked; nothing is 
 
   // a library.json that doesn't parse is never touched
   const broken = '{"shelves": [{"id": "shelf-1", "name": "Mine"';
-  const unreadable = mainContext(temp, 'ro_RO', { uiLanguage: 'ro' }, {}, broken); /* RHEMA — interface set, not system-derived */
+  const unreadable = mainContext(temp, 'ro_RO', { uiLanguage: 'ro' }, {}, broken);
   assert.equal(fs.readFileSync(path.join(temp, 'library.json'), 'utf8'), broken);
-  assert.equal(unreadable.loads[0].language, 'ro');
+  assert.deepEqual(Array.from(unreadable.loads[0].languages, (l) => l.language), ['en-US']);
   await Promise.resolve();
+});
+
+// RHEMA — Stone 19/20: the book's set goes through main's gate.
+test('spell:setBookLanguages validates codes, caps the set, and loads them in order', async (t) => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'neo-spell-test-'));
+  t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+  const m = mainContext(temp, 'en-US', {}, { spellLanguage: 'en-US' });
+  const call = (codes) => m.handlers.get('spell:setBookLanguages')({}, codes);
+  assert.equal(await call(['el', 'en-US']), true);
+  assert.deepEqual(Array.from(m.loads[1].languages, (l) => l.language), ['el', 'en-US']); // primary first, dirs resolved
+  assert.ok(m.loads[1].languages.every((l) => l.dir.includes('dictionary-')));
+  assert.equal(await call(['klingon', 'el']), true);   // unknown codes dropped, not rejected whole
+  assert.deepEqual(Array.from(m.loads[2].languages, (l) => l.language), ['el']);
+  assert.equal(await call('el'), false);               // not an array: refused
+  assert.equal(await call(['en-US', 'en-GB', 'fr', 'de', 'es', 'el']), true);
+  assert.equal(Array.from(m.loads[3].languages).length, 5); // capped at five (loads: init, 1, 2, this)
+  // the library default survives book switches (the radio stays the default)
+  assert.equal(vm.runInContext('spellLanguage', m.context), 'en-US');
+  // the picker's list comes from the bundled dictionaries
+  const list = m.handlers.get('spell:listLanguages')();
+  assert.ok(list.some((l) => l.code === 'el' && l.label === 'Ελληνικά'));
+  await Promise.resolve();
+});
+
+// RHEMA — Stone 19: union-acceptance in the real worker. A correctly
+// spelled foreign word is never flagged (Panos: "it is not true");
+// suggestions come from the primary; a learned word joins every set.
+test('worker union: two dictionaries accept, a third language still flags, primary suggests', async () => {
+  const send = spellWorker();
+  assert.equal((await send({ type: 'load', languages: [
+    { language: 'el', dir: path.join(root, 'node_modules/dictionary-el') },
+    { language: 'en-US', dir: path.join(root, 'node_modules/dictionary-en-us') }
+  ], custom: [] })).ok, true);
+  const good = await send({ type: 'check', words: ['καλημέρα', 'poem', 'γλώσσα'] });
+  for (const word of ['καλημέρα', 'poem', 'γλώσσα']) assert.equal(good.result[word], true, word);
+  const bad = await send({ type: 'check', words: ['bonjour', 'καλημερα'] }); // French: not in the set; Greek typo
+  assert.equal(bad.result.bonjour, false);
+  assert.equal(bad.result.καλημερα, false);
+  const sug = await send({ type: 'suggest', word: 'καλημερα' });
+  assert.ok(sug.result.includes('καλημέρα'), 'suggestions from the primary (el)');
+  assert.equal((await send({ type: 'add', word: 'καλημερα' })).ok, true);
+  assert.equal((await send({ type: 'check', words: ['καλημερα'] })).result.καλημερα, true);
+  // a failed member load keeps the previous set whole
+  assert.equal((await send({ type: 'load', languages: [
+    { language: 'fr', dir: '/no-such-rhema-dictionary' }
+  ] })).ok, false);
+  assert.equal((await send({ type: 'check', words: ['poem', 'γλώσσα'] })).result.poem, true);
 });
 
 test('Brazilian Portuguese: clitics, 1990 reform spellings, hyphenated words', async () => {
