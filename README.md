@@ -49,7 +49,7 @@ Everything lives in `~/Documents/Rhema Library` — one folder per book, chapter
 
 ## Languages
 
-Rhema opens in **Greek (Ελληνικά)** and switches to any other language in one click under **View → Language**: English, French, Spanish, Portuguese, German, Italian, Dutch, Polish, Romanian, Hungarian, Korean, Russian. Greek is first-class: « » quotes, Greek hyphenation, Greek plurals throughout. Adding a language is a single file, no programming needed: see [TRANSLATING.md](TRANSLATING.md).
+Rhema opens in English on first run and switches to any other language in one click under **View → Language**: Greek, French, Spanish, Portuguese, German, Italian, Dutch, Polish, Romanian, Hungarian, Korean, Russian, Turkish. Greek is first-class: « » quotes, Greek hyphenation, Greek plurals throughout. Adding a language is a single file, no programming needed: see [TRANSLATING.md](TRANSLATING.md).
 
 ## Building from source (for the eggheads)
 
