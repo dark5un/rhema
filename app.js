@@ -623,7 +623,7 @@ document.addEventListener('mousedown', (e) => {
 if (IS_MAC && !IS_POCKET) document.body.classList.add('mac-bar');
 function showWindowTitle() {
   const title = book ? (book.title || t('Untitled')) : '';
-  document.title = title ? title + ' — Rhema' : 'Rhema'; /* RHEMA */
+  document.title = title ? title + ' — ῥῆμα' : 'ῥῆμα — Rhema'; /* RHEMA: polytonic brand in the title bar (Panos 2026-10-18) */
   const strip = IS_MAC && !IS_POCKET && document.querySelector('#dragstrip'); // the desktop's page only
   if (strip) strip.textContent = title;
 }
@@ -17866,6 +17866,7 @@ async function showAbout() {
   bd.innerHTML = `
     <div class="modal" style="width:340px;text-align:center">
       <h2 style="font-size:22px;letter-spacing:6px">Rhema</h2> <!-- RHEMA: was NEO; attribution stays in LICENSE and the plan's About posture -->
+      <div class="brand-greek about-greek">ῥῆμα</div><!-- RHEMA: polytonic brand mark (Panos 2026-10-18) -->
       <p class="about-version">${t('Version {version}', { version: v })}</p>
       <p class="about-line">${t('A word processor for authors.')}</p>
       <div style="margin-top:16px">

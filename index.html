@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <!-- only NEO's own script files run: nothing pasted or read from a book can -->
   <meta http-equiv="Content-Security-Policy" content="script-src 'self'; object-src 'none'" />
-  <title>Rhema</title>
+  <title>ῥῆμα — Rhema</title>
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="rhema-poetry.css" /><!-- RHEMA -->
 </head>
@@ -15,7 +15,7 @@
   <!-- ======================= BOOKSHELF ======================= -->
   <div id="bookshelf-view">
     <header id="shelf-header">
-      <h1>Rhema</h1>
+      <h1>Rhema <span class="brand-greek" title="ῥῆμα">ῥῆμα</span></h1>
       <div class="shelf-header-right">
         <span id="author-chip" data-i18n-title title="Click to change your author name" role="button" tabindex="0"></span>
         <button id="import-btn" data-i18n-title title="Import .docx, .txt, or .md manuscripts"><span aria-hidden="true">&#8681;</span> <span data-i18n>Import</span></button>
@@ -29,6 +29,7 @@
   <div id="firstrun" class="modal-backdrop" data-stay="1" hidden>
     <div class="modal">
       <div id="fr-step1">
+        <div class="brand-greek fr-brand">ῥῆμα</div><!-- RHEMA: polytonic brand mark, first run -->
         <h2 data-i18n>Welcome to NEO</h2>
         <p data-i18n>NEO knows you're writing books. A few quick questions and it will never ask anything again.</p>
         <label><span data-i18n>Your name</span> <span class="soft" data-i18n>(appears as the author on every document — leave blank for “Anonymous”)</span>

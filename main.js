@@ -3632,7 +3632,7 @@ app.whenReady().then(() => {
     if (process.platform === 'darwin' && fs.existsSync(devIcon)) {
       if (app.dock) app.dock.setIcon(devIcon);
       app.setAboutPanelOptions({
-        applicationName: 'Rhema',
+        applicationName: 'ῥῆμα — Rhema', // polytonic brand (Panos 2026-10-18)
         applicationVersion: app.getVersion(),
         iconPath: devIcon
       });

@@ -656,6 +656,16 @@ body.light .print-modal select, body.light .print-modal textarea { background: #
 .fr-choice.danger strong { color: #d97b6c; }
 .about-version { color: #999; }
 .modal p.about-line { font-size: 13px; color: #777; }
+/* RHEMA: polytonic brand mark (Panos 2026-10-18). GFS Didot's greek-ext
+   subset covers U+1F00-1FFF — the @font-face declarations live in
+   rhema-poetry.css, loaded globally, so any stack naming "GFS Didot"
+   gets the polytonic glyphs from the vendored woff2. letter-spacing is
+   reset to 0: polytonic breathings and accents must sit on their
+   letters, never float beside them. */
+.brand-greek { font-family: "GFS Didot", Georgia, serif; letter-spacing: 0; }
+#shelf-header h1 .brand-greek { font-size: 15px; color: var(--muted); margin-left: 6px; }
+.fr-brand { text-align: center; font-size: 26px; color: var(--accent); margin-bottom: 4px; }
+.about-greek { font-size: 15px; color: #999; margin-top: 2px; }
 
 /* ========================= EDITOR ========================= */
 
@@ -1796,6 +1806,7 @@ body.light .fr-choice.danger strong { color: #a8412f; }
 body.light #fr-error { color: #a8412f; }
 body.light #fr-sample { box-shadow: 0 0 0 1px #e6e1d6; }
 body.light .about-version { color: #6a665e; }
+body.light .about-greek { color: #6a665e; }
 body.light .modal p.about-line { color: #77726a; }
 body.light .up-bar { background: #e4e0d8; }
 
