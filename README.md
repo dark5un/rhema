@@ -1,5 +1,7 @@
 # Rhema (Ρήμα)
 
+**Site & guides: [rhema.guide](https://rhema.guide)** (English / Ελληνικά)
+
 **A distraction-free word processor for authors — novels, screenplays, and poetry.**
 
 Rhema understands from the moment you install it that you are writing *books* and nothing else. No bloat, no distractions, with manuscripts that look like books as you write them. And now poems look like poems: line by line, the way you typed them.
