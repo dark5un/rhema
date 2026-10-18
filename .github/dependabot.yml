@@ -1,0 +1,9 @@
+# Keep the pinned release.yml versions current: Dependabot opens PRs
+# bumping the SHA pins (it preserves the version comments) and the
+# canary's floating majors. Land a PR only after Canary is green on it.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly

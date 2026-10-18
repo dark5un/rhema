@@ -1,0 +1,50 @@
+# RHEMA — CANARY pipeline (bleeding edge). Builds the same binaries with
+# every floating label: newest action majors, node-version: latest,
+# *-latest runner images (ubuntu-latest becomes Ubuntu 26.04 on 2026-10-19).
+# It NEVER publishes anything — its only job is to turn red when the
+# supported pipeline's pinned versions (release.yml) are about to fall
+# behind, so the Dependabot bumps can be reviewed with knowledge.
+name: Canary (bleeding edge)
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'   # Mondays 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: latest
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run package:linux -- --publish never
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: latest
+          cache: npm
+      - run: npm ci
+      - run: npx electron-builder --win --publish never
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: latest
+          cache: npm
+      - run: npm ci
+      - run: npx electron-builder --mac --publish never -c.mac.notarize=false -c.mac.identity=null
