@@ -2,8 +2,8 @@
   "name": "rhema",
   "productName": "Rhema",
   "desktopName": "rhema",
-  "version": "1.5.8",
-  "description": "A word processor for authors — novels, screenplays, and poetry. Distraction-free by default.",
+  "version": "1.5.9",
+  "description": "A word processor for authors \u2014 novels, screenplays, and poetry. Distraction-free by default.",
   "homepage": "https://github.com/dark5un/rhema",
   "main": "main.js",
   "scripts": {
@@ -98,8 +98,8 @@
       "synopsis": "A distraction-free word processor for authors",
       "desktop": {
         "entry": {
-          "Comment": "A word processor for authors. Distraction-free by default.",
-          "Keywords": "writing;writer;novel;book;author;manuscript;wordprocessor;"
+          "Comment": "Writing for poets \u2014 poems, novels, screenplays.",
+          "Keywords": "writing;writer;poetry;poem;novel;book;author;manuscript;wordprocessor;"
         }
       },
       "maintainer": "Panagiotis Xynos <panos@onlyascii.io>"
