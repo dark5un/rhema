@@ -123,6 +123,10 @@ test('the picker opens from the Edit menu message and saves the book set', async
   const until = Date.now() + 4000;
   while (Date.now() < until && !(await js('!!document.querySelector(".sb-picker #sb-primary")'))) await tick(100);
   assert.ok(await js('!!document.querySelector(".sb-picker #sb-primary")'), 'the picker modal opened');
+  // Gate round-3: the rows speak the UI's names (SPELL_LANGUAGE_NAMES),
+  // not main's endonyms — a round-2 fix was inert behind a window. guard.
+  assert.equal(await js(`document.querySelector('#sb-also label span').textContent`), 'US English',
+    'picker rows use the t()-translated dictionary names');
   // primary el, also accept en-US
   await js(`(() => { const s = document.querySelector('#sb-primary'); s.value = 'el'; s.dispatchEvent(new Event('change'));
     const box = [...document.querySelectorAll('#sb-also input')].find((i) => i.dataset.code === 'en-US');

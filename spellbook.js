@@ -61,14 +61,17 @@ async function bookSpellPicker() {
   if (!langs.length) { toast(t('The dictionary list could not be read.')); return; }
   // Gate round-2 (UI): rows and toast speak with one voice — the
   // t()-translated names app.js already uses, endonym label as fallback.
-  const nameOf = (l) => (window.SPELL_LANGUAGE_NAMES && SPELL_LANGUAGE_NAMES[l.code]) || l.label;
+  // Gate round-3 (coding+UX caught this): SPELL_LANGUAGE_NAMES is a
+  // top-level const in classic-script app.js — a global lexical binding,
+  // NOT a window property; reference it bare (typeof-guarded).
+  const nameOf = (l) => (typeof SPELL_LANGUAGE_NAMES === 'object' && SPELL_LANGUAGE_NAMES[l.code]) || l.label;
   const declared = rhemaValidSet(book.spellLanguages);
   let primary = declared[0] || (library && library.spellLanguage) || 'en-US';
   // Gate round-2 (UX): a Greek poet opening the picker on a book that
   // declares nothing must not meet "English (US)" as her primary. This
   // pre-fills the dropdown ONLY — the interface still never drives the
   // dictionary (Stone 20); it takes effect only if she saves.
-  if (!declared.length && !library.spellLanguage) {
+  if (!declared.length && !(library && library.spellLanguage)) {
     const ui = (NeoI18n.getLocale() || 'en').split('-')[0];
     const hit = langs.find((l) => l.code === ui || l.code.split('-')[0] === ui);
     if (hit) primary = hit.code;
@@ -111,7 +114,19 @@ async function bookSpellPicker() {
       else i.disabled = full && !i.checked;
     });
   };
-  primarySel.onchange = syncDisabled;
+  // Gate round-3 (coding+UX): demoting the old primary must not silently
+  // drop it from the book — it re-joins as an also-accept language when
+  // the cap has room.
+  let curPrimary = primarySel.value;
+  primarySel.onchange = () => {
+    const room = 1 + boxes().filter((i) => i.checked).length < 5;
+    if (room && curPrimary !== primarySel.value) {
+      const ob = boxes().find((i) => i.dataset.code === curPrimary);
+      if (ob && !ob.checked) ob.checked = true;
+    }
+    curPrimary = primarySel.value;
+    syncDisabled();
+  };
   bd.querySelectorAll('#sb-also input').forEach((i) => { i.onchange = syncDisabled; });
   syncDisabled();
   const done = () => bd.remove();
