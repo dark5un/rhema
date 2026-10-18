@@ -140,6 +140,7 @@
       "!pocket/**",
       "!dist/**",
       "!Backups/**",
+      "!ship/**",
       "!*.md",
       "!.github/**",
       "!scripts/**",

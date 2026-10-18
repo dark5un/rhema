@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=Rhema
+Name[el]=Ρήμα
+GenericName=Word processor
+GenericName[el]=Επεξεργαστής κειμένου
+Comment=Writing for poets — poems, novels, screenplays.
+Comment[el]=Γραφή για ποιητές — ποιήματα, μυθιστορήματα, σενάρια.
+Exec=@RHEMA_APPIMAGE@ %U
+Icon=@RHEMA_ICON@
+Terminal=false
+Categories=Office;WordProcessor;
+StartupWMClass=rhema
+Keywords=writing;writer;poetry;poem;novel;book;manuscript;

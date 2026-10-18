@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="el">
+<head>
+<meta charset="utf-8">
+<title>Ρήμα — Οδηγός σε μία σελίδα</title>
+<style>
+@font-face { font-family: 'GFS Didot'; src: url('../fonts/gfs-didot-greek-400-normal.woff2') format('woff2'); unicode-range: U+0370-03FF; }
+@font-face { font-family: 'GFS Didot'; src: url('../fonts/gfs-didot-greek-ext-400-normal.woff2') format('woff2'); unicode-range: U+1F00-1FFF; }
+@font-face { font-family: 'GFS Didot'; src: url('../fonts/gfs-didot-latin-400-normal.woff2') format('woff2'); unicode-range: U+0000-00FF; }
+@page { size: A4; margin: 13mm 14mm; }
+* { box-sizing: border-box; margin: 0; }
+body { font-family: 'GFS Didot', serif; font-size: 9.6pt; line-height: 1.32; color: #1c1a17; columns: 2; column-gap: 7mm; }
+h1 { font-size: 19pt; letter-spacing: .04em; margin-bottom: 1mm; column-span: all; }
+.tag { font-size: 9pt; color: #5a554c; margin-bottom: 3.5mm; column-span: all; }
+h2 { font-size: 10.6pt; margin: 2.6mm 0 .8mm; color: #1c1a17; }
+p { margin: 0 0 1mm; }
+.k { font-weight: bold; } /* UI strings, exact from el.json */
+kbd { font-family: inherit; border: .5pt solid #999; border-radius: 2pt; padding: 0 1.5pt; font-size: 8.6pt; white-space: nowrap; }
+.note { font-size: 8.6pt; color: #5a554c; }
+.foot { column-span: all; border-top: .5pt solid #b7b1a6; margin-top: 3mm; padding-top: 1.5mm; font-size: 8.6pt; color: #5a554c; }
+</style>
+</head>
+<body>
+
+<h1>Ρήμα</h1>
+<p class="tag">Οδηγός σε μία σελίδα — για να γράψετε ποίηση.</p>
+
+<h2>1 · Στα ελληνικά</h2>
+<p><span class="k">Προβολή</span> → <span class="k">Γλώσσα</span> → <span class="k">Ελληνικά</span>. (Το αγγλικό μένει μία αλλαγή μακριά.)</p>
+
+<h2>2 · Μια νέα συλλογή</h2>
+<p>Στο ράφι, πατήστε <span class="k">+ Ποίημα</span>. (Δεξί κλικ σε κενό: <span class="k">Νέα συλλογή ποιημάτων</span>.)</p>
+
+<h2>3 · Ο ρυθμός του Enter</h2>
+<p><span class="k">Enter μία φορά = νέος στίχος · δύο = νέα στροφή · τρεις = νέο ποίημα</span></p>
+<p>Μία κενή γραμμή είναι πάντα αλλαγή στροφής.</p>
+
+<h2>4 · Δουλειά στους στίχους</h2>
+<p><kbd>Alt</kbd>+<kbd>↑</kbd>/<kbd>↓</kbd> μετακίνηση στίχου (και ανάμεσα σε στροφές) · <kbd>Alt</kbd>+<kbd>D</kbd> αντίγραφο · <kbd>Alt</kbd>+<kbd>J</kbd> ένωση με τον από πάνω · <kbd>Tab</kbd>/<kbd>Shift</kbd>+<kbd>Tab</kbd> εσοχή. Όλα αναιρούνται με <kbd>Ctrl</kbd>+<kbd>Z</kbd>.</p>
+
+<h2>5 · Κατάσταση</h2>
+<p><span class="k">Κατάσταση ποιήματος…</span> — <span class="k">Προσχέδιο</span>, <span class="k">Καθαρόγραφο</span>, <span class="k">Τέλος</span>. Η κάρτα δείχνει πρόοδο: «{done} από {total} ποιήματα ολοκληρωμένα».</p>
+
+<h2>6 · Σκόρπια</h2>
+<p><kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd> κόβει στίχο ή στροφή· τον βρίσκετε στην καρτέλα <span class="k">Σκόρπια</span> και τον βάζετε σε άλλο ποίημα με <span class="k">Τοποθέτηση</span>.</p>
+
+<h2>7 · Στιγμιότυπα</h2>
+<p><kbd>Ctrl</kbd>+<kbd>S</kbd> = <span class="k">Λήψη Στιγμιότυπου</span>· το Ρήμα παίρνει και αυτόματα κάθε μέρα. Στην καρτέλα <span class="k">Στιγμιότυπα</span> βλέπετε <span class="k">Τότε</span> δίπλα στο <span class="k">Τώρα</span>, με τις αλλαγές σημειωμένες.</p>
+
+<h2>8 · Σχέδιο και QR στο τέλος του ποιήματος</h2>
+<p><span class="k">Σχέδιο ποιήματος…</span> — <span class="k">Ανθεάκι</span>, <span class="k">Αστερίσκος</span>, <span class="k">Μαίανδρος</span>, <span class="k">Αρχικό γράμμα</span>, <span class="k">Αποτύπωμα ποιήματος</span>, <span class="k">Μονόγραμμα</span>, και με AI: <span class="k">Γραμμικό σχέδιο με AI</span>, <span class="k">Εικονογράφηση με AI</span>. <span class="k">QR ποιήματος…</span> ορίζει τι κουβαλά το QR.</p>
+
+<h2>9 · Το AI διαβάζει μαζί σας</h2>
+<p><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd> = <span class="k">Το μάτι του αναγνώστη…</span> — παρατηρήσεις στην καρτέλα <span class="k">Σημειώσεις</span>· <span class="k">δεν αγγίζει ποτέ το ποίημα</span>. Δεξί κλικ στην κάρτα: <span class="k">Προτάσεις τίτλων…</span></p>
+
+<h2>10 · Φέρτε τα ποιήματά σας</h2>
+<p>Αρχείο → <span class="k">Εισαγωγή ποιημάτων…</span> — αρχεία .txt, .md, .docx, .pdf· ένα αρχείο με πολλά ποιήματα χωρίζεται αυτόματα σε πολλά.</p>
+
+<h2>11 · Ένα βιβλίο στο τέλος</h2>
+<p>Εξαγωγή → <span class="k">Φυλλάδιο PDF (5×8)…</span>, <span class="k">EPUB (.epub)</span>, Word, κείμενο· το σχέδιο και το QR μπαίνουν και στην εκτύπωση.</p>
+
+<h2>12 · Ορθογραφία</h2>
+<p>Επεξεργασία → <span class="k">Γλώσσα ορθογραφικού ελέγχου</span> — διαλέξτε π.χ. Ελληνικά· οι λέξεις που δικαιούνται μένουν ήσυχες με δεξί κλικ.</p>
+
+<h2>13 · Ρυθμίσεις</h2>
+<p>Αρχείο → <span class="k">Ρυθμίσεις Ρήματος…</span> — τα τοπικά μοντέλα AI, το QR, ο διαχωρισμός εισαγωγής και πόσα αντίγραφα ασφαλείας κρατούνε («Απεριόριστα» δεν διαγράφει ποτέ).</p>
+
+<p class="foot">Εγκατάσταση: σε έναν φάκελο, μαζί με το αρχείο του Ρήματος, τρέξτε μία φορά <kbd>sh install-rhema.sh</kbd> — θα βρείτε το Ρήμα στο μενού (Γραφείο). Βοήθεια μέσα στην εφαρμογή: τα σημειώματα που εμφανίζονται καθώς γράφετε.</p>
+
+</body>
+</html>
