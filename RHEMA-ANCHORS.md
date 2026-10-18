@@ -89,7 +89,7 @@ identity lines are expected and resolved in Rhema's favor.
 
 | Anchor | What | Phase |
 |--------|------|-------|
-| `const RHEMA_AUTO_UPDATE = false` (updater section) | Stone 15: auto-update disabled. Flip to `true` to re-enable the whole path; `publish` in package.json already points at our repo. Guards: `getUpdater()` early-return, `checkForUpdates()` early-return, `update:check` handler early-return. | 0 |
+| `const RHEMA_AUTO_UPDATE = true` + `rhemaAutoUpdateOn()` (updater section) | Stone 15 gate; master switch ENABLED 2026-10-18 (Panos) after the updater-target fix (a0050c0). Auto-update is the USER's choice (Panos 2026-10-18): library.rhema.autoUpdate (Rhema Settings → Updates, default off) gates getUpdater(), the background look, and installs; installs only on quit (autoInstallOnAppQuit) or an explicit Restart to update — never mid-session. The plain-API fallback (Help → Check for Update…) always works. | 0 |
 | `Rhema Library` (6 sites, was `NEO Library`) | library folder name | 0 |
 | `applicationName: 'Rhema'` (about panel) | product name | 0 |
 | startup migration block after `LIBRARY_FILE` | first-run adoption: if Rhema Library is empty but a NEO Library exists, ask once to open it (books from NEO never look "gone"). The NEO references ride a `{neo}` variable on purpose — the brand seam fills variables AFTER branding, so "NEO Library" survives as the upstream's name. | 0 |

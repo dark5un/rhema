@@ -59,7 +59,9 @@ app.whenReady().then(async () => {
   await js('RhemaSettings.open()');
   await tick(200);
   check('the pane opens with endpoint and retention fields',
-    await js('!!document.querySelector("#ra-base") && !!document.querySelector("#ra-imgprovider") && !!document.querySelector("#ra-retbackups") && !!document.querySelector("#ra-retsnaps")'));
+    await js('!!document.querySelector("#ra-base") && !!document.querySelector("#ra-imgprovider") && !!document.querySelector("#ra-retbackups") && !!document.querySelector("#ra-retsnaps") && !!document.querySelector("#ra-auto")')); /* RHEMA — Updates opt-in */
+  check('auto-update defaults to OFF (the user\'s choice, Panos 2026-10-18)',
+    await js('document.querySelector("#ra-auto").checked === false'));
   check('the local defaults are pre-filled, not just placeholders',
     await js('document.querySelector("#ra-base").value === "http://localhost:11434/v1" && document.querySelector("#ra-imgurl").value === "http://localhost:3101"'));
   await shot('rhema-settings-pane');
@@ -74,6 +76,7 @@ app.whenReady().then(async () => {
     set('ra-retbackups', 'unlimited');
     set('ra-retsnaps', 90);
     set('ra-split', 'whole'); /* RHEMA — Stone 12 split knob round-trip */
+    document.querySelector('#ra-auto').checked = true; /* RHEMA — opt in to auto-update */
     document.querySelector('.m-ok').click();
   })()`);
   await tick(300);
@@ -88,6 +91,9 @@ app.whenReady().then(async () => {
   check('the import split knob saved beside its siblings (merge, not replace)',
     !!(rhema && rhema.import && rhema.import.split === 'whole'),
     JSON.stringify(rhema && rhema.import));
+  check('auto-update opt-in saved (library.rhema.autoUpdate)',
+    !!(rhema && rhema.autoUpdate === true),
+    JSON.stringify(rhema && rhema.autoUpdate));
   check('the configured app now counts as paintable without any OpenAI key',
     await js('RhemaSettings.configured() === true && RhemaSettings.snapKeepDays() === 90'));
 

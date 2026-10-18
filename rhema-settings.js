@@ -102,6 +102,13 @@ const RhemaSettings = (() => {
           <p class="soft" style="font-size:12px;margin:0 0 6px">${t('Snapshots you take yourself ({key}) are always kept. “Unlimited” never deletes — the library folder just grows.', { key: K('⌘S', 'Ctrl+S') })}</p>
         </details>
         <details class="st-advanced">
+          <summary class="soft">${t('Updates')}</summary>
+          <div class="stats-row">
+            <label><input id="ra-auto" type="checkbox" ${cfg().autoUpdate ? 'checked' : ''}/> ${t('Keep Rhema up to date automatically')}</label>
+          </div>
+          <p class="soft" style="font-size:12px;margin:0 0 6px">${t('Off by default. When on, Rhema checks GitHub about once an hour and downloads a new version in the background — but never interrupts your writing: it installs when you quit, or when you press {restart}. {check} works either way.', { restart: t('Restart to update'), check: t('Check for Update…') })}</p>
+        </details>
+        <details class="st-advanced">
           <summary class="soft">${t('Poem QR')}</summary>
           <div class="stats-row">
             <label>${t('Each poem’s QR encodes')} <input id="ra-qr" type="text" spellcheck="false" style="width:340px" placeholder="https://example.com/{collection}/{title}"/></label>
@@ -201,7 +208,8 @@ const RhemaSettings = (() => {
         retention: {
           backups: back === 'unlimited' ? 'unlimited' : parseInt(back, 10),
           snapshots: snaps === 'unlimited' ? 'unlimited' : parseInt(snaps, 10)
-        }
+        },
+        autoUpdate: bd.querySelector('#ra-auto').checked || undefined /* RHEMA — Panos: auto-update is the user's choice, default off */
       });
       await writeLibrary(library);
       done();

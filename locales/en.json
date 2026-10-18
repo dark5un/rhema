@@ -92,5 +92,8 @@
   "{n} more": {
     "one": "+{n} more",
     "other": "+{n} more"
-  }
+  },
+  "Updates": "Updates",
+  "Keep Rhema up to date automatically": "Keep Rhema up to date automatically",
+  "Off by default. When on, Rhema checks GitHub about once an hour and downloads a new version in the background — but never interrupts your writing: it installs when you quit, or when you press {restart}. {check} works either way.": "Off by default. When on, Rhema checks GitHub about once an hour and downloads a new version in the background — but never interrupts your writing: it installs when you quit, or when you press {restart}. {check} works either way."
 }

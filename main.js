@@ -3475,12 +3475,20 @@ ipcMain.handle('app:version', () => app.getVersion());
 // start`, the Windows portable .exe, anything unsigned — falls back to the
 // release page on GitHub, as before.
 let updater = null;          // electron-updater's autoUpdater, wired once
-/* RHEMA */ const RHEMA_AUTO_UPDATE = false; // Stone 15: auto-update off; flip to true (publish config already points at our repo) to re-enable the whole path
+/* RHEMA */ const RHEMA_AUTO_UPDATE = true; // master switch (Stone 15 gate); ENABLED 2026-10-18 (Panos) — but the whole path is a USER choice: see rhemaAutoUpdateOn()
+/* RHEMA */ // Panos 2026-10-18: "the auto update option should be the user's
+/* RHEMA */ // choice" — library.rhema.autoUpdate (Rhema Settings, default
+/* RHEMA */ // off) gates every network step: background looks, the
+/* RHEMA */ // electron-updater wiring, and downloads. Help → Check for
+/* RHEMA */ // Update… (the plain-API fallback) always works, opted in or not.
+/* RHEMA */ function rhemaAutoUpdateOn() {
+  return !!((readJSON(LIBRARY_FILE, {}).rhema || {}).autoUpdate);
+}
 let updaterReady = false;    // an update is downloaded and waiting
 // where the background download stands, so the window can pick it up mid-way
 const upd = { state: 'idle', version: '', percent: 0, transferred: 0, total: 0, message: '' };
 function getUpdater() {
-  /* RHEMA */ if (!RHEMA_AUTO_UPDATE) return null;
+  /* RHEMA */ if (!RHEMA_AUTO_UPDATE || !rhemaAutoUpdateOn()) return null;
   if (updater || !app.isPackaged) return updater;
   const { autoUpdater } = require('electron-updater');
   autoUpdater.logger = null;
@@ -3617,7 +3625,7 @@ const UPDATE_EVERY = 60 * 60 * 1000;
 function checkForUpdates() {
   /* RHEMA */ if (!RHEMA_AUTO_UPDATE) return;
   if (!app.isPackaged) return;
-  const look = () => { lookForUpdate().catch(() => { /* logged in lookForUpdate */ }); };
+  const look = () => { if (!rhemaAutoUpdateOn()) return; lookForUpdate().catch(() => { /* logged in lookForUpdate */ }); };
   setTimeout(look, 8000);
   const timer = setInterval(look, UPDATE_EVERY);
   if (timer.unref) timer.unref();

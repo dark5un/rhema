@@ -1075,5 +1075,8 @@
  "Also accept words from": "Επίσης δεκτές λέξεις από",
  "Up to 5 languages per book": "Μέχρι 5 γλώσσες ανά βιβλίο",
  "Primary: {lang}": "Κύρια: {lang}",
- "{n} more": {"one": "+{n} ακόμη", "other": "+{n} ακόμη"}
+ "{n} more": {"one": "+{n} ακόμη", "other": "+{n} ακόμη"},
+ "Updates": "Ενημερώσεις",
+ "Keep Rhema up to date automatically": "Αυτόματη ενημέρωση του Rhema",
+ "Off by default. When on, Rhema checks GitHub about once an hour and downloads a new version in the background — but never interrupts your writing: it installs when you quit, or when you press {restart}. {check} works either way.": "Απενεργοποιημένη από προεπιλογή. Όταν είναι ενεργοποιημένη, το Rhema ελέγχει το GitHub περίπου μία φορά την ώρα και κατεβάζει στο παρασκήνιο τη νέα έκδοση — αλλά δεν σας διακόπτει ποτέ ενώ γράφετε: εγκαθίσταται όταν κλείσετε το πρόγραμμα ή όταν πατήσετε {restart}. Ο {check} λειτουργεί και χωρίς αυτήν."
 }
