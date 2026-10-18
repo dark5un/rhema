@@ -5,7 +5,7 @@ Rhema currently speaks:
 | Code | Language | Status |
 |---|---|---|
 | `en` | English | original |
-| `el` | Ελληνικά | complete — Rhema tops up upstream's partial Greek; it is Rhema's **default** interface language |
+| `el` | Ελληνικά | complete — Rhema tops up upstream's partial Greek; English is the first-run default, Greek is one switch away (View → Language) |
 | `fr` | Français | complete, reviewed by a native speaker |
 | `fr-CA` | Français (Canada) | regional differences only |
 | `es` | Español | complete, machine-assisted: native review welcome |

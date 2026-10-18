@@ -238,8 +238,8 @@ function mainContext(temp, systemLocale, settings = {}, library = {}, raw = null
 test('spellcheck follows the interface until a dictionary is picked; nothing is saved for the writer', async (t) => {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'neo-spell-test-'));
   t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
-  // RHEMA — the fork defaults the interface to Greek (Stone 11), so the interface
-  // is set through saved settings here; the follow rule under test is unchanged.
+  // RHEMA — the interface is set through saved settings here; the follow
+  // rule under test is unchanged.
   const fresh = mainContext(temp, 'ro_RO', { uiLanguage: 'ro' }, { authorName: 'Autor', customWords: ['Zorțilă'] });
   assert.equal(fresh.read().spellLanguage, undefined); // not saved on the writer's behalf
   assert.equal(fresh.read().authorName, 'Autor');
@@ -262,11 +262,12 @@ test('spellcheck follows the interface until a dictionary is picked; nothing is 
     await Promise.resolve();
   }
 
-  // RHEMA — the fork's first launch: Greek interface, Greek dictionary, whatever the system
+  // RHEMA — first launch (amended by Panos 2026-10-18): English interface
+  // and dictionary whatever the system language; Greek is one switch away.
   {
-    const greek = mainContext(temp, 'ro_RO');
-    assert.equal(vm.runInContext('uiLanguage', greek.context), 'el');
-    assert.equal(greek.loads[0].language, 'el');
+    const fresh = mainContext(temp, 'el_GR');
+    assert.equal(vm.runInContext('uiLanguage', fresh.context), 'en');
+    assert.equal(fresh.loads[0].language, 'en-US');
     await Promise.resolve();
   }
 

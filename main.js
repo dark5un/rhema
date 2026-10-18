@@ -132,10 +132,11 @@ function initLanguage() {
   const saved = readSettings().uiLanguage;
   let sys = 'en';
   try { sys = app.getLocale(); } catch { /* early start */ }
-  /* RHEMA — Stone 11: the poet's default is Greek, English one click away
+  /* RHEMA — Stone 11 (amended by Panos 2026-10-18): English is the
+     first-run default; Greek is fully supported one click away
      (View → Language). The saved choice always wins; the system language
      never overrides it. */
-  loadLanguage(saved || 'el');
+  loadLanguage(saved || 'en');
 }
 
 // The window asks once, synchronously, before any of its code runs
