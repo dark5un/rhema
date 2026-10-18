@@ -51,7 +51,8 @@ contextBridge.exposeInMainWorld('neo', {
     assetWrite: (bookId, key, svgText) => ipcRenderer.invoke('rhema:asset:write', bookId, key, svgText), /* RHEMA — Stone 17: generated SVG drawings */
     assetRead: (bookId, key) => ipcRenderer.invoke('rhema:asset:read', bookId, key),
     assetClear: (bookId, key) => ipcRenderer.invoke('rhema:asset:clear', bookId, key),
-    draw: (bookId, chId, kind, motif, text) => ipcRenderer.invoke('rhema:draw', bookId, chId, kind, motif, text) /* RHEMA — Stone 17: AI drawings; settings never renderer-supplied */
+    draw: (bookId, chId, kind, motif, text) => ipcRenderer.invoke('rhema:draw', bookId, chId, kind, motif, text) /* RHEMA — Stone 17: AI drawings; settings never renderer-supplied */,
+    poemAi: (bookId, chId, kind, text, collection) => ipcRenderer.invoke('rhema:poemai', bookId, chId, kind, text, collection) /* RHEMA — Stones 7+8: Reader's Eye + title suggestions; read posture, settings never renderer-supplied */
   },
   importFiles: (paths, opts) => ipcRenderer.invoke('import:files', paths, opts), /* RHEMA — opts carries the poetry mode */
   pathForFile: (file) => webUtils.getPathForFile(file),

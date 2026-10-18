@@ -21,6 +21,17 @@
  "Something went wrong with the AI.": "Κάτι πήγε στραβά με το AI.",
  "One drawing at a time — the last one is still going.": "Ένα σχέδιο τη φορά — το προηγούμενο δεν έχει τελειώσει ακόμα.",
  "The vector could not be saved — the picture is kept.": "Το διάνυσμα δεν μπόρεσε να αποθηκευτεί — μένει η εικόνα.",
+ "Reading the poem…": "Διαβάζω το ποίημα…",
+ "One at a time — the last reading is still going.": "Μια ανάγνωση τη φορά — η προηγούμενη δεν έχει τελειώσει ακόμα.",
+ "Reader's Eye": "Το μάτι του αναγνώστη",
+ "Reader's Eye filed {n} observations in the notes": {
+  "one": "Το μάτι του αναγνώστη κατέθεσε {n} παρατήρηση στις σημειώσεις",
+  "other": "Το μάτι του αναγνώστη κατέθεσε {n} παρατηρήσεις στις σημειώσεις"
+ },
+ "The AI is suggesting titles…": "Το AI προτείνει τίτλους…",
+ "Suggest titles": "Προτάσεις τίτλων",
+ "Suggest titles…": "Προτάσεις τίτλων…",
+ "Pick a title — or cancel. The poem itself never changes.": "Διαλέξτε τίτλο — ή ακυρώστε. Το ποίημα δεν αλλάζει ποτέ.",
  "Poem": "Ποίημα",
  "The endpoint refused the saved key.": "Η πηγή απέρριψε το αποθηκευμένο κλειδί.",
  "The line drawing could not be turned into vectors — it stays a picture.": "Το γραμμικό σχέδιο δεν μπόρεσε να διανυσματοποιηθεί — μένει εικόνα.",

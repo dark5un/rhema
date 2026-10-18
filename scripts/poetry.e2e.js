@@ -875,6 +875,69 @@ test('chapbook: a real 5x8 PDF renders with the verse, the mark, and 5x8 pages',
   await js(`(async () => { try { await window.__pb; } catch {} })()`); // settle the job
 });
 
+test("Reader's Eye + title suggestions (Phase 4, Stones 7+8): notes gain observations, metadata gains a title, the poem file never changes", async () => {
+  // a canned chat endpoint on loopback: numbered Greek observations, then
+  // five titles. The e2e exercises the real seams: the hotkey listener,
+  // the rhema:poemai IPC, the notes filing, and the poem's menu path.
+  const http = require('node:http');
+  let mode = 'eye';
+  const server = http.createServer((req, res) => {
+    let body = '';
+    req.on('data', (c) => { body += c; });
+    req.on('end', () => {
+      res.setHeader('content-type', 'application/json');
+      if (req.url.endsWith('/models')) { res.end(JSON.stringify({ data: [{ id: 'fake' }] })); return; }
+      const content = mode === 'eye'
+        ? '1. Η εικόνα «σειρά κεράκια» κρατά το ποίημα όρθιο.\n2. Ο τρίτος στίχος χαλαρώνει.\n3. Η επανάληψη μετράει, δεν κοσμεί.'
+        : 'Αναμμένα κεριά\nΤο παράθυρο\nΒραδινή αυλή\nΗ σιωπή\nΗ ανάσα';
+      res.end(JSON.stringify({ choices: [{ message: { content } }] }));
+    });
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const port = server.address().port;
+  try {
+    await js(`library.rhema = Object.assign(library.rhema || {}, { ai: Object.assign({}, (library.rhema || {}).ai, { text: { base: 'http://127.0.0.1:${port}/v1', model: 'fake' } }) })`);
+    await js('writeLibrary(library)'); // main reads library.json from disk
+    const ch0 = await js('book.chapterOrder[0]');
+    const before = await js(`window.neo.readChapter(book.id, ${JSON.stringify(ch0)})`);
+    // the hotkey: Ctrl+Shift+R (the same chord test the app's own keys use) —
+    // on the poem the poet has open
+    await js(`currentChapterId = ${JSON.stringify(ch0)}; renderChapters();`);
+    await tick(200);
+    await js(`document.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, code: 'KeyR', key: 'R', ctrlKey: true, shiftKey: true }))`);
+    let notes = '';
+    for (let i = 0; i < 100; i++) {
+      notes = await js(`((book.chapterNotes || {})[${JSON.stringify(ch0)}]) || ''`);
+      if (notes.includes('κεράκια')) break;
+      await tick(50);
+    }
+    assert.match(notes, /· .*σειρά κεράκια/, "Reader's Eye files the observations into the notes record");
+    assert.match(notes, /Reader's Eye — /, 'the block is labeled, so it never reads as the poet\u2019s own note');
+    const after = await js(`window.neo.readChapter(book.id, ${JSON.stringify(ch0)})`);
+    assert.equal(after, before, 'the poem file never changes (Stone 7 confirmed rule)');
+    // titles: the poem's menu path, pick one, metadata only
+    mode = 'titles';
+    await js(`(() => { NeoHooks.emitTrue('chapterMenuChoice', ${JSON.stringify(ch0)}, 'rhemaTitles'); return 1; })()`);
+    let picked = false;
+    for (let i = 0; i < 50 && !picked; i++) {
+      picked = await js(`(() => { const b = [...document.querySelectorAll('.modal .fr-choice')].find((x) => x.textContent.includes('Το παράθυρο')); if (!b) return 0; b.click(); return 1; })()`);
+      if (!picked) await tick();
+    }
+    assert.ok(picked, 'the suggestions modal offers the model\u2019s titles');
+    await tick(300);
+    const title = await js(`(book.chapterTitles || {})[${JSON.stringify(ch0)}]`);
+    assert.equal(title, 'Το παράθυρο', 'accepting a title sets the chapter-title metadata');
+    const after2 = await js(`window.neo.readChapter(book.id, ${JSON.stringify(ch0)})`);
+    assert.equal(after2, before, 'and still the poem file never changes');
+    // honest absence: no endpoint, no menu item, no hotkey effect
+    await js(`library.rhema = Object.assign(library.rhema || {}, { ai: {} }); writeLibrary(library)`);
+    const itemShown = await js(`(() => (NeoHooks.emitList('chapterMenuItems', ${JSON.stringify(ch0)}) || []).some((x) => x && x.value === 'rhemaTitles'))()`);
+    assert.equal(itemShown, false, 'with no text endpoint the Suggest titles item is not offered');
+    // cleanup: the notes/title/endpoint stay unset for later tests
+    await js(`(() => { delete book.chapterTitles[${JSON.stringify(ch0)}]; delete book.chapterNotes[${JSON.stringify(ch0)}]; saveMeta(); renderChapters(); renderNav(); })()`);
+  } finally { server.close(); }
+});
+
 test('the shelf shows a visible poem tile, and simple mode still offers poems (UX gate BLOCKER-2)', async () => {
   // the formal ruling: right-click-on-blank-card behind Show More
   // Features is not acceptable as the poet's first action — Rhema shows

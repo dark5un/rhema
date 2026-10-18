@@ -271,6 +271,6 @@ const RhemaDraw = (() => {
     return '';
   }
 
-  return { KINDS, svgFor, textHash, mulberry32, aiDrawing,
+  return { KINDS, svgFor, textHash, mulberry32, aiDrawing, aiError, poemText,
     fleuron, asterism, meander, dropCap, fingerprint, monogram };
 })();

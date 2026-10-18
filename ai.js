@@ -389,6 +389,82 @@ async function drawIllustration({ settings, apiKey, motif, text }) {
   return paintOpenaiCompat({ url: img.url, apiKey, model: img.model, prompt: subject, width: img.width, height: img.height });
 }
 
+// ---- Phase 4: the poet AI (Stones 7+8) — Reader's Eye and title
+// suggestions. Both are READ-POSTURE features: the output goes to the
+// notes pane and the chapter-title metadata, never into the poem file.
+// Stone 8: the model answers in the poem's own language — the prompt
+// says so, and the poem itself is the language sample. ----
+
+const EYE_SYSTEM = 'You are a careful first reader advising a poet about one poem. '
+  + 'Give 3 to 5 observations, each on its own line, numbered 1., 2., ... '
+  + 'Each observation must be concrete: name an image, a sound, a turn, a tension — '
+  + 'what lands, what is at risk, where the poem is strongest or loosest — anchored '
+  + 'in the poem\'s own words (quote at most one short phrase per observation). '
+  + 'Never rewrite the poem, never offer alternatives, never flatter. '
+  + 'Answer in the language the poem is written in.';
+
+const TITLE_SYSTEM = 'You name poems. Given one poem, propose exactly 5 titles, one per line, '
+  + 'no numbering, no quotes around them. Titles are short (1-4 words), concrete, and in the '
+  + 'language the poem is written in; they come from the poem\'s own world — an object, a place, '
+  + 'a phrase, an image — never a paraphrase of its theme, never an abstraction. '
+  + 'No title may repeat another.';
+
+// shared chat plumbing with the monoline draw: model fallback list,
+// reasoning-budget retry, honest failure kinds
+async function chatText({ base, apiKey, model, tokenParam, system, user, budget = 2000 }) {
+  base = assertHttpUrl(base, 'the text model URL');
+  const payload = {
+    model: model || undefined,
+    messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
+    [tokenParam || 'max_tokens']: budget
+  };
+  const defaults = [payload.model];
+  try { defaults.push(...(await listModels(base, apiKey))); } catch { /* the configured name will have to do */ }
+  const got = await withModels(payload.model, defaults, async (m) => {
+    payload.model = m;
+    let body = await post(base + '/chat/completions', authHeaders(apiKey), payload);
+    let msg = body.choices && body.choices[0] && body.choices[0].message;
+    let content = msg && msg.content;
+    // a reasoning model can spend the whole budget thinking (live check
+    // 2026-10-17: finish_reason 'length', content null); give it room once
+    if (!content && msg && msg.reasoning_content) {
+      payload[tokenParam || 'max_tokens'] = Math.max(budget, 8000);
+      body = await post(base + '/chat/completions', authHeaders(apiKey), payload);
+      msg = body.choices && body.choices[0] && body.choices[0].message;
+      content = msg && msg.content;
+    }
+    if (!content) { const err = new Error('The model answered without text'); err.modelProblem = true; throw err; }
+    return content;
+  });
+  return got.result;
+}
+
+const OBS_LINE = /^\s*\d+[.)]\s+(.+)$/;
+function parseObservations(text) {
+  return String(text || '').split(/\r?\n/).map((l) => l.match(OBS_LINE)).filter(Boolean).map((m) => m[1].trim()).slice(0, 5);
+}
+
+async function readersEye({ base, apiKey, model, tokenParam, text }) {
+  const lines = await chatText({ base, apiKey, model, tokenParam, system: EYE_SYSTEM, user: 'POEM:\n\n' + excerpt(text), budget: 2500 });
+  const obs = parseObservations(lines);
+  if (!obs.length) { const err = new Error('The model answered without observations'); err.modelProblem = true; throw err; }
+  return obs;
+}
+
+function parseTitles(text) {
+  return String(text || '').split(/\r?\n/)
+    .map((l) => l.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, '').replace(/^["«»“”]+/, '').replace(/["«»“”]+$/, '').trim())
+    .filter((l) => l && l.length <= 80).slice(0, 5);
+}
+
+async function suggestTitles({ base, apiKey, model, tokenParam, text, collection }) {
+  const user = ((collection && collection.trim()) ? 'COLLECTION: ' + collection.trim() + '\n\n' : '') + 'POEM:\n\n' + excerpt(text);
+  const lines = await chatText({ base, apiKey, model, tokenParam, system: TITLE_SYSTEM, user, budget: 800 });
+  const titles = parseTitles(lines);
+  if (!titles.length) { const err = new Error('The model answered without titles'); err.modelProblem = true; throw err; }
+  return titles;
+}
+
 // The settings pane's Test button: what answers, what doesn't. Errors come
 // back with a `kind` the pane turns into plain language for the writer.
 // echoText/echoImage: response CONTENT (model names, versions, checkpoint
@@ -454,6 +530,7 @@ module.exports = {
   paintCover, testEndpoints, writeBrief, comfyuiPaint, paintOpenaiCompat,
   buildWorkflow, DEFAULT_WORKFLOW, keepValue, excerpt,
   MONOLINE_SYSTEM, extractSvg, drawMonolineSvg, paintLineart, drawIllustration,
+  EYE_SYSTEM, TITLE_SYSTEM, chatText, parseObservations, parseTitles, readersEye, suggestTitles,
   LINEART_SUFFIX, LINEART_NEGATIVE, errKind, // the renderer speaks errKind's kinds in plain language
   BRIEF_SYSTEM, PAINT_SUFFIX, DEFAULT_NEGATIVE
 };

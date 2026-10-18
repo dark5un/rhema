@@ -360,3 +360,58 @@ test('drawMonolineSvg refuses a non-http base at the call site (security gate NI
     () => ai.drawMonolineSvg({ base: 'file:///etc', apiKey: 'k', model: 'm', motif: 'a lamp', text: 'x' }),
     /http\(s\) URL: the text model URL/);
 });
+
+// ---------------------------------------------------------------------------
+// Phase 4: the poet AI (Stones 7+8) — Reader's Eye + title suggestions
+// ---------------------------------------------------------------------------
+
+test("readersEye: numbered observations come back as an array; the prompt carries Stone 8 and the read posture", async () => {
+  const calls = [];
+  await withFetch(async (url, init) => {
+    if (String(url).endsWith('/models')) return jsonResponse({ data: [{ id: 'm1' }] });
+    calls.push(JSON.parse(init.body));
+    return jsonResponse({ choices: [{ message: { content: '1. Η εικόνα «σειρά κεράκια» κρατά το ποίημα όρθιο.\n2. Ο τρίτος στίχος χαλαρώνει.\n3. Η επανάληψη μετράει, δεν κοσμεί.' } }] });
+  }, async () => {
+    const obs = await ai.readersEye({ base: 'http://x/v1', apiKey: 'k', model: 'm1', text: 'σα μια σειρά κεράκια αναμμένα' });
+    assert.equal(obs.length, 3, 'three numbered lines, three observations');
+    assert.match(obs[0], /«σειρά κεράκια»/, 'the quoted phrase survives whole');
+  });
+  const chat = calls.find((b) => b.messages);
+  assert.match(chat.messages[0].content, /Answer in the language the poem is written in/, 'Stone 8: the language follows the poem');
+  assert.match(chat.messages[0].content, /Never rewrite the poem/, 'read posture: the model may not rewrite');
+  assert.match(chat.messages[1].content, /POEM:/, 'the poem itself is the request');
+});
+
+test('readersEye: prose without numbered lines fails honestly, not emptily', async () => {
+  await withFetch(async (url) => {
+    if (String(url).endsWith('/models')) return jsonResponse({ data: [] });
+    return jsonResponse({ choices: [{ message: { content: 'Lovely poem, it flows well.' } }] });
+  }, async () => {
+    await assert.rejects(() => ai.readersEye({ base: 'http://x/v1', apiKey: 'k', model: 'm1', text: 'x' }), /without observations/);
+  });
+});
+
+test('suggestTitles: bullets, numbers and guillemets are stripped; five clean titles come back', async () => {
+  await withFetch(async (url, init) => {
+    if (String(url).endsWith('/models')) return jsonResponse({ data: [] });
+    const body = JSON.parse(init.body);
+    assert.match(body.messages[1].content, /COLLECTION: Κεριά/, 'the collection context rides along');
+    return jsonResponse({ choices: [{ message: { content: '1. «Αναμμένα κεριά»\n- Το παράθυρο\nΒραδινή αυλή\n4. Η σιωπή\n5) Η ανάσα' } }] });
+  }, async () => {
+    const titles = await ai.suggestTitles({ base: 'http://x/v1', apiKey: 'k', model: 'm1', text: ' ποίημα ', collection: 'Κεριά και άλλα ποιήματα' });
+    assert.equal(titles.length, 5, 'all five survive');
+    assert.ok(titles.every((x) => !/^[\d.)•-]+\s/.test(x) && !/^[«"]/.test(x)), 'no numbering or quoting leaks through');
+    assert.equal(titles[1], 'Το παράθυρο');
+  });
+});
+
+test('chatText: the reasoning-budget retry guards the poet AI too', async () => {
+  const budgets = [];
+  await withFetch(async (url, init) => {
+    if (String(url).endsWith('/models')) return jsonResponse({ data: [] });
+    budgets.push(JSON.parse(init.body).max_tokens);
+    if (budgets.length === 1) return jsonResponse({ choices: [{ message: { content: null, reasoning_content: 'σκέψη…' } }] });
+    return jsonResponse({ choices: [{ message: { content: '1. μία παρατήρηση' } }] });
+  }, () => ai.readersEye({ base: 'http://x/v1', apiKey: 'k', model: 'm1', text: 'x' }));
+  assert.deepEqual(budgets, [2500, 8000], 'one retry with room, same pitfall as the monoline draw');
+});

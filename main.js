@@ -1092,6 +1092,41 @@ ipcMain.handle('rhema:asset:clear', (_e, bookId, key) => {
     return RhemaAssets.clearAsset(bookDir(bookId), key);
   } catch { return false; }
 });
+/* RHEMA — Phase 4 (Stones 7+8): the poet AI — Reader's Eye observations and
+   title suggestions. Same trust boundary as rhema:draw: settings from the
+   library file, key from the secret store, the renderer names only book,
+   poem, kind and the poem text (content, not config). Read posture: the
+   answer goes to the notes pane / title metadata — the poem file is never
+   touched. Shares the one-job-at-a-time ceiling with the drawing chain. */
+ipcMain.handle('rhema:poemai', async (_e, bookId, chId, kind, text, collection) => {
+  if (drawJobs.size >= 1) return { busy: true };
+  const jobKey = 'ai:' + bookId + '/' + chId;
+  drawJobs.add(jobKey);
+  try {
+    const settings = rhemaAiSettings();
+    const apiKey = readSecret('rhema-ai');
+    const tcfg = settings.text || {};
+    if (!tcfg.base) return { error: 'No AI endpoint is configured.', kind: 'unset' };
+    const ai = require('./ai.js');
+    const cleanText = String(text || '').slice(0, 20000); // a poem, not a novel
+    const cleanCol = String(collection || '').slice(0, 200);
+    if (kind === 'eye') {
+      const obs = await ai.readersEye({ base: tcfg.base, apiKey, model: tcfg.model, tokenParam: tcfg.tokenParam, text: cleanText });
+      return { obs };
+    }
+    if (kind === 'titles') {
+      const titles = await ai.suggestTitles({ base: tcfg.base, apiKey, model: tcfg.model, tokenParam: tcfg.tokenParam, text: cleanText, collection: cleanCol });
+      return { titles };
+    }
+    return { error: 'Unknown poet-AI kind.', kind: 'bad_kind' };
+  } catch (err) {
+    const ai = require('./ai.js');
+    return { error: String(err && err.message || err), kind: err.kind || ai.errKind(err, err.status) };
+  } finally {
+    drawJobs.delete(jobKey);
+  }
+});
+
 /* RHEMA — Stone 17: AI poem drawings. The trust boundary is the cover:paint
    one: settings are read from the user's own library file and the key from
    the encrypted secret store — the renderer names only the book, the poem,
