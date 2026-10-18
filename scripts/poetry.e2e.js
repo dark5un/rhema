@@ -904,7 +904,7 @@ test("Reader's Eye + title suggestions (Phase 4, Stones 7+8): notes gain observa
     // on the poem the poet has open
     await js(`currentChapterId = ${JSON.stringify(ch0)}; renderChapters();`);
     await tick(200);
-    await js(`document.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, code: 'KeyR', key: 'R', ctrlKey: true, shiftKey: true }))`);
+    await js(`document.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, code: 'KeyE', key: 'E', ctrlKey: true, shiftKey: true }))`); // UI gate B1: Shift+R is Format>Align Right in the menu
     let notes = '';
     for (let i = 0; i < 100; i++) {
       notes = await js(`((book.chapterNotes || {})[${JSON.stringify(ch0)}]) || ''`);
@@ -915,9 +915,18 @@ test("Reader's Eye + title suggestions (Phase 4, Stones 7+8): notes gain observa
     assert.match(notes, /Reader's Eye — /, 'the block is labeled, so it never reads as the poet\u2019s own note');
     const after = await js(`window.neo.readChapter(book.id, ${JSON.stringify(ch0)})`);
     assert.equal(after, before, 'the poem file never changes (Stone 7 confirmed rule)');
-    // titles: the poem's menu path, pick one, metadata only
+    // titles: the REAL menu path (UX gate S6: menu flows must be driven,
+    // not called directly) — right-click the nav row, click the item
     mode = 'titles';
-    await js(`(() => { NeoHooks.emitTrue('chapterMenuChoice', ${JSON.stringify(ch0)}, 'rhemaTitles'); return 1; })()`);
+    const items = await js(`(() => (NeoHooks.emitList('chapterMenuItems', ${JSON.stringify(ch0)}) || []).map((x) => x && x.value))()`);
+    assert.ok(items.includes('rhemaEye') && items.includes('rhemaTitles'), 'the poem menu offers both AI reading entries');
+    await js(`(() => { const row = document.querySelector('.nav-item[data-id="' + ${JSON.stringify(ch0)} + '"] .n-row') || document.querySelector('.nav-item[data-id="' + ${JSON.stringify(ch0)} + '"]'); row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 200, clientY: 300 })); return 1; })()`);
+    let menuClicked = false;
+    for (let i = 0; i < 50 && !menuClicked; i++) {
+      menuClicked = await js(`(() => { const b = [...document.querySelectorAll('.pop-menu button')].find((x) => x.textContent === 'Suggest titles…'); if (!b) return 0; b.click(); return 1; })()`);
+      if (!menuClicked) await tick();
+    }
+    assert.ok(menuClicked, 'the nav right-click menu offers Suggest titles…');
     let picked = false;
     for (let i = 0; i < 50 && !picked; i++) {
       picked = await js(`(() => { const b = [...document.querySelectorAll('.modal .fr-choice')].find((x) => x.textContent.includes('Το παράθυρο')); if (!b) return 0; b.click(); return 1; })()`);
@@ -934,7 +943,7 @@ test("Reader's Eye + title suggestions (Phase 4, Stones 7+8): notes gain observa
     const itemShown = await js(`(() => (NeoHooks.emitList('chapterMenuItems', ${JSON.stringify(ch0)}) || []).some((x) => x && x.value === 'rhemaTitles'))()`);
     assert.equal(itemShown, false, 'with no text endpoint the Suggest titles item is not offered');
     // cleanup: the notes/title/endpoint stay unset for later tests
-    await js(`(() => { delete book.chapterTitles[${JSON.stringify(ch0)}]; delete book.chapterNotes[${JSON.stringify(ch0)}]; saveMeta(); renderChapters(); renderNav(); })()`);
+    await js(`(async () => { delete book.chapterTitles[${JSON.stringify(ch0)}]; delete book.chapterNotes[${JSON.stringify(ch0)}]; await saveMeta(); renderChapters(); renderNav(); })()`); // coding gate NICE: await the meta write so the next test starts on settled state
   } finally { server.close(); }
 });
 

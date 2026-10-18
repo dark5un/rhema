@@ -439,9 +439,9 @@ async function chatText({ base, apiKey, model, tokenParam, system, user, budget 
   return got.result;
 }
 
-const OBS_LINE = /^\s*\d+[.)]\s+(.+)$/;
+const OBS_LINE = /^\s*(?:[*_]{1,3}\s*)?(\d+)[.)](?:\s*[*_]{1,3})?\s+(.+)$/; // coding gate: reasoning models decorate lists — '**1.**' must not false-fail
 function parseObservations(text) {
-  return String(text || '').split(/\r?\n/).map((l) => l.match(OBS_LINE)).filter(Boolean).map((m) => m[1].trim()).slice(0, 5);
+  return String(text || '').split(/\r?\n/).map((l) => l.match(OBS_LINE)).filter(Boolean).map((m) => m[2].replace(/[*_]+$/, '').trim()).slice(0, 5);
 }
 
 async function readersEye({ base, apiKey, model, tokenParam, text }) {
@@ -453,7 +453,7 @@ async function readersEye({ base, apiKey, model, tokenParam, text }) {
 
 function parseTitles(text) {
   return String(text || '').split(/\r?\n/)
-    .map((l) => l.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, '').replace(/^["«»“”]+/, '').replace(/["«»“”]+$/, '').trim())
+    .map((l) => l.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, '').replace(/^["«»“”[*_]+|["«»“”[*_]+$/g, '').trim()) // coding gate NICE: markdown emphasis must not leak into a title
     .filter((l) => l && l.length <= 80).slice(0, 5);
 }
 

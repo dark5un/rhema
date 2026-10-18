@@ -149,3 +149,8 @@ body.light .st-done { background: #2e7d43; }
   font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
   opacity: 0.85; } /* UX gate round 2: absolute caption keeps the + centered
   like the book tile; .65 opacity read too faint on night */
+
+/* RHEMA — UX gate (Phase 4 S2): the outline note carries the Reader's
+   Eye block, whose newlines were collapsing into one run-on line. The
+   stored text already has the breaks; let them show. */
+#notes-outline, .ns-outline { white-space: pre-line; }
