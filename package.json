@@ -3,7 +3,7 @@
   "productName": "Rhema",
   "desktopName": "rhema",
   "version": "1.5.9",
-  "description": "A word processor for authors \u2014 novels, screenplays, and poetry. Distraction-free by default.",
+  "description": "A word processor for authors — novels, screenplays, and poetry. Distraction-free by default.",
   "homepage": "https://github.com/dark5un/rhema",
   "main": "main.js",
   "scripts": {
@@ -98,7 +98,7 @@
       "synopsis": "A distraction-free word processor for authors",
       "desktop": {
         "entry": {
-          "Comment": "Writing for poets \u2014 poems, novels, screenplays.",
+          "Comment": "Writing for poets — poems, novels, screenplays.",
           "Keywords": "writing;writer;poetry;poem;novel;book;author;manuscript;wordprocessor;"
         }
       },
@@ -161,7 +161,7 @@
   "license": "MIT",
   "devDependencies": {
     "electron": "^43.0.0",
-    "electron-builder": "^26.15.3",
+    "electron-builder": "^26.17.0",
     "oxlint": "^1.86.0"
   },
   "dependencies": {
