@@ -2,7 +2,7 @@
   "name": "rhema",
   "productName": "Rhema",
   "desktopName": "rhema",
-  "version": "1.5.9",
+  "version": "1.5.10",
   "description": "A word processor for authors — novels, screenplays, and poetry. Distraction-free by default.",
   "homepage": "https://github.com/dark5un/rhema",
   "main": "main.js",
